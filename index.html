@@ -1,0 +1,1359 @@
+<title>Martylko</title>
+<meta name="description" content="Konfigurator für ein einfaches DIY-Sideboard: Masse eingeben, Zuschnittliste, Plattenplan, Beschläge und Bauablauf erhalten.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#EDF0EE; --panel:#F8FAF9; --raise:#FFFFFF;
+  --ink:#1B2427; --muted:#5A676A; --line:#D3DAD7; --line-strong:#B3BEBA;
+  --accent:#2D5D6C; --accent-soft:#DCE8EB; --on-accent:#FFFFFF;
+  --stage:#E4E9E6; --stage-2:#D5DCD8;
+  --warn:#7E520F; --warn-bg:#F5EAD4; --warn-line:#E2CC9E;
+  --part:#E8D6B2; --part-front:#CBD6D2; --part-back:#E3E4DE; --waste:#AEB9B5;
+  --shadow:0 1px 2px rgba(20,35,40,.05), 0 10px 30px rgba(20,35,40,.07);
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#131A1C; --panel:#192225; --raise:#1F292D;
+    --ink:#E3EAE8; --muted:#97A5A7; --line:#2A373A; --line-strong:#3E4D51;
+    --accent:#86BACA; --accent-soft:#1E3940; --on-accent:#0D191C;
+    --stage:#1B2427; --stage-2:#141C1E;
+    --warn:#E8B96A; --warn-bg:#33291A; --warn-line:#56442A;
+    --part:#6B5A3E; --part-front:#3A4C49; --part-back:#3B3F3D; --waste:#34413F;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#131A1C; --panel:#192225; --raise:#1F292D;
+  --ink:#E3EAE8; --muted:#97A5A7; --line:#2A373A; --line-strong:#3E4D51;
+  --accent:#86BACA; --accent-soft:#1E3940; --on-accent:#0D191C;
+  --stage:#1B2427; --stage-2:#141C1E;
+  --warn:#E8B96A; --warn-bg:#33291A; --warn-line:#56442A;
+  --part:#6B5A3E; --part-front:#3A4C49; --part-back:#3B3F3D; --waste:#34413F;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+.app{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:14px 56px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono,.num input,td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* Kopf */
+.top{display:flex;flex-wrap:wrap;gap:14px 40px;align-items:flex-end;justify-content:space-between;padding-block:6px 16px;border-bottom:1px solid var(--line)}
+.brand{display:flex;gap:14px;align-items:center}
+.brand svg{flex:none;color:var(--accent)}
+.brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.summary{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0}
+.summary div{display:flex;flex-direction:column}
+.summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.summary small{color:var(--muted);font-size:12px}
+.lvl{display:inline-flex;gap:3px;vertical-align:middle;margin-right:6px}
+.lvlhead{margin:0;display:flex;align-items:center;gap:4px;font-size:15px}
+.lvlhead .lvl i{width:11px;height:11px}
+.lvl i{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--accent)}
+.lvl[data-l="1"] i:nth-child(-n+1),.lvl[data-l="2"] i:nth-child(-n+2),.lvl[data-l="3"] i:nth-child(-n+3){background:var(--accent)}
+
+/* Raster */
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"controls viewer" "controls output";gap:20px 24px;margin-top:20px;align-items:start}
+.controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin}
+.viewer{grid-area:viewer;min-width:0}
+.output{grid-area:output;min-width:0}
+@media (max-width:920px){
+  .layout{grid-template-columns:minmax(0,1fr);grid-template-areas:"viewer" "controls" "output"}
+  .controls{position:static;max-height:none;overflow:visible}
+}
+
+/* Steuerung */
+.group{padding-block:14px;border-bottom:1px solid var(--line);display:grid;gap:12px}
+.group:last-child{border-bottom:0}
+.group h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.field{display:grid;gap:5px}
+.field > label,.lbl{font-size:13px;font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dim{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+.dim label{font-size:13px;font-weight:500}
+.dim input[type=range]{grid-column:1 / -1}
+.num{display:flex;align-items:center;border:1px solid var(--line-strong);border-radius:7px;background:var(--raise);padding-inline:8px 8px}
+.num input{width:62px;border:0;background:transparent;padding:5px 2px;text-align:right;font-size:14px;-moz-appearance:textfield}
+.num input::-webkit-inner-spin-button{opacity:.5}
+.num input:focus{outline:none}
+.num:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.num span{font-size:12px;color:var(--muted);padding-left:3px}
+.num.wide input{width:56px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-radius:7px;background:var(--raise)}
+.hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:var(--raise)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{flex:1;text-align:center;padding:6px 4px;cursor:pointer;font-size:13px;border-left:1px solid var(--line);user-select:none;white-space:nowrap}
+.seg label:first-of-type{border-left:0}
+.seg input:checked + label{background:var(--accent);color:var(--on-accent);font-weight:600}
+.seg input:focus-visible + label{outline:2px solid var(--ink);outline-offset:-3px}
+.cards{display:grid;gap:8px}
+.card{position:relative;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--raise)}
+.card input{position:absolute;opacity:0;pointer-events:none}
+.card b{font-size:14px;font-weight:600}
+.card span{grid-column:1 / -1;font-size:12.5px;color:var(--muted);line-height:1.4}
+.card:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.card:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatches input{position:absolute;opacity:0;pointer-events:none}
+.swatches label{display:grid;justify-items:center;gap:3px;font-size:11px;color:var(--muted);cursor:pointer;width:52px;text-align:center;line-height:1.2}
+.swatches .sw{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-strong);box-shadow:0 0 0 3px var(--panel)}
+.swatches input:checked + label .sw{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
+.swatches input:checked + label{color:var(--ink);font-weight:600}
+.swatches input:focus-visible + label .sw{outline:2px solid var(--ink);outline-offset:4px}
+.check{display:flex;gap:8px;align-items:center;font-size:13px}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+
+/* 3D */
+.stage-wrap{position:relative;border-radius:14px;overflow:hidden;background:radial-gradient(120% 90% at 50% 20%,var(--stage),var(--stage-2));border:1px solid var(--line)}
+#stage{width:100%;aspect-ratio:16/10;max-height:66vh;min-height:280px;touch-action:none;cursor:grab}
+#stage:active{cursor:grabbing}
+#stage canvas{display:block;width:100%;height:100%}
+.vbar{position:absolute;top:12px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;pointer-events:none}
+.vbar > div{display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto}
+.vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
+.vbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.vbtn:hover{border-color:var(--accent)}
+.dimtag{position:absolute;right:14px;bottom:12px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);background:color-mix(in srgb,var(--raise) 80%,transparent);padding:4px 9px;border-radius:6px;pointer-events:none}
+.pick{position:absolute;left:14px;bottom:12px;font-size:13px;background:var(--raise);border:1px solid var(--line-strong);padding:6px 10px;border-radius:8px;box-shadow:var(--shadow);max-width:calc(100% - 28px)}
+.pick b{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
+.nogl{display:grid;place-items:center;height:100%;padding:24px;text-align:center;color:var(--muted)}
+
+/* Hinweise */
+.warns{display:grid;gap:6px;margin-top:14px}
+.warns:empty{display:none}
+.warn{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--ink);border-radius:9px;font-size:13.5px}
+.warn::before{content:"!";flex:none;display:grid;place-items:center;width:18px;height:18px;margin-top:1px;border-radius:50%;background:var(--warn);color:var(--warn-bg);font-weight:700;font-size:12px}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;margin-top:22px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tab{border:0;background:none;padding:10px 14px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .count{font-family:var(--f-mono);font-weight:400;font-size:12px;margin-left:4px;color:var(--muted)}
+.panel{padding-top:16px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.toolbar p{margin:0;font-size:13px;color:var(--muted);max-width:60ch}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);padding:7px 14px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.copied{font-size:13px;color:var(--muted)}
+.copybox{width:100%;min-height:140px;font-family:var(--f-mono);font-size:12px;margin-top:10px;background:var(--raise);border:1px solid var(--line-strong);border-radius:8px;padding:8px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--raise);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody.grp th{background:var(--ground);font-family:var(--f-display);font-size:13.5px;font-weight:600;letter-spacing:0;color:var(--ink);padding-block:7px}
+tbody.grp th span{font-family:var(--f-body);font-weight:400;color:var(--muted);margin-left:8px}
+td.n{white-space:nowrap}
+td.pos{font-family:var(--f-mono);font-weight:500;color:var(--accent);width:44px}
+td.note{color:var(--muted);font-size:13px;min-width:180px}
+tr[data-key]{cursor:default}
+tr.hl td{background:var(--accent-soft)}
+tfoot td{font-size:13px;color:var(--muted);background:var(--raise);border-bottom:0}
+
+/* Plattenplan */
+.sheets{display:grid;gap:22px}
+.sheetgrp h3{font-size:16px;font-weight:600}
+.sheetgrp .meta{font-size:13px;color:var(--muted);margin:2px 0 10px;font-family:var(--f-mono)}
+.sheetlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px}
+figure.sheet{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 8px}
+figure.sheet figcaption{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-family:var(--f-mono)}
+figure.sheet svg{width:100%;height:auto;display:block}
+.sh-bg{fill:url(#hatch);stroke:var(--line-strong);stroke-width:4}
+.sh-part rect{fill:var(--part);stroke:var(--ink);stroke-width:3}
+.sh-part.front rect{fill:var(--part-front)}
+.sh-part.back rect{fill:var(--part-back)}
+.sh-part text{fill:var(--ink);font-family:var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.sh-part.hl rect{fill:var(--accent);}
+.sh-part.hl text{fill:var(--on-accent)}
+.hatchline{stroke:var(--waste);stroke-width:6}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:12px;height:12px;border:1px solid var(--ink);vertical-align:-1px;margin-right:5px;border-radius:2px}
+
+/* Beschläge */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.box h3{font-size:15px;font-weight:600;margin-bottom:8px}
+.items{list-style:none;margin:0;padding:0;display:grid}
+.items li{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.items li:last-child{border-bottom:0}
+.items .q{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--accent);font-weight:500}
+.items small{display:block;color:var(--muted);font-size:12.5px}
+.tools{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+
+/* Bauablauf */
+.steps{list-style:none;margin:0;padding:0;counter-reset:st;display:grid;gap:12px;max-width:78ch}
+.steps li{counter-increment:st;display:grid;grid-template-columns:36px 1fr;gap:12px}
+.steps li::before{content:counter(st);font-family:var(--f-display);font-weight:700;font-size:15px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--accent);color:var(--accent)}
+.steps h3{font-size:15.5px;font-weight:600;margin-top:5px}
+.steps p{margin:3px 0 0;color:var(--ink);font-size:14px;line-height:1.55}
+.steps p.tip{color:var(--muted);font-size:13px}
+.foot{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:90ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <pattern id="hatch" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="40" class="hatchline"></line>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="4" y="9" width="36" height="22" rx="1"></rect>
+        <line x1="22" y1="9" x2="22" y2="31"></line>
+        <circle cx="18" cy="15" r="1.6" fill="currentColor" stroke="none"></circle>
+        <circle cx="26" cy="15" r="1.6" fill="currentColor" stroke="none"></circle>
+        <line x1="9" y1="31" x2="8" y2="38"></line><line x1="35" y1="31" x2="36" y2="38"></line>
+      </svg>
+      <div>
+        <h1>Martylko</h1>
+        <p>Masse eingeben – Zuschnitt, Beschläge und Bauablauf erhalten.</p>
+      </div>
+    </div>
+    <dl class="summary" id="summary"></dl>
+  </header>
+
+  <div class="layout">
+    <form id="cfg" class="controls" autocomplete="off">
+      <section class="group">
+        <h2>Masse</h2>
+        <div class="dim">
+          <label for="w">Breite</label>
+          <div class="num"><input id="w" name="w" type="number" min="300" max="2400" step="10" value="1200" inputmode="numeric"><span>mm</span></div>
+          <input id="w-r" type="range" min="300" max="2400" step="10" value="1200" data-for="w" aria-label="Breite">
+        </div>
+        <div class="dim">
+          <label for="h">Höhe</label>
+          <div class="num"><input id="h" name="h" type="number" min="300" max="1400" step="10" value="720" inputmode="numeric"><span>mm</span></div>
+          <input id="h-r" type="range" min="300" max="1400" step="10" value="720" data-for="h" aria-label="Höhe">
+        </div>
+        <div class="dim">
+          <label for="d">Tiefe</label>
+          <div class="num"><input id="d" name="d" type="number" min="250" max="650" step="10" value="400" inputmode="numeric"><span>mm</span></div>
+          <input id="d-r" type="range" min="250" max="650" step="10" value="400" data-for="d" aria-label="Tiefe">
+        </div>
+        <p class="hint">Höhe inklusive Füsse bzw. Sockel. Tiefe inklusive Rückwand, ohne aufliegende Türen.</p>
+      </section>
+
+      <section class="group">
+        <h2>Material</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-room">Einsatzort</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
+            <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
+            <input type="radio" name="room" id="room-bath" value="bath"><label for="room-bath">Badezimmer</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mat">Plattenmaterial</label>
+          <select id="mat" name="mat">
+            <option value="birke">Multiplex Birke</option>
+            <option value="eiche">Eiche Leimholz</option>
+            <option value="fichte">Fichte Leimholz</option>
+            <option value="seekiefer">Sperrholz Seekiefer</option>
+            <option value="fichtesp">Sperrholz Fichte</option>
+            <option value="mdf">MDF (zum Lackieren)</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="t">Stärke</label><select id="t" name="t"></select></div>
+          <div class="field"><label for="back">Rückwand</label>
+            <select id="back" name="back">
+              <option value="hdf3">HDF 3 mm</option>
+              <option value="ply6">Sperrholz Pappel 5 mm</option>
+              <option value="none">keine</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" id="matNote"></p>
+      </section>
+
+      <section class="group">
+        <h2>Aufbau</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-top">Deckel</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-top">
+            <input type="radio" name="top" id="top-over" value="over" checked><label for="top-over">aufgesetzt</label>
+            <input type="radio" name="top" id="top-between" value="between"><label for="top-between">zwischen Seiten</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-sec">Fächer nebeneinander</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sec">
+            <input type="radio" name="sections" id="sec-1" value="1"><label for="sec-1">1</label>
+            <input type="radio" name="sections" id="sec-2" value="2" checked><label for="sec-2">2</label>
+            <input type="radio" name="sections" id="sec-3" value="3"><label for="sec-3">3</label>
+            <input type="radio" name="sections" id="sec-4" value="4"><label for="sec-4">4</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-sh">Einlegeböden pro Fach</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sh">
+            <input type="radio" name="shelves" id="sh-0" value="0"><label for="sh-0">0</label>
+            <input type="radio" name="shelves" id="sh-1" value="1" checked><label for="sh-1">1</label>
+            <input type="radio" name="shelves" id="sh-2" value="2"><label for="sh-2">2</label>
+            <input type="radio" name="shelves" id="sh-3" value="3"><label for="sh-3">3</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-base">Untergestell</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-base">
+            <input type="radio" name="base" id="base-none" value="none"><label for="base-none">ohne</label>
+            <input type="radio" name="base" id="base-plinth" value="plinth"><label for="base-plinth">Sockel</label>
+            <input type="radio" name="base" id="base-legs" value="legs" checked><label for="base-legs">Füsse</label>
+          </div>
+        </div>
+        <div class="dim" id="row-baseH">
+          <label for="baseH" id="lbl-baseH">Fusshöhe</label>
+          <div class="num"><input id="baseH" name="baseH" type="number" min="60" max="350" step="5" value="160" inputmode="numeric"><span>mm</span></div>
+          <input id="baseH-r" type="range" min="60" max="350" step="5" value="160" data-for="baseH" aria-label="Höhe Untergestell">
+        </div>
+        <div class="field" id="row-legShape">
+          <span class="lbl" id="lbl-ls">Beinform</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-ls">
+            <input type="radio" name="legShape" id="ls-cone" value="cone" checked><label for="ls-cone">konisch</label>
+            <input type="radio" name="legShape" id="ls-straight" value="straight"><label for="ls-straight">gerade</label>
+          </div>
+        </div>
+        <div class="dim" id="row-taper">
+          <label for="taper">Verjüngung unten</label>
+          <div class="num"><input id="taper" name="taper" type="number" min="10" max="60" step="5" value="35" inputmode="numeric"><span>%</span></div>
+          <input id="taper-r" type="range" min="10" max="60" step="5" value="35" data-for="taper" aria-label="Verjüngung der Beine">
+        </div>
+        <div class="field" id="row-legColor">
+          <span class="lbl" id="lbl-lc">Beinfarbe</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-lc">
+            <input type="radio" name="legColor" id="lc-oak" value="oak" checked><label for="lc-oak">Eiche natur</label>
+            <input type="radio" name="legColor" id="lc-black" value="black"><label for="lc-black">Schwarz</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Verbindung</h2>
+        <div class="cards" role="radiogroup" aria-label="Verbindung">
+          <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
+          <label class="card"><input type="radio" name="joint" value="screws"><b>Verschraubt</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Von aussen durch die Platte geschraubt. Am einfachsten – Schraubenköpfe bleiben sichtbar.</span></label>
+          <label class="card"><input type="radio" name="joint" value="dowels"><b>Holzdübel</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Dübel und Leim, komplett unsichtbar. Genaues Anzeichnen nötig – eine Dübellehre hilft.</span></label>
+          <label class="card"><input type="radio" name="joint" value="cam"><b>Exzenter</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Zerlegbar wie ein Fertigmöbel. Präzise Bohrungen mit Forstnerbohrer Ø 15 mm.</span></label>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Front</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-front">Türen</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-front">
+            <input type="radio" name="front" id="fr-open" value="open"><label for="fr-open">offen</label>
+            <input type="radio" name="front" id="fr-hinged" value="hinged" checked><label for="fr-hinged">Drehtüren</label>
+            <input type="radio" name="front" id="fr-sliding" value="sliding"><label for="fr-sliding">Schiebetüren</label>
+          </div>
+        </div>
+        <div class="field" id="row-doorsPer">
+          <span class="lbl" id="lbl-dp">Türen pro Fach</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-dp">
+            <input type="radio" name="doorsPer" id="dp-auto" value="auto" checked><label for="dp-auto">automatisch</label>
+            <input type="radio" name="doorsPer" id="dp-1" value="1"><label for="dp-1">1</label>
+            <input type="radio" name="doorsPer" id="dp-2" value="2"><label for="dp-2">2</label>
+          </div>
+        </div>
+        <div class="field" id="row-slideN" hidden>
+          <span class="lbl" id="lbl-sn">Anzahl Schiebetüren</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sn">
+            <input type="radio" name="slideN" id="sn-auto" value="auto" checked><label for="sn-auto">automatisch</label>
+            <input type="radio" name="slideN" id="sn-2" value="2"><label for="sn-2">2</label>
+            <input type="radio" name="slideN" id="sn-3" value="3"><label for="sn-3">3</label>
+          </div>
+        </div>
+        <div class="field" id="row-handle">
+          <label for="handle">Griff</label>
+          <select id="handle" name="handle"></select>
+        </div>
+        <div class="field" id="row-color">
+          <span class="lbl" id="lbl-col">Frontfarbe</span>
+          <div class="swatches" role="radiogroup" aria-labelledby="lbl-col">
+            <input type="radio" name="color" id="c-korpus" value="korpus" checked><label for="c-korpus"><span class="sw" id="sw-korpus"></span>Holz</label>
+            <input type="radio" name="color" id="c-weiss" value="weiss"><label for="c-weiss"><span class="sw" style="background:#EEEDE7"></span>Kreide&shy;weiss</label>
+            <input type="radio" name="color" id="c-salbei" value="salbei"><label for="c-salbei"><span class="sw" style="background:#A7B39E"></span>Salbei</label>
+            <input type="radio" name="color" id="c-taube" value="taube"><label for="c-taube"><span class="sw" style="background:#8E9FAB"></span>Tauben&shy;blau</label>
+            <input type="radio" name="color" id="c-anthrazit" value="anthrazit"><label for="c-anthrazit"><span class="sw" style="background:#3E4447"></span>Anthrazit</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Zuschnitt</h2>
+        <div class="field">
+          <span class="lbl">Plattenformat (Länge × Breite)</span>
+          <div class="row2">
+            <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
+            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="2100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4"><span>mm</span></div></div>
+          <div class="field"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55"><span>CHF/m²</span></div></div>
+        </div>
+        <label class="check" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
+        <p class="hint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
+      </section>
+      <section class="group">
+        <h2>Niveau</h2>
+        <div class="levelbox" id="levelBox" aria-live="polite"></div>
+      </section>
+    </form>
+
+    <section class="viewer" aria-label="3D-Vorschau">
+      <div class="stage-wrap">
+        <div id="stage"></div>
+        <div class="vbar">
+          <div>
+            <button type="button" class="vbtn" id="bDoors" aria-pressed="false">Türen öffnen</button>
+            <button type="button" class="vbtn" id="bExplode" aria-pressed="false">Explosionsansicht</button>
+          </div>
+          <div><button type="button" class="vbtn" id="bReset">Ansicht zurücksetzen</button></div>
+        </div>
+        <div class="pick" id="pick" hidden></div>
+        <div class="dimtag" id="dimTag"></div>
+      </div>
+      <div class="warns" id="warns" aria-live="polite"></div>
+    </section>
+
+    <section class="output">
+      <div class="tabs" role="tablist" aria-label="Ergebnis">
+        <button class="tab" role="tab" id="tab-cut" aria-controls="p-cut" aria-selected="true">Zuschnittliste<span class="count" id="cnt-cut"></span></button>
+        <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
+        <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
+        <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-cut" aria-labelledby="tab-cut">
+        <div class="toolbar">
+          <p>Länge = Faserrichtung. Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</p>
+          <div><button type="button" class="btn" id="bCopy">Liste kopieren</button> <span class="copied" id="copied" aria-live="polite"></span></div>
+        </div>
+        <div class="tablewrap"><table id="cutTable"></table></div>
+        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Zuschnittliste als Text"></textarea>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-sheet" aria-labelledby="tab-sheet" hidden>
+        <div class="toolbar">
+          <p>Vorschlag mit durchgehenden Schnitten, wie sie eine Plattensäge macht. Der Zuschnittservice optimiert oft noch selbst.</p>
+          <div class="legend"><span><i style="background:var(--part)"></i>Korpus</span><span><i style="background:var(--part-front)"></i>Front</span><span><i style="background:var(--part-back)"></i>Rückwand</span><span><i style="background:repeating-linear-gradient(45deg,var(--waste) 0 2px,transparent 2px 6px)"></i>Rest</span></div>
+        </div>
+        <div class="sheets" id="sheets"></div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-hw" aria-labelledby="tab-hw" hidden>
+        <div class="cols">
+          <div class="box"><h3>Beschläge &amp; Kleinteile</h3><ul class="items" id="hwList"></ul></div>
+          <div class="box"><h3>Werkzeug</h3><ul class="tools" id="toolList"></ul>
+            <h3 style="margin-top:16px">Oberfläche</h3><ul class="items" id="finishList"></ul></div>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-steps" aria-labelledby="tab-steps" hidden>
+        <ol class="steps" id="steps"></ol>
+      </div>
+
+      <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const form = $('#cfg');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, isFinite(v) ? v : a));
+const r0 = v => Math.round(v);
+
+/* ---------- Kataloge ---------- */
+const MATS = {
+  birke:  { name:'Multiplex Birke', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  t:[15,18,21], tDef:18, sheet:[2500,1250], price:55,
+            note:'Sichtbare Schichtkanten sind der typisch skandinavische Look. Einfach ölen, Kanten nur schleifen.' },
+  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  t:[18,20,26], tDef:20, sheet:[2400,600],  price:80,
+            note:'Massivholz arbeitet leicht mit der Luftfeuchtigkeit. Leimholz gibt es meist bis 600 mm, teils 1200 mm breit.' },
+  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  t:[18,28],    tDef:18, sheet:[2000,600],  price:30,
+            note:'Günstig und leicht zu bearbeiten, aber weich. Weissöl verhindert das Nachdunkeln ins Gelbliche.' },
+  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, t:[15], tDef:15, sheet:[2500,1250], price:48,
+            note:'Lebhafte, rötliche Maserung und sichtbare Schichtkanten. Günstiger als Birke, Oberfläche etwas rauer – gut schleifen.' },
+  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, t:[18], tDef:18, sheet:[2500,1250], price:65,
+            note:'Helles Nadelholz mit sichtbaren Schichtkanten. Weicher als Birke, Weissöl hält den hellen Ton.' },
+  mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, t:[16,19,22], tDef:19, sheet:[2800,2070], price:30,
+            note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' }
+};
+const BACKS = {
+  none: null,
+  hdf3: { name:'HDF weiss', t:3, sheet:[2800,2070], price:10, color:'#F0EFEA', ply:false },
+  ply6: { name:'Sperrholz Pappel', t:5, sheet:[2500,1250], price:24, color:'#E8D9B8', ply:true }
+};
+const COLORS = { weiss:'#EEEDE7', salbei:'#A7B39E', taube:'#8E9FAB', anthrazit:'#3E4447' };
+const COLOR_NAMES = { weiss:'Kreideweiss', salbei:'Salbei', taube:'Taubenblau', anthrazit:'Anthrazit' };
+const JOINTS = {
+  pocket: { name:'Taschenloch', level:1 },
+  screws: { name:'Verschraubt', level:1 },
+  dowels: { name:'Holzdübel', level:2 },
+  cam:    { name:'Exzenter', level:2 }
+};
+const HANDLES_HINGED = [['hole','Griffloch Ø 30 mm'],['knob','Holzknopf'],['push','Ohne Griff (Push-to-open)']];
+const HANDLES_SLIDING = [['shell','Griffmuschel rund'],['hole','Griffloch Ø 30 mm']];
+
+/* ---------- Formular ---------- */
+const STORE = 'sideboard-werkbank-v2';
+function fillThickness(mat, keep){
+  const sel = $('#t'), M = MATS[mat];
+  sel.innerHTML = M.t.map(v => `<option value="${v}">${v} mm</option>`).join('');
+  sel.value = M.t.includes(Number(keep)) ? keep : M.tDef;
+}
+function fillHandles(front, keep){
+  const sel = $('#handle');
+  const list = front === 'sliding' ? HANDLES_SLIDING : HANDLES_HINGED;
+  sel.innerHTML = list.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+  sel.value = list.some(([v]) => v === keep) ? keep : list[0][0];
+}
+function syncVisibility(){
+  const f = new FormData(form);
+  const front = f.get('front'), base = f.get('base'), mat = f.get('mat');
+  $('#row-doorsPer').hidden = front !== 'hinged';
+  $('#row-slideN').hidden = front !== 'sliding';
+  $('#row-handle').hidden = front === 'open';
+  $('#row-color').hidden = front === 'open';
+  $('#row-baseH').hidden = base === 'none';
+  $('#row-legShape').hidden = $('#row-legColor').hidden = base !== 'legs';
+  $('#row-taper').hidden = base !== 'legs' || f.get('legShape') !== 'cone';
+  $('#lbl-baseH').textContent = base === 'plinth' ? 'Sockelhöhe' : 'Fusshöhe';
+  const bh = $('#baseH'), bhr = $('#baseH-r');
+  const [mn, mx] = base === 'plinth' ? [40,150] : [60,350];
+  bh.min = bhr.min = mn; bh.max = bhr.max = mx;
+  $('#grain').disabled = !MATS[mat].grain;
+  $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
+  $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' ? 'Weiss' : 'Holz';
+  $('#matNote').textContent = MATS[mat].note;
+}
+function readCfg(){
+  const f = new FormData(form);
+  const n = k => Number(f.get(k));
+  return {
+    W:n('w'), H:n('h'), D:n('d'), room:f.get('room'), mat:f.get('mat'), t:n('t'), back:f.get('back'), top:f.get('top'),
+    sections:n('sections'), shelves:n('shelves'), base:f.get('base'), baseH:n('baseH'), legShape:f.get('legShape'), taper:n('taper'), legColor:f.get('legColor'), joint:f.get('joint'),
+    front:f.get('front'), doorsPer:f.get('doorsPer'), slideN:f.get('slideN'), handle:f.get('handle'), color:f.get('color'),
+    sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:f.get('grain') === 'on', price:n('price')
+  };
+}
+function save(){
+  try {
+    const data = {};
+    for (const el of form.elements) {
+      if (!el.name) continue;
+      if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+      else if (el.type === 'checkbox') data[el.name] = el.checked;
+      else data[el.name] = el.value;
+    }
+    localStorage.setItem(STORE, JSON.stringify(data));
+  } catch (e) {}
+}
+function restore(){
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+  const mat = data && MATS[data.mat] ? data.mat : 'birke';
+  $('#mat').value = mat;
+  fillThickness(mat, data && data.t);
+  const front = data && data.front || 'hinged';
+  fillHandles(front, data && data.handle);
+  if (!data) return;
+  for (const [k, v] of Object.entries(data)) {
+    if (k === 't' || k === 'handle' || k === 'mat') continue;
+    const els = form.elements[k];
+    if (!els) continue;
+    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === v; }
+    else if (els.type === 'checkbox') els.checked = !!v;
+    else els.value = v;
+  }
+  for (const r of form.querySelectorAll('input[type=range][data-for]')) r.value = $('#' + r.dataset.for).value;
+}
+
+/* ---------- Berechnung ---------- */
+function compute(c){
+  const M = MATS[c.mat], t = c.t, Bk = BACKS[c.back], bt = Bk ? Bk.t : 0;
+  const warn = [];
+  const W = clamp(c.W, 300, 2400), H = clamp(c.H, 300, 1400), D = clamp(c.D, 250, 650);
+  let bh = 0;
+  if (c.base === 'plinth') bh = clamp(c.baseH, 40, 150);
+  if (c.base === 'legs') bh = clamp(c.baseH, 60, 350);
+  const maxBh = H - 2*t - 150;
+  if (bh > maxBh) { bh = Math.max(0, maxBh); warn.push(`Untergestell auf ${bh} mm begrenzt – sonst bleibt kein Innenraum.`); }
+  const Hc = H - bh, Dp = D - bt, Wi = W - 2*t, Hi = Hc - 2*t, n = c.sections;
+  const s = (Wi - (n-1)*t) / n;
+  const hinged = c.front === 'hinged', sliding = c.front === 'sliding';
+  const topOver = c.top === 'over';
+  const slideSet = sliding ? 2*t + 16 : 0;
+  const dd = Dp - slideSet;            // Tiefe Mittelwände
+  const sd = dd - 10;                  // Tiefe Einlegeböden
+  const paint = c.front === 'open' ? null : (c.color === 'korpus' ? (c.mat === 'mdf' ? COLORS.weiss : null) : COLORS[c.color]);
+  const carcFin = { color: c.mat === 'mdf' ? COLORS.weiss : M.color, ply:M.ply, grain:M.grain, plyColor:M.color };
+  const frontFin = paint ? { color:paint, ply:M.ply, grain:false, plyColor:M.color, painted:true } : carcFin;
+  const backFin = Bk ? { color:Bk.color, ply:Bk.ply, grain:false, plyColor:Bk.color } : null;
+  const bath = c.room === 'bath';
+  const matShort = bath && c.mat === 'mdf' ? 'MDF MR' : M.short;
+  const ss = bath ? ', Edelstahl A2' : '';
+  const glueName = bath ? 'Holzleim D4 (wasserfest)' : 'Holzleim D3';
+  const gMain = `${matShort} ${t} mm`, gBack = Bk ? `${Bk.name} ${Bk.t} mm` : null;
+  const z0 = -D/2 + bt, z1 = D/2, zc = (z0 + z1) / 2;
+
+  const raw = [], boxes = [], doors = [], slides = [], extras = [];
+  function add(name, L, B, th, group, note, kind, box){
+    const key = [name, r0(L), r0(B), th, group, note].join('|');
+    raw.push({ key, name, L:r0(L), B:r0(B), t:th, group, note, kind });
+    if (box) { box.key = key; boxes.push(box); }
+    return key;
+  }
+
+  // Korpus
+  const sideH = topOver ? Hc - t : Hc;
+  for (const sx of [-1, 1]) add('Seite', sideH, Dp, t, gMain, c.shelves ? 'Lochreihe Bodenträger innen' : 'Vorderkante sichtbar', 'korpus',
+    { size:[t, sideH, Dp], pos:[sx*(W/2 - t/2), bh + sideH/2, zc], thin:'x', grain:'y', fin:carcFin, ex:[sx*150, 0, 0] });
+  const topW = topOver ? W : Wi;
+  add('Deckel', topW, Dp, t, gMain, topOver ? 'liegt auf den Seiten · Oberseite = Sichtseite' : 'zwischen den Seiten', 'korpus',
+    { size:[topW, t, Dp], pos:[0, bh + Hc - t/2, zc], thin:'y', grain:'x', fin:carcFin, ex:[0, 170, 0] });
+  add('Boden', Wi, Dp, t, gMain, 'zwischen den Seiten', 'korpus',
+    { size:[Wi, t, Dp], pos:[0, bh + t/2, zc], thin:'y', grain:'x', fin:carcFin, ex:[0, -60, 0] });
+  const divX = [];
+  for (let i = 1; i < n; i++) {
+    const x = -Wi/2 + i*s + (i-1)*t + t/2; divX.push(x);
+    add('Mittelwand', Hi, dd, t, gMain, sliding ? `${slideSet} mm zurückversetzt (Schiene)` : (c.shelves ? 'Lochreihen beidseitig, versetzt' : ''), 'korpus',
+      { size:[t, Hi, dd], pos:[x, bh + t + Hi/2, z0 + dd/2], thin:'x', grain:'y', fin:carcFin, ex:[0, 0, -40] });
+  }
+  for (let j = 0; j < n; j++) {
+    const cx = -Wi/2 + j*(s + t) + s/2;
+    for (let k = 1; k <= c.shelves; k++) {
+      const y = bh + t + Hi * k / (c.shelves + 1);
+      add('Einlegeboden', Math.floor(s - 2), sd, t, gMain, '2 mm Luft, auf 4 Bodenträgern', 'korpus',
+        { size:[s - 2, t, sd], pos:[cx, y, z0 + sd/2], thin:'y', grain:'x', fin:carcFin, ex:[0, 0, 200] });
+    }
+  }
+  if (Bk) add('Rückwand', W - 2, Hc - 2, Bk.t, gBack, 'hinten aufgeschraubt, 1 mm rundum zurück', 'back',
+    { size:[W - 2, Hc - 2, bt], pos:[0, bh + Hc/2, -D/2 + bt/2], thin:'z', grain:'x', fin:backFin, ex:[0, 0, -220] });
+
+  // Untergestell
+  let legs = 0;
+  if (c.base === 'plinth') {
+    const sb = 30, L1 = W - 2*sb, L2 = D - 2*sb - 2*t;
+    for (const sz of [1, -1]) add('Sockelblende', L1, bh, t, gMain, sz > 0 ? 'vorne' : 'hinten', 'korpus',
+      { size:[L1, bh, t], pos:[0, bh/2, sz*(D/2 - sb - t/2)], thin:'z', grain:'x', fin:carcFin, ex:[0, -110, 0] });
+    for (const sx of [1, -1]) add('Sockel seitlich', L2, bh, t, gMain, 'zwischen den Blenden', 'korpus',
+      { size:[t, bh, L2], pos:[sx*(W/2 - sb - t/2), bh/2, 0], thin:'x', grain:'z', fin:carcFin, ex:[0, -110, 0] });
+  }
+  if (c.base === 'legs') {
+    const xs = W > 1300 ? [-1, 0, 1] : [-1, 1];
+    const rBot = c.legShape === 'straight' ? 21 : 21 * (1 - clamp(c.taper, 10, 60) / 100);
+    const legColor = c.legColor === 'black' ? '#1F2122' : '#B98B58';
+    for (const xf of xs) for (const zf of [-1, 1]) extras.push({ type:'leg', x: xf*(W/2 - 55), z: zf*(D/2 - 55), h: bh, rBot, color: legColor });
+    legs = xs.length * 2;
+  }
+
+  // Fronten
+  const hingeCount = { full:0, half:0 };
+  let handleCount = 0, frontCount = 0, doorsText = '';
+  if (hinged) {
+    const bounds = [-W/2, ...divX, W/2];
+    const yb = bh + 1.5, yt = bh + Hc - 1.5, dh = yt - yb;
+    const hpd = dh <= 900 ? 2 : dh <= 1600 ? 3 : 4;
+    for (let j = 0; j < n; j++) {
+      const span = bounds[j+1] - bounds[j];
+      const dp = c.doorsPer === 'auto' ? (span > 620 ? 2 : 1) : Number(c.doorsPer);
+      for (let k = 0; k < dp; k++) {
+        const left = bounds[j] + k*span/dp, dw = span/dp - 3, cx = left + span/dp/2;
+        const side = dp === 2 ? (k === 0 ? 'L' : 'R') : (n > 1 && j === n-1 ? 'R' : 'L');
+        const hb = side === 'L' ? j : j + 1;
+        const outer = hb === 0 || hb === n;
+        hingeCount[outer ? 'full' : 'half'] += hpd;
+        const key = add('Tür', dh, dw, t, gMain, `${hpd}× Topfbohrung Ø 35 · Scharnier ${outer ? 'aufliegend' : 'halb aufliegend'}`, 'front');
+        doors.push({ key, cx, dw, dh, yc: yb + dh/2, side });
+        if (dw > 600) warn.push(`Eine Tür ist ${r0(dw)} mm breit. Ab etwa 600 mm werden Türen schwer und schwingen weit auf – wähle 2 Türen pro Fach.`);
+      }
+    }
+    frontCount = doors.length;
+    handleCount = c.handle === 'knob' ? frontCount : 0;
+    doorsText = `${frontCount} Drehtür${frontCount > 1 ? 'en' : ''}`;
+    if (c.base === 'none') warn.push('Ohne Füsse oder Sockel liegen die Türen nur 1,5 mm über dem Boden. Filzgleiter (mind. 3 mm) oder ein Untergestell verhindern Schleifen.');
+    if (t >= 26) warn.push('Türen über 22 mm brauchen Topfscharniere für dicke Türen – im Datenblatt nach der maximalen Türstärke schauen.');
+  }
+  let ns = 0, ws = 0, trackDepth = 0;
+  if (sliding) {
+    ns = c.slideN === 'auto' ? (Wi > 1500 ? 3 : 2) : Number(c.slideN);
+    const ov = 30; ws = (Wi + (ns - 1)*ov) / ns;
+    const dhs = Hi - 20;
+    const zf = D/2 - 5 - t/2, zb = zf - t - 6;
+    trackDepth = 2*t + 12;
+    for (let i = 0; i < ns; i++) {
+      const left = -Wi/2 + i*(ws - ov);
+      const key = add('Schiebetür', dhs, ws, t, gMain, `${ov} mm Überlappung · Höhe nach Beschlag prüfen`, 'front');
+      slides.push({ key, cx: left + ws/2, ws, dh: dhs, yc: bh + t + 10 + dhs/2, z: i % 2 === 0 ? zf : zb, shift: i === 0 ? ws - ov : 0, idx:i, last: i === ns - 1 });
+    }
+    extras.push({ type:'track', y: bh + t + 4, z: (zf + zb)/2, len: Wi, depth: trackDepth });
+    extras.push({ type:'track', y: bh + t + Hi - 4, z: (zf + zb)/2, len: Wi, depth: trackDepth });
+    frontCount = ns;
+    doorsText = `${ns} Schiebetüren`;
+    if (t > 19) warn.push('Die meisten Schiebetürbeschläge für den Korpus sind für 16–19 mm Türen gemacht. Prüf den Beschlag oder wähle eine dünnere Platte.');
+    if (ws > 900) warn.push(`Schiebetüren mit ${r0(ws)} mm Breite sind schwer zu führen – nimm 3 Türen.`);
+  }
+
+  // Aggregieren
+  const rowsMap = new Map();
+  for (const p of raw) {
+    const r = rowsMap.get(p.key);
+    if (r) r.qty++; else rowsMap.set(p.key, { ...p, qty:1 });
+  }
+  const rows = [...rowsMap.values()];
+  rows.forEach((r, i) => { r.pos = String.fromCharCode(65 + i); });
+
+  // Warnungen Statik & Sicherheit
+  const span = t <= 16 ? 700 : t <= 19 ? 800 : 900;
+  if (c.shelves && s > span) warn.push(`Die Einlegeböden sind ${r0(s)} mm breit. Bei ${t} mm Stärke biegen sie sich ab ca. ${span} mm unter Last durch – mehr Fächer wählen oder dickere Platte.`);
+  if (!c.shelves && n === 1 && Wi > span + 200) warn.push(`Der Boden spannt ${r0(Wi)} mm frei. Eine Mittelwand macht den Korpus deutlich steifer.`);
+  if (s < 180) warn.push(`Die Fächer sind nur ${r0(s)} mm breit – weniger Fächer wählen oder breiter bauen.`);
+  if (!Bk) warn.push('Ohne Rückwand kann sich der Korpus verziehen. Setz hinten Metallwinkel in die Ecken oder wähle eine Rückwand.');
+  if (c.joint === 'screws' && topOver) warn.push('Beim aufgesetzten Deckel sieht man die Schraubenköpfe auf der Oberseite. Tipp: Deckel mit Taschenlöchern oder Dübeln befestigen, oder Abdeckkappen verwenden.');
+  if (c.joint === 'cam' && t >= 26) warn.push('Exzenterverbinder sind für 16–22 mm Platten gemacht. Bei dieser Stärke besser Dübel oder Taschenloch.');
+  if (H > 1000 || H > 2.4*D) warn.push('Hoch und schmal kippt leicht, besonders mit offenen Türen. Den Korpus oben mit einem Kippschutz an der Wand sichern.');
+  if (Hi < 150) warn.push('Der Innenraum ist sehr niedrig – mehr Höhe oder ein niedrigeres Untergestell wählen.');
+
+  // Zuschnitt packen
+  const groups = [];
+  const mainItems = [], backItems = [];
+  for (const r of rows) for (let q = 0; q < r.qty; q++) (r.kind === 'back' ? backItems : mainItems).push(r);
+  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100);
+  groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate: !(c.grain && M.grain), ...pack(mainItems, sheetL, sheetB, clamp(c.kerf, 0, 8), 10, !(c.grain && M.grain)) });
+  if (Bk) groups.push({ label: gBack, sheet: Bk.sheet, price: Bk.price, rotate: true, ...pack(backItems, Bk.sheet[0], Bk.sheet[1], clamp(c.kerf, 0, 8), 10, true) });
+  for (const g of groups) for (const u of g.unplaced) warn.push(`Teil ${u.pos} (${u.name}, ${u.L} × ${u.B} mm) passt nicht auf die Platte ${g.sheet[0]} × ${g.sheet[1]} mm. Grösseres Plattenformat eintragen${g.rotate ? '' : ' oder Maserung freigeben'}.`);
+
+  // Beschläge
+  const hw = [];
+  const lens = [Dp, Dp, Dp, Dp]; for (let i = 1; i < n; i++) lens.push(dd, dd);
+  const per = len => {
+    switch (c.joint) {
+      case 'screws': case 'pocket': return Math.max(2, Math.ceil((len - 80) / 150) + 1);
+      case 'dowels': return Math.max(3, Math.ceil((len - 80) / 120) + 1);
+      default: return len < 350 ? 2 : 3;
+    }
+  };
+  const conn = lens.reduce((a, l) => a + per(l), 0);
+  const plus = x => Math.ceil(x * 1.1);
+  if (c.joint === 'screws') {
+    hw.push([plus(conn), c.mat === 'mdf' ? 'Konfirmat-Schrauben 7 × 50 mm' + ss : `Holzschrauben Senkkopf ${t <= 16 ? '4 × 40' : t >= 26 ? '5 × 60' : '4 × 50'} mm${ss}`, 'für Deckel, Boden und Mittelwände, +10 % Reserve']);
+    hw.push([plus(conn), 'Abdeckkappen (optional)', 'passend zur Holzfarbe']);
+  } else if (c.joint === 'pocket') {
+    hw.push([plus(conn), `Taschenlochschrauben ${t <= 16 ? '25' : t >= 26 ? '38' : '32'} mm, Grobgewinde${bath ? ', rostfrei beschichtet' : ''}`, c.mat === 'mdf' ? 'für MDF/Plattenwerkstoffe' : 'für Holz/Plattenwerkstoffe']);
+    hw.push([1, glueName, 'optional für zusätzliche Festigkeit']);
+  } else if (c.joint === 'dowels') {
+    hw.push([plus(conn), `Holzdübel ${t <= 16 ? '6 × 30' : '8 × 40'} mm, geriffelt`, 'Buche, +10 % Reserve']);
+    hw.push([1, glueName, '500 g reichen für mehrere Möbel']);
+  } else {
+    hw.push([plus(conn), 'Exzenterverbinder Ø 15 mm inkl. Verbindungsbolzen', `für ${t <= 19 ? '16–19' : '19–22'} mm Platten`]);
+    hw.push([plus(conn), 'Holzdübel 8 × 30 mm', 'als Führung zwischen den Exzentern, ohne Leim (bleibt zerlegbar)']);
+  }
+  if (Bk) hw.push([Math.ceil(2*(W + Hc)/150) + (n - 1)*Math.ceil(Hc/200), 'Senkkopfschrauben 3 × 16 mm' + ss, 'Rückwand, alle 15 cm, auch in die Mittelwände']);
+  else hw.push([4, 'Metallwinkel 40 × 40 mm inkl. Schrauben', 'hinten in die Ecken, gegen Verziehen']);
+  if (c.shelves) hw.push([4*n*c.shelves, bath ? 'Bodenträger Ø 5 mm, Edelstahl' : 'Bodenträger Ø 5 mm (Metall)', '4 pro Einlegeboden']);
+  if (hinged) {
+    const typ = c.handle === 'push' ? 'ohne Feder (für Push-to-open)' : 'mit Softclose';
+    if (hingeCount.full) hw.push([hingeCount.full, `Topfscharnier Ø 35 mm, 110°, aufliegend, ${typ}`, bath ? 'vernickelt oder Edelstahl, inkl. Montageplatte' : 'inkl. Montageplatte']);
+    if (hingeCount.half) hw.push([hingeCount.half, `Topfscharnier Ø 35 mm, 110°, halb aufliegend (Mittelwand), ${typ}`, bath ? 'vernickelt oder Edelstahl, inkl. Montageplatte' : 'inkl. Montageplatte']);
+    if (c.handle === 'knob') hw.push([frontCount, 'Holzknopf Ø 30 mm inkl. Schraube', 'Eiche oder Buche']);
+    if (c.handle === 'push') hw.push([frontCount, 'Push-to-open-Beschlag (Magnet oder Tip-On)', 'einer pro Tür, oben an der Grifffseite']);
+  }
+  if (sliding) {
+    hw.push([1, `Schiebetürbeschlag für Holztüren im Korpus, doppelspurig`, `Lauf- und Führungsschiene je ${r0(Wi)} mm, Gleiter für ${ns} Türen`]);
+    if (c.handle === 'shell') hw.push([ns, 'Griffmuschel rund Ø 35 mm zum Einpressen', 'eine pro Tür']);
+  }
+  if (c.base === 'legs') {
+    const shape = c.legShape === 'straight' ? 'gerade, Ø 42 mm' : `konisch, Ø 42 → ${r0(42 * (1 - clamp(c.taper, 10, 60) / 100))} mm`;
+    hw.push([legs, `Möbelfüsse ${c.legColor === 'black' ? 'schwarz lackiert' : 'Eiche natur'}, ${bh} mm, ${shape}`, 'inkl. Anschraubplatte']);
+    hw.push([legs*4, 'Holzschrauben 4 × 16 mm' + ss, 'für die Anschraubplatten']);
+  }
+  if (c.base === 'plinth') {
+    hw.push([8, 'Holzschrauben 4 × 40 mm', 'Sockelecken verschrauben']);
+    hw.push([4, 'Stahlwinkel 40 × 40 mm + Schrauben 4 × 16', 'Sockel unter den Boden schrauben']);
+  }
+  if (c.base === 'none') hw.push([4, 'Filzgleiter Ø 25 mm, 3–5 mm hoch', 'schont den Boden']);
+  if (H > 1000 || H > 2.4*D) hw.push([1, 'Kippschutz-Set (Wandbefestigung)', 'Dübel passend zur Wand']);
+
+  // Oberfläche
+  const areaOf = kind => rows.filter(r => kind(r)).reduce((a, r) => a + r.qty * r.L * r.B / 1e6, 0);
+  const finish = [];
+  const woodArea = areaOf(r => r.kind === 'korpus' || (r.kind === 'front' && !paint) || (bath && r.kind === 'back')) * 2;
+  const paintArea = c.mat === 'mdf' ? areaOf(r => r.kind !== 'back' || bath) * 2 : (paint ? areaOf(r => r.kind === 'front') * 2 : 0);
+  const coats = bath ? 3 : 2;
+  if (c.mat !== 'mdf' && woodArea > 0) {
+    if (bath) finish.push([`${Math.max(1, Math.ceil(woodArea * 3 / 10 * 10))} dl`, 'Wasserbasierter PU-Klarlack seidenmatt (für Feuchträume)', `${woodArea.toFixed(1)} m² rundum inkl. Rückwand, 3 Schichten, Kanten 1× extra`]);
+    else finish.push([`${Math.max(1, Math.ceil(woodArea * 2 / 22 * 10))} dl`, 'Hartwachsöl, farblos oder weiss pigmentiert', `${woodArea.toFixed(1)} m² beidseitig, 2 Anstriche`]);
+  }
+  if (paintArea > 0) {
+    finish.push([`${Math.max(1, Math.ceil(paintArea / 10 * 10))} dl`, bath ? 'Isoliergrund (feuchtigkeitssperrend), Kanten 2×' : c.mat === 'mdf' ? 'Grundierung für MDF (Kanten 2×)' : 'Haftgrund', `${paintArea.toFixed(1)} m²`]);
+    finish.push([`${Math.max(1, Math.ceil(paintArea * coats / 10 * 10))} dl`, `${bath ? 'PU-Möbellack' : 'Möbellack'} seidenmatt${paint ? ', ' + (COLOR_NAMES[c.color] || 'Weiss') : ''}`, `${coats} Schichten, Zwischenschliff Körnung 240`]);
+  }
+  if (bath) {
+    if (c.mat === 'mdf') warn.push('Bad: Normales MDF quillt bei Feuchtigkeit auf. Kauf MDF MR (feuchtigkeitsbeständig, meist mit grünem Kern) und versiegle alle Kanten doppelt.');
+    if (M.ply) warn.push(`Bad: Verlang beim Kauf wasserfest verleimtes ${M.name} (EN 314-2 Klasse 3 bzw. «AW 100»). Die Schichtkanten saugen stark – mehrfach lackieren.`);
+    if (c.mat === 'fichte') warn.push('Bad: Fichte ist weich und nimmt schnell Wasser auf. Rundum gut versiegeln oder für Spritzwasserbereiche Eiche bzw. wasserfestes Multiplex wählen.');
+    if (c.back === 'hdf3') warn.push('Bad: Eine HDF-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
+    if (c.back === 'ply6') warn.push('Bad: Die Pappel-Rückwand beidseitig lackieren und hinten ein paar Millimeter Luft zur Wand lassen.');
+    if (c.base === 'none') warn.push('Bad: Stell den Schrank auf Füsse oder montier ihn an der Wand – so steht er nie in einer Pfütze und du kannst darunter putzen.');
+  }
+  finish.push(['1', 'Schleifpapier Körnung 120, 180' + (paintArea || bath ? ', 240' : ''), 'Kanten leicht brechen']);
+
+  // Werkzeug
+  const tools = new Set(['Akkuschrauber mit Bit-Set', 'Holzbohrer 3–8 mm mit Tiefenstopp', 'Schraubzwingen (mind. 4)', 'Anschlagwinkel und Doppelmeter', 'Schwingschleifer oder Schleifklotz', 'Bleistift und Vorstecher']);
+  if (c.joint === 'pocket') tools.add('Taschenloch-Bohrlehre mit Stufenbohrer');
+  if (c.joint === 'screws') { tools.add('Kegelsenker'); if (c.mat === 'mdf') tools.add('Stufenbohrer für Konfirmat'); }
+  if (c.joint === 'dowels') { tools.add('Dübellehre oder Dübelmarkierer Ø ' + (t <= 16 ? 6 : 8)); tools.add('Gummihammer'); }
+  if (c.joint === 'cam') { tools.add('Forstnerbohrer Ø 15 mm'); tools.add('Bohrschablone für Exzenter (empfohlen)'); }
+  if (c.shelves) tools.add('Lochreihen-Bohrschablone (32-mm-Raster) + Bohrer Ø 5 mm');
+  if (hinged) tools.add('Forstnerbohrer Ø 35 mm + Scharnier-Bohrlehre');
+  if (sliding) { tools.add('Eisensäge zum Kürzen der Schienen'); if (c.handle === 'shell') tools.add('Forstnerbohrer Ø 35 mm'); }
+  if (c.front !== 'open' && c.handle === 'hole') tools.add('Forstnerbohrer Ø 30 mm + Restholz gegen Ausrisse');
+  tools.add(paintArea || bath ? 'Schaumstoffrolle und Lackpinsel' : 'Baumwolllappen oder Pinsel für Öl');
+
+  // Bauablauf
+  const steps = buildSteps({ c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, dd, slideSet, paint, paintArea, ns });
+
+  const level = Math.min(3, JOINTS[c.joint].level + (c.front === 'open' ? 0 : 1));
+  const Dtot = hinged ? D + t + 1 : D;
+  return { W, H, D, Dtot, t, bh, Hc, Dp, Wi, Hi, n, s, M, Bk, rows, boxes, doors, slides, extras, groups, hw, finish, tools:[...tools], steps, warn:[...new Set(warn)], carcFin, frontFin, level, doorsText, handle:c.handle, front:c.front, joint:c.joint, matShort };
+}
+
+function buildSteps(o){
+  const { c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, slideSet, paint, paintArea, ns } = o;
+  const st = [];
+  const mdf = c.mat === 'mdf';
+  st.push(['Zuschnitt organisieren', 'Kopier die Zuschnittliste und lass die Platten im Baumarkt oder bei einer Schreinerei zuschneiden – das ist auf den Millimeter genauer als zu Hause mit der Handkreissäge. Die erste Zahl liegt jeweils in Faserrichtung.', 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
+  st.push(['Teile beschriften und schleifen', 'Schreib jedem Teil den Positionsbuchstaben auf die Innenseite und markier «vorne» und «oben». Flächen und Kanten mit Körnung 120, dann 180 schleifen, Kanten leicht brechen.', null]);
+  if (c.shelves) st.push(['Löcher für Bodenträger bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Seiten${n > 1 ? ' und in beide Seiten der Mittelwände' : ''} bohren, je ca. 40 mm von vorne und hinten, 10 mm tief.${n > 1 ? ' Bei den Mittelwänden nur 8 mm tief und die zweite Seite um 16 mm versetzt bohren, damit nichts durchbricht.' : ''}`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
+  const between = topOver ? 'den Boden' : 'Deckel und Boden';
+  if (c.joint === 'pocket') st.push(['Taschenlöcher bohren', `Bohrlehre auf ${t} mm Plattenstärke einstellen. Taschenlöcher an beiden Enden von ${between}${n > 1 ? ' und der Mittelwände' : ''} bohren, alle ca. 15 cm und 40 mm von vorne und hinten.${topOver ? ' Für den aufgesetzten Deckel die Taschenlöcher oben innen in die Seiten bohren.' : ''} Die Löcher kommen immer auf Innen- oder Unterseiten – beim Boden auf die Unterseite.`, null]);
+  if (c.joint === 'screws') st.push(['Schraublöcher vorbohren', `Schraubpositionen anreissen: ${t/2} mm von der Plattenkante, alle ca. 15 cm, 40 mm von vorne und hinten. In ${topOver ? 'Deckel (von oben) und Seiten' : 'die Seiten'} Ø ${mdf ? '5' : '4'} mm durchbohren und ansenken. In die Stirnkante des Gegenstücks Ø ${mdf ? '5 mm mit Stufenbohrer (Konfirmat)' : '2,5–3 mm'} vorbohren.`, mdf ? 'MDF reisst ohne Vorbohren an den Kanten auf.' : 'Mittig in die Kante bohren – ein Anschlag an der Bohrmaschine hilft.']);
+  if (c.joint === 'dowels') st.push(['Dübellöcher bohren', `Dübel alle ca. 12 cm setzen, 40 mm von vorne und hinten. Mit Dübellehre oder Dübelmarkierern die Positionen übertragen. In der Plattenfläche ${t <= 16 ? '10' : '12'} mm tief bohren (nie durch!), in der Stirnkante ${t <= 16 ? '20' : '28'} mm.`, 'Erst eine Probeverbindung mit Reststücken machen.']);
+  if (c.joint === 'cam') st.push(['Bohrungen für Exzenter', `Exzentergehäuse Ø 15 mm mit dem Forstnerbohrer in die Innenseiten von ${between}${n > 1 ? ' und die Mittelwände' : ''} bohren, Tiefe und Randabstand gemäss Hersteller (meist 12,5 mm tief, 24 oder 34 mm von der Kante). Passende Löcher für die Bolzen in die Gegenstücke.`, 'Eine Bohrschablone spart viel Anreissen und Fehler.']);
+  const glue = c.joint === 'dowels' ? ` Dübel und Kontaktflächen dünn mit ${glueName} bestreichen, zusammenschieben und mit Zwingen pressen. Austretenden Leim sofort feucht abwischen.` : '';
+  if (bath) st.push(['Alle Teile rundum versiegeln – vor der Montage', `Im Bad muss jedes Teil von allen Seiten geschützt sein, auch Innenseiten, Unterseite und Rückwand. ${hinged || (c.front !== 'open' && (c.handle === 'hole' || c.handle === 'shell')) ? 'Bohr die Topfbohrungen und Grifflöcher schon jetzt, damit auch sie versiegelt werden. ' : ''}${mdf ? 'Isoliergrund auftragen, Kanten zweimal, dann ' : 'Dann '}${mdf || paint ? 'PU-Lack' : 'wasserbasierten PU-Klarlack'} in 3 dünnen Schichten auftragen, mit Zwischenschliff Körnung 240. Alle Kanten und Bohrlöcher bekommen eine Schicht extra. Die Verbindungsflächen für den Leim frei lassen.`, 'Leg die Teile auf Leisten oder Nägel, dann kannst du beide Seiten nacheinander streichen.']);
+  st.push(['Korpus zusammenbauen', `Zuerst alles trocken zusammenstecken. Dann den Boden zwischen die Seiten setzen, ${topOver ? 'den Deckel oben auflegen' : 'den Deckel zwischen die Seiten setzen'}${n > 1 ? ' und die Mittelwände dazwischen einpassen' : ''}.${glue} Arbeite auf einer ebenen Fläche und kontrollier jede Ecke mit dem Winkel.`, 'Zu zweit geht es deutlich einfacher.']);
+  if (Bk) st.push(['Rechtwinklig ausrichten, Rückwand montieren', 'Beide Diagonalen messen – sind sie gleich lang, ist der Korpus rechtwinklig. Rückwand auflegen, rundum 1 mm zurück, und alle 15 cm verschrauben, auch in die Hinterkanten der Mittelwände. Die Rückwand macht den Korpus stabil.', null]);
+  else st.push(['Rechtwinklig ausrichten und aussteifen', 'Beide Diagonalen messen, bis sie gleich lang sind. Dann hinten in allen vier Ecken Metallwinkel setzen.', null]);
+  if (c.base === 'legs') st.push(['Füsse montieren', `Korpus auf eine Decke legen. Anschraubplatten ca. 55 mm von den Aussenkanten unter den Boden schrauben und die ${bh} mm hohen Füsse eindrehen.`, 'Schrauben nicht länger als Bodenstärke minus 3 mm.']);
+  if (c.base === 'plinth') st.push(['Sockel bauen und montieren', 'Die vier Sockelteile zu einem Rahmen verschrauben (Blenden aussen, Seitenteile dazwischen). Rahmen 30 mm zurückversetzt unter den Boden stellen und mit den Stahlwinkeln festschrauben.', 'Der zurückgesetzte Sockel lässt das Möbel schweben.']);
+  if (bath) { /* bereits vor der Montage versiegelt */ }
+  else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.', null]);
+  else st.push(['Oberfläche ölen', `Staub entfernen und Hartwachsöl dünn mit Lappen oder Pinsel auftragen, nach 15 Minuten Überschuss abnehmen. Nach dem Trocknen ein zweites Mal.${paint ? ' Die Fronten vorher grundieren und zweimal lackieren.' : ''}`, 'Weiss pigmentiertes Öl gibt den hellen, nordischen Ton.']);
+  if (hinged) st.push(['Türen anschlagen', 'In jede Tür Topfbohrungen Ø 35 mm, ca. 12 mm tief, Randabstand meist 3–5 mm (Datenblatt!), ca. 100 mm von oben und unten. Montageplatten an die Seiten bzw. Mittelwände schrauben, Scharniere einklipsen und mit den Stellschrauben auf gleichmässige 3-mm-Fugen einstellen.', 'Eine Scharnier-Bohrlehre sorgt für gerade, gleich tiefe Löcher.']);
+  if (sliding) st.push(['Schiebetüren einsetzen', `Untere Laufschiene auf den Boden und obere Führungsschiene unter den Deckel schrauben, 5 mm hinter der Vorderkante, beide auf ${r0(o.c.W - 2*t)} mm gekürzt. Gleiter an die ${ns} Türen montieren, Türen oben einheben und unten einsetzen.`, 'Die Türhöhe hängt vom Beschlag ab – im Zweifel die Türen erst zuschneiden, wenn der Beschlag da ist.']);
+  if (c.front !== 'open') {
+    if (c.handle === 'hole') st.push(['Grifflöcher bohren', 'Position anzeichnen, Restholz hinter die Tür spannen und mit dem Forstnerbohrer Ø 30 mm durchbohren. Kante innen und aussen leicht brechen.', null]);
+    if (c.handle === 'knob') st.push(['Knöpfe montieren', 'Position anzeichnen (ca. 45 mm vom Rand, 70 mm von oben), Ø 5 mm durchbohren und Knöpfe von hinten festschrauben.', null]);
+    if (c.handle === 'push') st.push(['Push-to-open einbauen', 'Beschlag innen an die Seite bzw. Mittelwand auf der Griffseite schrauben, Türen so einstellen, dass etwa 2 mm Luft zum Drücken bleibt.', null]);
+    if (c.handle === 'shell') st.push(['Griffmuscheln einsetzen', 'Mit dem Forstnerbohrer Ø 35 mm nach Herstellerangabe tief bohren (nicht durch) und die Griffmuscheln einpressen.', null]);
+  }
+  if (c.shelves) st.push(['Einlegeböden einlegen', 'Bodenträger in die gewünschte Höhe stecken und die Einlegeböden auflegen.', null]);
+  return st;
+}
+
+/* ---------- Guillotine-Packen ---------- */
+function pack(items, SL, SB, kerf, margin, rotate){
+  const UW = SL - 2*margin + kerf, UH = SB - 2*margin + kerf;
+  const list = items.slice().sort((a, b) => b.L*b.B - a.L*a.B || Math.max(b.L, b.B) - Math.max(a.L, a.B));
+  const sheets = [], unplaced = [];
+  const fits = (it, w, h) => it.L + kerf <= w && it.B + kerf <= h;
+  for (const it of list) {
+    const canFitEmpty = fits(it, UW, UH) || (rotate && it.B + kerf <= UW && it.L + kerf <= UH);
+    if (!canFitEmpty) { if (!unplaced.some(u => u.key === it.key)) unplaced.push(it); continue; }
+    let placed = false;
+    for (const sh of sheets) { if (place(sh, it)) { placed = true; break; } }
+    if (!placed) { const sh = { free:[{ x:0, y:0, w:UW, h:UH }], parts:[] }; sheets.push(sh); place(sh, it); }
+  }
+  function place(sh, it){
+    let best = null;
+    for (let i = 0; i < sh.free.length; i++) {
+      const f = sh.free[i];
+      const opts = [[it.L + kerf, it.B + kerf, false]];
+      if (rotate && it.L !== it.B) opts.push([it.B + kerf, it.L + kerf, true]);
+      for (const [w, h, rot] of opts) {
+        if (w <= f.w && h <= f.h) {
+          const score = f.w*f.h - w*h;
+          if (!best || score < best.score) best = { i, w, h, rot, score };
+        }
+      }
+    }
+    if (!best) return false;
+    const f = sh.free.splice(best.i, 1)[0];
+    sh.parts.push({ it, x: f.x + margin, y: f.y + margin, w: best.w - kerf, h: best.h - kerf, rot: best.rot });
+    const lw = f.w - best.w, lh = f.h - best.h;
+    let a, b;
+    if (lw < lh) { a = { x:f.x + best.w, y:f.y, w:lw, h:best.h }; b = { x:f.x, y:f.y + best.h, w:f.w, h:lh }; }
+    else { a = { x:f.x + best.w, y:f.y, w:lw, h:f.h }; b = { x:f.x, y:f.y + best.h, w:best.w, h:lh }; }
+    for (const r of [a, b]) if (r.w > kerf && r.h > kerf) sh.free.push(r);
+    return true;
+  }
+  const used = sheets.reduce((a, s) => a + s.parts.reduce((b, p) => b + p.w*p.h, 0), 0);
+  const partArea = items.reduce((a, it) => a + it.L * it.B, 0);
+  return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
+}
+
+/* ---------- Ausgabe ---------- */
+let R = null;
+function render(){
+  const c = readCfg();
+  R = compute(c);
+  renderSummary(R); renderWarns(R); renderCut(R); renderSheets(R); renderHw(R); renderSteps(R);
+  $('#dimTag').textContent = `${R.W} × ${R.H} × ${R.Dtot} mm`;
+  $('#bDoors').hidden = c.front === 'open';
+  if (window.THREE && three.ok) build3D(R);
+}
+function renderSummary(R){
+  const main = R.groups[0], back = R.groups[1];
+  const cost = R.groups.reduce((a, g) => a + g.partArea / 1e6 * g.price, 0);
+  const parts = R.rows.reduce((a, r) => a + r.qty, 0);
+  const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
+  $('#summary').innerHTML = `
+    <div><dt>Aussenmass</dt><dd>${R.W} × ${R.H} × ${R.Dtot} <small>mm</small></dd></div>
+    <div><dt>Teile</dt><dd>${parts}</dd></div>
+    <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
+    <div><dt>Material ca.</dt><dd>CHF ${Math.round(cost / 5) * 5}</dd></div>
+    `;
+  const why = `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
+  $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
+  $('#cnt-cut').textContent = parts;
+  $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
+}
+function renderWarns(R){
+  $('#warns').innerHTML = R.warn.map(w => `<div class="warn">${w}</div>`).join('');
+}
+function renderCut(R){
+  const groups = [...new Set(R.rows.map(r => r.group))];
+  let html = `<thead><tr><th>Pos</th><th>Bauteil</th><th>Anz.</th><th>Länge × Breite</th><th>Stärke</th><th>Hinweis</th></tr></thead>`;
+  let area = 0;
+  for (const g of groups) {
+    const rows = R.rows.filter(r => r.group === g);
+    const n = rows.reduce((a, r) => a + r.qty, 0);
+    html += `<tbody class="grp"><tr><th colspan="6">${g}<span>${n} Teile</span></th></tr></tbody><tbody>`;
+    for (const r of rows) {
+      area += r.qty * r.L * r.B / 1e6;
+      html += `<tr data-key="${encodeURIComponent(r.key)}"><td class="pos">${r.pos}</td><td>${r.name}</td><td class="n">${r.qty}×</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.t}</td><td class="note">${r.note || '–'}</td></tr>`;
+    }
+    html += `</tbody>`;
+  }
+  html += `<tfoot><tr><td colspan="6">Zuschnittfläche total ${area.toFixed(2)} m² · alle Masse in mm</td></tr></tfoot>`;
+  $('#cutTable').innerHTML = html;
+}
+function renderSheets(R){
+  let html = '';
+  for (const g of R.groups) {
+    const [SL, SB] = g.sheet;
+    const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
+    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}</p><div class="sheetlist">`;
+    g.sheets.forEach((sh, i) => {
+      html += `<figure class="sheet"><figcaption><span>Platte ${i + 1}</span><span>${sh.parts.length} Teile</span></figcaption>
+        <svg viewBox="-12 -12 ${SL + 24} ${SB + 24}" role="img" aria-label="Plattenplan ${g.label}, Platte ${i + 1}">
+        <rect x="0" y="0" width="${SL}" height="${SB}" class="sh-bg"></rect>`;
+      for (const p of sh.parts) {
+        const it = p.it, cls = it.kind === 'front' ? 'front' : it.kind === 'back' ? 'back' : '';
+        const fs = Math.max(26, Math.min(90, Math.min(p.w, p.h) * 0.32));
+        const showDim = p.w > 300 && p.h > 150;
+        const cx = p.x + p.w/2, cy = p.y + p.h/2;
+        html += `<g class="sh-part ${cls}" data-key="${encodeURIComponent(it.key)}"><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"><title>${it.pos} · ${it.name} · ${it.L} × ${it.B} mm</title></rect>`;
+        if (p.w > 60 && p.h > 50) html += `<text x="${cx}" y="${showDim ? cy - fs*0.45 : cy}" font-size="${fs}" font-weight="500">${it.pos}</text>`;
+        if (showDim) html += `<text x="${cx}" y="${cy + fs*0.55}" font-size="${fs*0.55}">${it.L}×${it.B}</text>`;
+        html += `</g>`;
+      }
+      html += `</svg></figure>`;
+    });
+    if (!g.sheets.length) html += `<p class="hint">Keine Teile auf diesem Format.</p>`;
+    html += `</div></div>`;
+  }
+  $('#sheets').innerHTML = html;
+}
+function renderHw(R){
+  $('#hwList').innerHTML = R.hw.map(([q, n, s]) => `<li><span class="q">${q}×</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
+  $('#toolList').innerHTML = R.tools.map(t => `<li>${t}</li>`).join('');
+  $('#finishList').innerHTML = R.finish.map(([q, n, s]) => `<li><span class="q">${q}</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
+}
+function renderSteps(R){
+  $('#steps').innerHTML = R.steps.map(([h, p, tip]) => `<li><div><h3>${h}</h3><p>${p}</p>${tip ? `<p class="tip">Tipp: ${tip}</p>` : ''}</div></li>`).join('');
+}
+
+/* ---------- Hervorheben ---------- */
+let hlKey = null;
+function highlight(key){
+  if (key === hlKey) return;
+  hlKey = key;
+  const enc = key ? encodeURIComponent(key) : null;
+  document.querySelectorAll('tr[data-key]').forEach(tr => tr.classList.toggle('hl', tr.dataset.key === enc));
+  document.querySelectorAll('.sh-part').forEach(g => g.classList.toggle('hl', g.dataset.key === enc));
+  if (three.ok) for (const [k, list] of Object.entries(three.byKey)) {
+    const on = k === key;
+    for (const m of list) for (const mat of (Array.isArray(m.material) ? m.material : [m.material])) {
+      mat.emissive.setHex(on ? 0x3a8aa0 : 0x000000); mat.emissiveIntensity = on ? 0.45 : 0;
+    }
+  }
+}
+function keyFromEl(el){ const h = el.closest('[data-key]'); return h ? decodeURIComponent(h.dataset.key) : null; }
+for (const sel of ['#cutTable', '#sheets']) {
+  const el = $(sel);
+  el.addEventListener('pointerover', e => highlight(keyFromEl(e.target)));
+  el.addEventListener('pointerleave', () => highlight(null));
+}
+
+/* ---------- 3D ---------- */
+const S = 0.001;
+const three = { ok:false, byKey:{}, doors:[], open:0, openT:0, ex:0, exT:0, userMoved:false, texCache:{}, matCache:{} };
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function shade(hex, f){
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = f < 0 ? 0 : 255, p = Math.abs(f);
+  r = Math.round((t - r)*p + r); g = Math.round((t - g)*p + g); b = Math.round((t - b)*p + b);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function makeTex(canvas){
+  const tx = new THREE.CanvasTexture(canvas);
+  tx.anisotropy = three.renderer.capabilities.getMaxAnisotropy();
+  return tx;
+}
+function grainTex(color, along){
+  const k = `g|${color}|${along}`;
+  if (three.texCache[k]) return three.texCache[k];
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = color; g.fillRect(0, 0, 512, 512);
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const dark = shade(color, -0.22), light = shade(color, 0.12);
+  for (let i = 0; i < 110; i++) {
+    const p = rnd()*512, amp = 1.5 + rnd()*7, fr = 0.004 + rnd()*0.012, ph = rnd()*6.28;
+    g.strokeStyle = rnd() < 0.72 ? dark : light;
+    g.globalAlpha = 0.04 + rnd()*0.12; g.lineWidth = 0.6 + rnd()*2.4;
+    g.beginPath();
+    for (let q = 0; q <= 512; q += 8) {
+      const off = Math.sin(q*fr + ph)*amp;
+      const [x, y] = along === 'u' ? [q, p + off] : [p + off, q];
+      q === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  return (three.texCache[k] = makeTex(c));
+}
+function plyTex(color, along, layers){
+  const k = `p|${color}|${along}|${layers}`;
+  if (three.texCache[k]) return three.texCache[k];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const step = 256 / layers;
+  for (let i = 0; i < layers; i++) {
+    g.fillStyle = shade(color, i % 2 ? -0.1 : 0.03);
+    along === 'u' ? g.fillRect(i*step, 0, step + 1, 256) : g.fillRect(0, i*step, 256, step + 1);
+    g.fillStyle = shade(color, -0.38);
+    along === 'u' ? g.fillRect(i*step, 0, 1.4, 256) : g.fillRect(0, i*step, 256, 1.4);
+  }
+  return (three.texCache[k] = makeTex(c));
+}
+function stdMat(opts){ return new THREE.MeshStandardMaterial(Object.assign({ roughness:0.78, metalness:0 }, opts)); }
+function faceMat(fin, along){
+  const k = `f|${fin.color}|${fin.grain ? along : '-'}|${fin.painted ? 1 : 0}`;
+  if (!three.matCache[k]) three.matCache[k] = fin.grain ? stdMat({ map: grainTex(fin.color, along) }) : stdMat({ color: fin.color, roughness: fin.painted ? 0.55 : 0.8 });
+  return three.matCache[k];
+}
+function edgeMat(fin, along, th){
+  const layers = Math.max(3, Math.round(th / 1.45));
+  const k = fin.ply ? `e|ply|${fin.plyColor}|${along}|${layers}` : `e|${fin.color}`;
+  if (!three.matCache[k]) three.matCache[k] = fin.ply ? stdMat({ map: plyTex(fin.plyColor, along, layers) }) : stdMat({ color: shade(fin.color, -0.07), roughness: fin.painted ? 0.55 : 0.85 });
+  return three.matCache[k];
+}
+const UV = { x:['z','y'], y:['x','z'], z:['x','y'] };
+const FACE_AXIS = ['x','x','y','y','z','z'];
+function boxMesh(b){
+  const [sx, sy, sz] = b.size;
+  const th = { x:sx, y:sy, z:sz }[b.thin];
+  const geo = new THREE.BoxGeometry(sx*S, sy*S, sz*S);
+  const mats = FACE_AXIS.map(ax => {
+    const [u] = UV[ax];
+    if (ax === b.thin) return faceMat(b.fin, b.grain === u ? 'u' : 'v').clone();
+    return edgeMat(b.fin, b.thin === u ? 'u' : 'v', th).clone();
+  });
+  const m = new THREE.Mesh(geo, mats);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function place(obj, pos, ex){
+  obj.userData.base = pos; obj.userData.ex = ex || [0, 0, 0];
+  obj.position.set(pos[0]*S, pos[1]*S, pos[2]*S);
+}
+function reg(key, m){ m.userData.key = key; (three.byKey[key] = three.byKey[key] || []).push(m); }
+
+function handleMesh(type, t){
+  const g = new THREE.Group();
+  if (type === 'hole') {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(15*S, 15*S, (t + 0.8)*S, 40), stdMat({ color:'#221E1B', roughness:1 }));
+    m.rotation.x = Math.PI/2; g.add(m);
+  } else if (type === 'knob') {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(14*S, 12*S, 24*S, 40), stdMat({ color:'#B78A55' }));
+    m.rotation.x = Math.PI/2; m.position.z = (t/2 + 12)*S; m.castShadow = true; g.add(m);
+  } else if (type === 'shell') {
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(18*S, 18*S, 1.2*S, 48), stdMat({ color:'#A7ACAA', metalness:0.6, roughness:0.35 }));
+    ring.rotation.x = Math.PI/2; ring.position.z = (t/2 + 0.3)*S; g.add(ring);
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(14.5*S, 14.5*S, 1.4*S, 40), stdMat({ color:'#5E6260', metalness:0.5, roughness:0.5 }));
+    cup.rotation.x = Math.PI/2; cup.position.z = (t/2 + 0.5)*S; g.add(cup);
+  }
+  return g;
+}
+
+function initThree(){
+  const el = $('#stage');
+  try {
+    if (!window.THREE || !THREE.OrbitControls) throw new Error('lib');
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false });
+    three.renderer = renderer;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    el.appendChild(renderer.domElement);
+    const scene = new THREE.Scene(); three.scene = scene;
+    const camera = new THREE.PerspectiveCamera(32, 1.6, 0.02, 60); three.camera = camera;
+    const controls = new THREE.OrbitControls(camera, renderer.domElement); three.controls = controls;
+    controls.enableDamping = true; controls.dampingFactor = 0.09;
+    controls.maxPolarAngle = Math.PI * 0.495; controls.minDistance = 0.4; controls.maxDistance = 9;
+    controls.addEventListener('start', () => { three.userMoved = true; });
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb9b2a5, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    dir.position.set(1.6, 3.2, 2.4); dir.castShadow = true;
+    dir.shadow.mapSize.set(2048, 2048); dir.shadow.bias = -0.0006; dir.shadow.normalBias = 0.012;
+    Object.assign(dir.shadow.camera, { left:-2.2, right:2.2, top:2.2, bottom:-2.2, near:0.5, far:10 });
+    scene.add(dir); three.dir = dir;
+    const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-2, 1.2, 1.5); scene.add(fill);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity:0.17 }));
+    ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+    three.root = new THREE.Group(); scene.add(three.root);
+    const resize = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+      if (!three.userMoved && R) fitCamera(R);
+    };
+    new ResizeObserver(resize).observe(el); resize();
+
+    // Teil antippen
+    const ray = new THREE.Raycaster(), v2 = new THREE.Vector2();
+    let down = null;
+    renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+    renderer.domElement.addEventListener('pointerup', e => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+      const r = renderer.domElement.getBoundingClientRect();
+      v2.set(((e.clientX - r.left) / r.width)*2 - 1, -((e.clientY - r.top) / r.height)*2 + 1);
+      ray.setFromCamera(v2, camera);
+      const hit = ray.intersectObjects(three.root.children, true).find(h => h.object.userData.key);
+      const pick = $('#pick');
+      if (hit) {
+        const row = R.rows.find(x => x.key === hit.object.userData.key);
+        highlight(row.key);
+        pick.innerHTML = `<b>${row.pos}</b>${row.name} · <span class="mono">${row.L} × ${row.B} × ${row.t} mm</span>`;
+        pick.hidden = false;
+      } else { highlight(null); pick.hidden = true; }
+    });
+    three.ok = true;
+    const tick = () => {
+      requestAnimationFrame(tick);
+      const k = reduceMotion ? 1 : 0.12;
+      three.open += (three.openT - three.open) * k;
+      three.ex += (three.exT - three.ex) * k;
+      applyAnim();
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    tick();
+  } catch (e) {
+    el.innerHTML = '<div class="nogl">Die 3D-Vorschau braucht WebGL. Zuschnittliste und Plattenplan funktionieren trotzdem.</div>';
+  }
+}
+function applyAnim(){
+  for (const o of three.root.children) {
+    const b = o.userData.base, x = o.userData.ex;
+    if (!b) continue;
+    o.position.set((b[0] + x[0]*three.ex)*S, (b[1] + x[1]*three.ex)*S, (b[2] + x[2]*three.ex)*S);
+    const d = o.userData.door;
+    if (d && d.type === 'hinge') o.rotation.y = -d.sign * (Math.PI * 0.58) * three.open;
+    if (d && d.type === 'slide') o.position.x += d.shift * three.open * S;
+  }
+}
+function fitCamera(R){
+  const cam = three.camera;
+  const r = Math.hypot(R.W, R.H, R.Dtot) / 2 * S;
+  const v = cam.fov * Math.PI / 180;
+  const hf = 2 * Math.atan(Math.tan(v/2) * cam.aspect);
+  const dist = r / Math.sin(Math.min(v, hf) / 2) * 1.02;
+  const target = new THREE.Vector3(0, R.H/2*S*0.92, 0);
+  const dir = new THREE.Vector3(0.62, 0.42, 1.3).normalize();
+  cam.position.copy(target).addScaledVector(dir, dist);
+  three.controls.target.copy(target);
+  cam.near = dist / 50; cam.far = dist * 20; cam.updateProjectionMatrix();
+}
+function clearRoot(){
+  const root = three.root;
+  root.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+  });
+  while (root.children.length) root.remove(root.children[0]);
+  three.byKey = {};
+}
+function build3D(R){
+  clearRoot();
+  const root = three.root, t = R.t;
+  for (const b of R.boxes) { const m = boxMesh(b); place(m, b.pos, b.ex); reg(b.key, m); root.add(m); }
+
+  for (const d of R.doors) {
+    const g = new THREE.Group();
+    const sign = d.side === 'L' ? 1 : -1;
+    const hx = d.cx - sign * d.dw / 2;
+    const m = boxMesh({ size:[d.dw, d.dh, t], thin:'z', grain:'y', fin:R.frontFin });
+    m.position.set(sign * d.dw/2 * S, 0, t/2 * S);
+    reg(d.key, m); g.add(m);
+    if (R.handle !== 'push') {
+      const h = handleMesh(R.handle, t);
+      h.position.set(sign * (d.dw - 45) * S, (d.dh/2 - 70) * S, t/2 * S);
+      g.add(h);
+    }
+    place(g, [hx, d.yc, R.D/2 + 1], [0, 0, 240]);
+    g.userData.door = { type:'hinge', sign };
+    root.add(g);
+  }
+  for (const d of R.slides) {
+    const g = new THREE.Group();
+    const m = boxMesh({ size:[d.ws, d.dh, t], thin:'z', grain:'y', fin:R.frontFin });
+    reg(d.key, m); g.add(m);
+    const h = handleMesh(R.handle, t);
+    const hx = d.idx === 0 ? -d.ws/2 + 50 : d.ws/2 - 50;
+    h.position.set(hx * S, 0, 0); g.add(h);
+    place(g, [d.cx, d.yc, d.z], [0, 0, d.idx % 2 === 0 ? 260 : 200]);
+    g.userData.door = { type:'slide', shift: d.shift };
+    root.add(g);
+  }
+  const trackMat = stdMat({ color:'#9EA3A1', metalness:0.5, roughness:0.45 });
+  for (const e of R.extras) {
+    if (e.type === 'leg') {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(21*S, e.rBot*S, e.h*S, 32), stdMat({ color:e.color, roughness: e.color === '#1F2122' ? 0.5 : 0.7 }));
+      m.castShadow = true;
+      place(m, [e.x, e.h/2, e.z], [0, -80, 0]); root.add(m);
+    }
+    if (e.type === 'track') {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(e.len*S, 8*S, e.depth*S), trackMat.clone());
+      m.castShadow = m.receiveShadow = true;
+      place(m, [0, e.y, e.z], [0, 0, 0]); root.add(m);
+    }
+  }
+  const ext = Math.max(R.W, R.D) / 1000 * 0.75 + 0.4;
+  Object.assign(three.dir.shadow.camera, { left:-ext, right:ext, top:ext, bottom:-ext });
+  three.dir.shadow.camera.updateProjectionMatrix();
+  if (!three.userMoved) fitCamera(R);
+  hlKey = '__none'; highlight(null);
+  $('#pick').hidden = true;
+  applyAnim();
+}
+
+/* ---------- Ereignisse ---------- */
+form.addEventListener('input', e => {
+  const el = e.target;
+  if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
+  else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
+  if (el.name === 'mat') {
+    const M = MATS[el.value];
+    fillThickness(el.value, $('#t').value);
+    $('#sheetL').value = M.sheet[0]; $('#sheetB').value = M.sheet[1]; $('#price').value = M.price;
+  }
+  if (el.name === 'front') fillHandles(el.value, $('#handle').value);
+  if (el.name === 'base') {
+    const v = el.value === 'plinth' ? 80 : 160;
+    $('#baseH').value = v; $('#baseH-r').value = v;
+  }
+  syncVisibility(); render(); save();
+});
+form.addEventListener('change', e => {
+  const el = e.target;
+  if (el.type === 'number' && el.value !== '') {
+    const v = clamp(Number(el.value), Number(el.min), Number(el.max));
+    if (String(v) !== el.value) { el.value = v; const r = $('#' + el.id + '-r'); if (r) r.value = v; render(); save(); }
+  }
+});
+form.addEventListener('submit', e => e.preventDefault());
+
+$('#bDoors').addEventListener('click', e => {
+  three.openT = three.openT ? 0 : 1;
+  e.currentTarget.setAttribute('aria-pressed', String(!!three.openT));
+  e.currentTarget.textContent = three.openT ? 'Türen schliessen' : 'Türen öffnen';
+});
+$('#bExplode').addEventListener('click', e => {
+  three.exT = three.exT ? 0 : 1;
+  e.currentTarget.setAttribute('aria-pressed', String(!!three.exT));
+});
+$('#bReset').addEventListener('click', () => { three.userMoved = false; if (three.ok && R) fitCamera(R); });
+
+// Tabs
+const tabs = [...document.querySelectorAll('.tab')];
+function selectTab(id){
+  for (const t of tabs) {
+    const on = t.id === id;
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+    $('#' + t.getAttribute('aria-controls')).hidden = !on;
+  }
+  try { localStorage.setItem(STORE + '-tab', id); } catch (e) {}
+}
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => selectTab(t.id));
+  t.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    selectTab(n.id); n.focus();
+  });
+});
+
+// Kopieren
+$('#bCopy').addEventListener('click', () => {
+  const lines = [`Sideboard ${R.W} × ${R.H} × ${R.D} mm – Zuschnittliste (Länge = Faserrichtung, Masse in mm)`];
+  for (const g of [...new Set(R.rows.map(r => r.group))]) {
+    lines.push('', g);
+    for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${r.note ? ' (' + r.note + ')' : ''}`);
+  }
+  const text = lines.join('\n');
+  const box = $('#copyBox'), msg = $('#copied');
+  const fallback = () => { box.hidden = false; box.value = text; box.focus(); box.select(); msg.textContent = 'Text markiert – mit Ctrl+C kopieren.'; };
+  try {
+    navigator.clipboard.writeText(text).then(() => { box.hidden = true; msg.textContent = 'Kopiert.'; setTimeout(() => { msg.textContent = ''; }, 2500); }, fallback);
+  } catch (e) { fallback(); }
+});
+
+/* ---------- Start ---------- */
+restore();
+syncVisibility();
+try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
+initThree();
+render();
+})();
+</script>
