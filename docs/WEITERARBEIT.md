@@ -74,7 +74,14 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 - [ ] Richtpreise für Sideboard-Beschläge (Scharniere, Schiebetürbeschlag, Füsse) fehlen ganz; ebenso Verbindungsbeschläge und Rückwandschrauben (beide Möbel) und Oberfläche (Öl, Grundierung, Lack).
 - [ ] Ungenau, aber keine Preise: Spannweiten `SPAN` (Daumenregel), Ergiebigkeit von Farbe/Öl (10 bzw. 22 m²/l), Schnittkosten beim Zuschnitt nicht eingerechnet.
 
+## Oberfläche
+
+- Möbeltyp-Umschalter steht im Kopf (Radios mit `form="cfg"`, Ereignisse laufen über `#kindBar` in dieselben Handler). «In Sammlung»: Handy in der Leiste unten («Sammeln» neben «Ergebnis»), Desktop im Kopf neben dem Preis (`.js-sammeln`, Meldung `.js-sammelmsg`).
+- Reihenfolge im Formular, von Rahmen über Form zu Material und Technik: Zufall · Masse / Raum · Bauart · Form · Tablare · Nische · Aufbau · Front · Material · Verbindung · Platten & Preise · Niveau.
+
 ## Ideen (noch nicht entschieden)
+
+- **Ansichten trennen** (Entwerfen / Bauplan / Sammlung, evtl. Möbelwahl als erster Schritt): vorgeschlagen am 25.09.2026, Entscheid offen. Prompt für die Diskussion: `docs/prompts/ansichten-flow.md`.
 
 - **Materialauswahl mit Filter** (Optik wählen, dann passende Platten; beim Sideboard die rustikalen ausblenden): besprochen, vorerst verworfen – die nach Preis sortierte Liste reicht.
 - **Maserung pro Bauteil wählbar**: verworfen; die Richtung wird automatisch festgelegt und in der Materialliste ausgewiesen.

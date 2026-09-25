@@ -51,6 +51,12 @@ test('Zufall Reduit lässt den Raum stehen', () => {
   assert.notStrictEqual(d.shape, 'U', 'U-Form braucht Platz');
 });
 
+for (const wall of ['solid', 'drywall']) test(`Zufall Reduit (${wall}) würfelt meist eingebaute Regale`, () => {
+  const rnd = seeded(11), n = { built:0, free:0 };
+  for (let i = 0; i < 100; i++) n[K.zufall({ ...FORM, kind:'reduit', wall }, rnd).build]++;
+  assert.ok(n.built >= 50, JSON.stringify(n));
+});
+
 test('Zufall Sideboard behält Einsatzort und Masse des Bads', () => {
   const d = K.zufall({ ...FORM, room:'bath' }, seeded(3));
   assert.strictEqual(d.room, 'bath');
