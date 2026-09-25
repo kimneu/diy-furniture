@@ -11,7 +11,7 @@ const PREISE = {
     "eiche": { "prices": { "18": 109, "27": 149 }, "sheet": [ 2500, 1200 ], "stand": "2026-09-25", "quelle": "Leimholzplatte Eiche B/C, ungeölt" },
     "fichte": { "prices": { "18": 59.95, "21": 79.95, "27": 94.95 }, "sheet": [ 2500, 1210 ], "stand": "2026-09-25", "quelle": "Leimholzplatte Fichte B" },
     "seekiefer": { "prices": { "12": 36.95, "15": 47.95 }, "sheet": [ 2500, 1250 ], "stand": "2026-09-25", "quelle": "Sperrholz Seekiefer Premium" },
-    "fichtesp": { "prices": { "12": 44.95, "15": 52.95, "18": 64.95, "21": 72.95, "24": 84.95 }, "sheet": [ 2500, 1250 ], "stand": "2026-09-25", "quelle": "Sperrholz Fichte III/III" },
+    "fichtesp": { "prices": { "12": 44.95, "15": 52.95, "18": 64.95, "21": 72.95, "24": 84.95 }, "sheet": [ 2500, 1250 ], "stand": "2026-09-25", "quelle": "Sperrholz Fichte II/III" },
     "mdf": { "prices": { "16": 34.95, "19": 38.95, "22": 39.95 }, "sheet": [ 2800, 2070 ], "stand": "2026-09-25", "quelle": "Oecoplan MDF" },
     "schaltafel": { "prices": { "27": 29.5 }, "sheet": [ 2000, 500 ], "stand": "2026-09-25", "quelle": "Schalungstafel 3-S 27 x 2000 x 500 mm, ganze Tafel CHF 29.50 (kein Zuschnitt)" },
     "osb": { "prices": { "12": 19.95, "15": 24.95, "18": 29.95 }, "sheet": [ 2770, 2070 ], "stand": "2026-09-25", "quelle": "OSB 3 V100 PEFC" },

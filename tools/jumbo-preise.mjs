@@ -109,16 +109,16 @@ async function prices(page, keys) {
       rows.push({ key, t, name:p.name, price:p.price, was:cur.price(t), max:`${p.maxL} × ${p.maxB}`, sheet:cur.sheet.join(' × ') });
     }
     const extra = first.thick.map(o => o.t).filter(t => !want.includes(t));
-    if (extra.length && !src.t) rows.push({ key, t:'', note:`weitere Stärken bei Jumbo: ${extra.join('/')} (neu aufnehmen: von Hand in preise.js und SPAN)` });
+    if (extra.length && !src.t && DATA.platten[key.split('~')[0]]) rows.push({ key, t:'', note:`auch bei Jumbo: ${extra.join('/')} mm` });
     await sleep(PAUSE);
   }
   console.log('\nSchlüssel              Stärke  Jumbo CHF/m²  Code CHF/m²  Jumbo max. Zuschnitt  Code Platte   Produkt');
   for (const r of rows) {
     if (r.note) { console.log(`${r.key.padEnd(22)} ${String(r.t).padStart(4)}   ${r.note}`); continue; }
     const flag = r.price !== r.was || r.max !== r.sheet ? '*' : ' ';
-    console.log(`${flag}${r.key.padEnd(21)} ${String(r.t).padStart(4)}   ${String(r.price).padStart(10)}   ${String(r.was).padStart(10)}   ${r.max.padStart(18)}  ${String(r.sheet).padStart(12)}   ${r.name}`);
+    console.log(`${flag}${r.key.padEnd(21)} ${String(r.t).padStart(4)}   ${String(r.price).padStart(10)}   ${String(r.was ?? '–').padStart(10)}   ${r.max.padStart(18)}  ${String(r.sheet).padStart(12)}   ${r.name}`);
   }
-  console.log('\n* = weicht von preise.js ab');
+  console.log('\n* = weicht von preise.js ab · «auch bei Jumbo» = Stärken, die der Katalog nicht führt (aufnehmen: preise.js + SPAN in reduit.js)');
   return rows;
 }
 
