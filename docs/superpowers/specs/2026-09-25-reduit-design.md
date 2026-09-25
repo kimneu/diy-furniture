@@ -70,7 +70,7 @@ Bei «Reduit» werden «Masse», «Aufbau», «Front» ausgeblendet. Neue Gruppe
 2. **Form** – gerade · L · U. Bei L: Ecke links hinten · rechts hinten.
 3. **Bauart** – selbststehend · eingebaut. Bei «eingebaut» Karten (wie «Verbindung») mit Niveau und Kurztext: Leisten · Schienen · Winkel · Wangen · Pfostenrahmen.
 4. **Tablare** – Tiefe hinten / links / rechts (nur aktive Wände sichtbar), Anzahl Tablare, Abstand unterstes Tablar zum Boden, Abstand oberstes zur Decke.
-5. **Nische** – pro Seitensegment optional am vorderen Ende; beim hinteren Segment optional links oder rechts. Je Nische: Breite, Höhe.
+5. **Nische** – pro Seitensegment optional am vorderen Ende (neben der Tür). Je Nische: Breite, Höhe. Keine Nische am hinteren Segment (beim U läge sie immer hinter einem Seitenregal).
 
 «Material», «Platten & Preise», «Niveau» bleiben für beide Typen. «Verbindung» nur bei «selbststehend».
 
@@ -89,8 +89,6 @@ Koordinaten: Raum B (x) × T (z) × H (y), Tür mittig in der Vorderwand. Wandst
 | U | hinten + links + rechts |
 
 **Ecke:** Hinteres Segment läuft über die volle Breite. Seitensegmente beginnen bei `z = Tiefe hinten` und stossen davor an. Alle Tablare liegen auf gleicher Höhe. Beim Einbau bekommt der Stoss eine **Eckleiste** (unter dem Stoss, an beide Tablare geschraubt); bei Bauart Wangen steht dort eine Wange.
-
-**Hintere Nische** nur auf einer Seite ohne Seitensegment (sonst läge sie unzugänglich hinter dem Seitenregal).
 
 **Seitensegment und Tür:** Läuft standardmässig bis zur Vorderwand (Ende an Wand).
 

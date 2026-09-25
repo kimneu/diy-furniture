@@ -353,7 +353,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         </div>
       </section>
 
-      <section class="group" data-kind="reduit">
+      <section class="group" data-kind="reduit" id="grp-niche">
         <h2>Nische</h2>
         <div class="field" id="row-nicheL">
           <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
@@ -369,14 +369,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
             <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
           </div>
         </div>
-        <div class="field" id="row-nicheB">
-          <span class="lbl" id="lbl-nicheB">Nische hinten</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-nicheB"><input type="radio" name="nicheB" id="nicheB-none" value="none" checked><label for="nicheB-none">keine</label><input type="radio" name="nicheB" id="nicheB-L" value="L"><label for="nicheB-L">links</label><input type="radio" name="nicheB" id="nicheB-R" value="R"><label for="nicheB-R">rechts</label></div>
-        </div>
-          <div class="row2" id="row-nicheB-dims">
-            <div class="num wide"><input id="nicheBW" name="nicheBW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite hinten"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheBH" name="nicheBH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe hinten"><span>mm hoch</span></div>
-          </div>
         <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
       </section>
 
@@ -669,10 +661,7 @@ function syncVisibility(){
   $('#row-dRight').hidden = $('#row-nicheR').hidden = !hasR;
   $('#row-nicheL-dims').hidden = !f.get('nicheL');
   $('#row-nicheR-dims').hidden = !f.get('nicheR');
-  // Hintere Nische nur, wo kein Seitenregal davor steht
-  $('#nicheB-L').disabled = hasL; $('#nicheB-R').disabled = hasR;
-  if (($('#nicheB-L').checked && hasL) || ($('#nicheB-R').checked && hasR)) $('#nicheB-none').checked = true;
-  $('#row-nicheB-dims').hidden = new FormData(form).get('nicheB') === 'none';
+  $('#grp-niche').hidden = !hasL && !hasR;
 }
 function readCfg(){
   const f = new FormData(form);
@@ -687,8 +676,7 @@ function readCfg(){
     shape:f.get('shape'), corner:f.get('corner'), build:f.get('build'), sys:f.get('sys'),
     dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
     nicheL:f.get('nicheL') === 'on', nicheLW:n('nicheLW'), nicheLH:n('nicheLH'),
-    nicheR:f.get('nicheR') === 'on', nicheRW:n('nicheRW'), nicheRH:n('nicheRH'),
-    nicheB:f.get('nicheB'), nicheBW:n('nicheBW'), nicheBH:n('nicheBH')
+    nicheR:f.get('nicheR') === 'on', nicheRW:n('nicheRW'), nicheRH:n('nicheRH')
   };
 }
 function save(){

@@ -45,13 +45,6 @@ test('Nische am vorderen Ende des Seitenregals', () => {
   assert.deepStrictEqual(s.niche, { at:'end', w:450, h:1300 });
 });
 
-test('hintere Nische nur ohne Seitensegment auf dieser Seite', () => {
-  assert.deepStrictEqual(seg(lay({ shape:'L', corner:'L', nicheB:'R' }), 'back').niche.at, 'end');
-  const n = cfg({ shape:'L', corner:'L', nicheB:'L' });
-  assert.strictEqual(n.cfg.nicheB, 'none');
-  assert.ok(n.warn.some(w => w.includes('Nische')));
-});
-
 test('Tablarhöhen gleichmässig zwischen Boden- und Deckenabstand', () => {
   assert.deepStrictEqual(R.shelfLevels(3, 100, 400, 2400), [100, 1050, 2000]);
 });
@@ -151,7 +144,7 @@ test('Kosten: Holz und Kaufteile getrennt', () => {
 test('alle Kombinationen liefern gültige Teile', () => {
   for (const shape of ['I', 'L', 'U']) for (const build of ['built', 'free'])
     for (const sys of ['battens', 'rails', 'brackets', 'cheeks', 'posts'])
-      for (const extra of [{}, { nicheL:true, nicheR:true, nicheB:'R' }, { doorIn:true, hinge:'R' }, { mat:'mdf', t:19, back:'none' }]) {
+      for (const extra of [{}, { nicheL:true, nicheR:true }, { doorIn:true, hinge:'R' }, { mat:'mdf', t:19, back:'none' }]) {
         const Rr = run({ shape, build, sys, ...extra });
         const tag = JSON.stringify({ shape, build, sys, extra });
         assert.ok(Rr.rows.length > 0, tag);

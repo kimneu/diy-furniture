@@ -5,8 +5,7 @@ const REDUIT_DEFAULTS = {
   rw:1600, rd:1400, rh:2400, doorW:800, doorIn:false, hinge:'L', wall:'solid',
   shape:'U', corner:'L', build:'built', sys:'battens',
   dBack:400, dLeft:300, dRight:300, nShelves:5, gapBottom:150, gapTop:300,
-  nicheL:false, nicheLW:450, nicheLH:1300, nicheR:false, nicheRW:450, nicheRH:1300,
-  nicheB:'none', nicheBW:450, nicheBH:1300
+  nicheL:false, nicheLW:450, nicheLH:1300, nicheR:false, nicheRW:450, nicheRH:1300
 };
 const SIDE_NAME = { back:'hinten', left:'links', right:'rechts' };
 
@@ -19,8 +18,8 @@ function normReduit(c0){
   if (c.doorW > c.rw - 100) { c.doorW = c.rw - 100; warn.push(`Türbreite auf ${c.doorW} mm verkleinert – neben der Tür braucht es mindestens 50 mm Wand pro Seite.`); }
   for (const k of ['dBack', 'dLeft', 'dRight']) num(k, 150, 600);
   num('nShelves', 1, 8); num('gapBottom', 0, 600); num('gapTop', 100, 800);
-  for (const k of ['nicheLW', 'nicheRW', 'nicheBW']) num(k, 300, 1000);
-  for (const k of ['nicheLH', 'nicheRH', 'nicheBH']) num(k, 600, 1800);
+  for (const k of ['nicheLW', 'nicheRW']) num(k, 300, 1000);
+  for (const k of ['nicheLH', 'nicheRH']) num(k, 600, 1800);
   if (!['I', 'L', 'U'].includes(c.shape)) c.shape = 'U';
   if (c.build !== 'free') c.build = 'built';
   if (!['battens', 'rails', 'brackets', 'cheeks', 'posts'].includes(c.sys)) c.sys = 'battens';
@@ -43,12 +42,6 @@ function normReduit(c0){
   if (c.dBack > c.rd - 300) { c.dBack = Math.max(150, c.rd - 300); warn.push(`Das hintere Regal ist zu tief für ${c.rd} mm Raumtiefe – auf ${c.dBack} mm begrenzt.`); }
   // Tablare brauchen Höhe
   if (c.rh - c.gapTop - c.gapBottom < 300) { c.gapTop = Math.max(100, c.rh - c.gapBottom - 300); warn.push(`Abstand zur Decke auf ${c.gapTop} mm reduziert, damit die Tablare Platz haben.`); }
-  // Hintere Nische nur, wo kein Seitenregal davor steht
-  if (!['none', 'L', 'R'].includes(c.nicheB)) c.nicheB = 'none';
-  if ((c.nicheB === 'L' && hasL) || (c.nicheB === 'R' && hasR)) {
-    warn.push(`Die hintere Nische ${c.nicheB === 'L' ? 'links' : 'rechts'} läge hinter dem Seitenregal und wäre nicht erreichbar – Nische weggelassen.`);
-    c.nicheB = 'none';
-  }
   if (!hasL) c.nicheL = false;
   if (!hasR) c.nicheR = false;
   return { cfg: c, warn };
@@ -68,7 +61,6 @@ function layoutReduit(c){
   const W = c.rw, D = c.rd, warn = [], segs = [];
   const wf = (W - c.doorW) / 2;
   const back = { id:'back', depth:c.dBack, u0:0, u1:W, ends:['wall', 'wall'], niche:null };
-  if (c.nicheB !== 'none') back.niche = { at: c.nicheB === 'L' ? 'start' : 'end', w:c.nicheBW, h:c.nicheBH };
   segs.push(back);
   for (const id of ['left', 'right']) {
     if (id === 'left' ? !c.hasL : !c.hasR) continue;
