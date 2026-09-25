@@ -23,6 +23,7 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
 | `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
 | `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
+| `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern) |
 | `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau (mit eingefrorenen Preisen `test/fixtures/preise.json`) |
 | `test/preise.test.js` | Form und Vollständigkeit von `preise.js` |
 | `test/reduit.test.js`, `test/shared.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise |
