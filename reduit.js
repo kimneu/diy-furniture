@@ -15,7 +15,8 @@ function normReduit(c0){
   const c = { ...REDUIT_DEFAULTS, ...c0 }, warn = [];
   const num = (k, a, b) => { c[k] = r0(clamp(Number(c[k]), a, b)); };
   num('rw', 600, 4000); num('rd', 600, 4000); num('rh', 1800, 3000);
-  num('doorW', 600, Math.min(1200, c.rw - 100));
+  num('doorW', 600, 1200);
+  if (c.doorW > c.rw - 100) { c.doorW = c.rw - 100; warn.push(`Türbreite auf ${c.doorW} mm verkleinert – neben der Tür braucht es mindestens 50 mm Wand pro Seite.`); }
   for (const k of ['dBack', 'dLeft', 'dRight']) num(k, 150, 600);
   num('nShelves', 1, 8); num('gapBottom', 0, 600); num('gapTop', 100, 800);
   for (const k of ['nicheLW', 'nicheRW', 'nicheBW']) num(k, 300, 1000);

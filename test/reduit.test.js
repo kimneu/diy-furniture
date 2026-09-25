@@ -167,3 +167,12 @@ test('Randfall: sehr kleiner Raum selbststehend', () => {
   assert.ok(rowsNamed(Rr, 'Seite').length > 0);
   assert.ok(Rr.rows.every(r => Number.isFinite(r.L)));
 });
+
+test('Randfall: Tür breiter als Raum erlaubt wird mit Warnung verkleinert', () => {
+  const n = cfg({ rw:650, doorW:800 });
+  assert.strictEqual(n.cfg.doorW, 550);
+  assert.ok(n.warn.some(w => w.includes('Türbreite')));
+  const ok = cfg({ rw:1600, doorW:800 });
+  assert.strictEqual(ok.cfg.doorW, 800);
+  assert.ok(!ok.warn.some(w => w.includes('Türbreite')));
+});
