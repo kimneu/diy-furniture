@@ -115,7 +115,11 @@ const SPAN = {
   fichte:    { 18:600, 28:950 },
   seekiefer: { 15:550 },
   fichtesp:  { 18:700 },
-  mdf:       { 16:450, 19:550, 22:650 }
+  mdf:       { 16:450, 19:550, 22:650 },
+  schaltafel:{ 27:1000 },
+  osb:       { 12:450, 15:550, 18:650, 22:800 },
+  dreischicht:{ 19:650, 27:950 },
+  dekorspan: { 16:400, 19:500 }
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 
@@ -238,7 +242,7 @@ function freeEndPosts(ctx, seg, shelves){
 // Gleichartige Meldungen mehrerer Wände zu einer zusammenfassen.
 function groupWarn(ctx, key, part, text){
   const g = ctx.grouped.get(key) || { parts:[], text };
-  g.parts.push(part);
+  if (!g.parts.includes(part)) g.parts.push(part);
   ctx.grouped.set(key, g);
 }
 const joinDe = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1] : a[0];
@@ -514,7 +518,8 @@ function computeReduit(c0){
   if (c.mat === 'mdf') {
     finish.push([`${Math.max(1, Math.ceil(plateArea / 10 * 10))} dl`, 'Grundierung für MDF (Kanten 2×)', `${plateArea.toFixed(1)} m²`]);
     finish.push([`${Math.max(1, Math.ceil(plateArea * 2 / 10 * 10))} dl`, 'Möbellack seidenmatt, Weiss', '2 Schichten, Zwischenschliff Körnung 240']);
-  } else finish.push([`${Math.max(1, Math.ceil(plateArea * 2 / 22 * 10))} dl`, 'Hartwachsöl, farblos oder weiss pigmentiert', `${plateArea.toFixed(1)} m² beidseitig, 2 Anstriche`]);
+  } else if (M.coated) finish.push(['–', 'Flächen sind fertig beschichtet', c.mat === 'dekorspan' ? 'sichtbare Kanten mit Kantenband bügeln' : 'Schnittkanten mit Lack oder Öl schützen']);
+  else finish.push([`${Math.max(1, Math.ceil(plateArea * 2 / 22 * 10))} dl`, 'Hartwachsöl, farblos oder weiss pigmentiert', `${plateArea.toFixed(1)} m² beidseitig, 2 Anstriche`]);
   if (rows.some(r => r.kind === 'solid')) finish.push(['–', 'Kanthölzer und Latten roh lassen oder mitölen', 'im Reduit reicht roh']);
   finish.push(['1', 'Schleifpapier Körnung 120, 180', 'Kanten leicht brechen']);
 
@@ -529,7 +534,7 @@ function computeReduit(c0){
   if (!free && c.sys === 'rails') tools.add('Eisensäge zum Kürzen der Schienen');
   if (rows.some(r => r.kind === 'solid')) tools.add('Handsäge oder Kappsäge für Kanthölzer und Latten');
   tools.add('Schwingschleifer oder Schleifklotz');
-  tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : 'Baumwolllappen oder Pinsel für Öl');
+  tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
   const steps = buildReduitSteps({ c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
 
@@ -582,7 +587,8 @@ function buildReduitSteps(o){
     st.push(['Tablare auflegen', c.sys === 'cheeks' ? 'Bodenträger stecken und die Tablare auflegen.' : 'Tablare auflegen und von unten mit Schrauben 4 × 35 an Leisten, Konsolen oder Winkeln fixieren.', null]);
     if (hasCorner) st.push(['Eckstösse verbinden', 'Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben in jedes Tablar.', null]);
   }
-  st.push([c.mat === 'mdf' ? 'Lackieren' : 'Oberfläche ölen', c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren – am besten vor der Montage.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal – am einfachsten vor der Montage.', null]);
+  if (MATS[c.mat] && MATS[c.mat].coated) st.push(['Kanten schützen', c.mat === 'dekorspan' ? 'Sichtbare Kanten mit Kantenband bügeln, Überstand mit dem Cutter abnehmen.' : 'Schnittkanten mit Lack oder Öl streichen, damit sie keine Feuchtigkeit ziehen.', null]);
+  else st.push([c.mat === 'mdf' ? 'Lackieren' : 'Oberfläche ölen', c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren – am besten vor der Montage.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal – am einfachsten vor der Montage.', null]);
   return st;
 }
 

@@ -192,7 +192,7 @@ function computeSideboard(c){
   const woodArea = areaOf(r => r.kind === 'korpus' || (r.kind === 'front' && !paint) || (bath && r.kind === 'back')) * 2;
   const paintArea = c.mat === 'mdf' ? areaOf(r => r.kind !== 'back' || bath) * 2 : (paint ? areaOf(r => r.kind === 'front') * 2 : 0);
   const coats = bath ? 3 : 2;
-  if (c.mat !== 'mdf' && woodArea > 0) {
+  if (c.mat !== 'mdf' && !M.coated && woodArea > 0) {
     if (bath) finish.push([`${Math.max(1, Math.ceil(woodArea * 3 / 10 * 10))} dl`, 'Wasserbasierter PU-Klarlack seidenmatt (für Feuchträume)', `${woodArea.toFixed(1)} m² rundum inkl. Rückwand, 3 Schichten, Kanten 1× extra`]);
     else finish.push([`${Math.max(1, Math.ceil(woodArea * 2 / 22 * 10))} dl`, 'Hartwachsöl, farblos oder weiss pigmentiert', `${woodArea.toFixed(1)} m² beidseitig, 2 Anstriche`]);
   }
@@ -208,6 +208,7 @@ function computeSideboard(c){
     if (c.back === 'ply6') warn.push('Bad: Die Pappel-Rückwand beidseitig lackieren und hinten ein paar Millimeter Luft zur Wand lassen.');
     if (c.base === 'none') warn.push('Bad: Stell den Schrank auf Füsse oder montier ihn an der Wand – so steht er nie in einer Pfütze und du kannst darunter putzen.');
   }
+  if (M.coated) finish.push([`${Math.ceil(rows.reduce((a, r) => a + r.qty * 2 * (r.L + r.B), 0) / 1000 / 5) * 5} m`, 'Kantenband zum Aufbügeln, passend zur Beschichtung', 'für sichtbare Kanten']);
   finish.push(['1', 'Schleifpapier Körnung 120, 180' + (paintArea || bath ? ', 240' : ''), 'Kanten leicht brechen']);
 
   // Werkzeug
@@ -248,6 +249,7 @@ function buildSteps(o){
   if (c.base === 'plinth') st.push(['Sockel bauen und montieren', 'Die vier Sockelteile zu einem Rahmen verschrauben (Blenden aussen, Seitenteile dazwischen). Rahmen 30 mm zurückversetzt unter den Boden stellen und mit den Stahlwinkeln festschrauben.', 'Der zurückgesetzte Sockel lässt das Möbel schweben.']);
   if (bath) { /* bereits vor der Montage versiegelt */ }
   else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.', null]);
+  else if (MATS[c.mat].coated) st.push(['Kanten versäubern', 'Die Flächen sind fertig beschichtet. Sichtbare Kanten mit dem Bügeleisen und Kantenband bekleben, Überstand mit dem Kantenfräser oder Cutter abnehmen.', null]);
   else st.push(['Oberfläche ölen', `Staub entfernen und Hartwachsöl dünn mit Lappen oder Pinsel auftragen, nach 15 Minuten Überschuss abnehmen. Nach dem Trocknen ein zweites Mal.${paint ? ' Die Fronten vorher grundieren und zweimal lackieren.' : ''}`, 'Weiss pigmentiertes Öl gibt den hellen, nordischen Ton.']);
   if (hinged) st.push(['Türen anschlagen', 'In jede Tür Topfbohrungen Ø 35 mm, ca. 12 mm tief, Randabstand meist 3–5 mm (Datenblatt!), ca. 100 mm von oben und unten. Montageplatten an die Seiten bzw. Mittelwände schrauben, Scharniere einklipsen und mit den Stellschrauben auf gleichmässige 3-mm-Fugen einstellen.', 'Eine Scharnier-Bohrlehre sorgt für gerade, gleich tiefe Löcher.']);
   if (sliding) st.push(['Schiebetüren einsetzen', `Untere Laufschiene auf den Boden und obere Führungsschiene unter den Deckel schrauben, 5 mm hinter der Vorderkante, beide auf ${r0(o.c.W - 2*t)} mm gekürzt. Gleiter an die ${ns} Türen montieren, Türen oben einheben und unten einsetzen.`, 'Die Türhöhe hängt vom Beschlag ab – im Zweifel die Türen erst zuschneiden, wenn der Beschlag da ist.']);

@@ -176,3 +176,24 @@ test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt', () 
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 100'), 3);
   assert.ok(Rr.warn.some(w => w.includes('zwei Stücke')));
 });
+
+test('jede Material-Stärke hat einen Spannweiten-Wert', () => {
+  for (const [k, M] of Object.entries(MATS)) for (const t of M.t) assert.ok(R.SPAN[k] && R.SPAN[k][t], `${k} ${t} mm fehlt in SPAN`);
+});
+
+test('beschichtete Platten werden nicht geölt', () => {
+  for (const mat of ['schaltafel', 'dekorspan']) {
+    const Rr = run({ mat, t: MATS[mat].tDef });
+    assert.ok(!Rr.finish.some(f => f[1].includes('Hartwachsöl')), mat);
+  }
+});
+
+test('Schaltafel: 50 cm breit – zu tiefe Teile werden gemeldet', () => {
+  const Rr = run({ mat:'schaltafel', t:27, sheetL:2500, sheetB:500, dBack:550 });
+  assert.ok(Rr.warn.some(w => w.includes('passt nicht auf die Platte')));
+});
+
+test('zusammengefasste Warnungen nennen jede Wand nur einmal', () => {
+  const w = run({ shape:'U', rh:2400, sys:'rails' }).warn.find(x => x.includes('zwei Stücke'));
+  assert.ok(w && !w.includes('hinten, hinten'), w);
+});
