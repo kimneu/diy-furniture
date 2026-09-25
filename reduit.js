@@ -110,11 +110,11 @@ function boxOf(seg, W, D, b, thin, grain, fin, ex){
 // Maximale freie Spannweite (mm) eines belasteten Tablars (ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200).
 // Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
 const SPAN = {
-  birke:     { 15:650, 18:800, 21:950 },
-  eiche:     { 18:700, 20:800, 26:1000 },
-  fichte:    { 18:600, 28:950 },
-  seekiefer: { 15:550 },
-  fichtesp:  { 18:700 },
+  birke:     { 12:500, 15:650, 18:800, 21:950 },
+  eiche:     { 18:700, 20:800, 26:1000, 27:1050 },
+  fichte:    { 18:600, 21:720, 27:900, 28:950 },
+  seekiefer: { 12:450, 15:550 },
+  fichtesp:  { 12:450, 15:600, 18:700, 21:800, 24:900 },
   mdf:       { 16:450, 19:550, 22:650 },
   schaltafel:{ 27:1000 },
   osb:       { 12:450, 15:550, 18:650, 22:800 },

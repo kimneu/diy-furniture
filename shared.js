@@ -4,16 +4,20 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, isFinite(v) ? v : a));
 const r0 = v => Math.round(v);
 
 /* ---------- Kataloge ---------- */
+// Birke, Eiche, Fichte Leimholz, Seekiefer, Sperrholz Fichte: Jumbo-Zuschnittpreise (CHF/m²), von Hand erfasst 25.09.2026.
+// Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite. Eiche-Format und MDF/Rückwände: noch alte Richtwerte.
+// Birke, Eiche, Fichte Leimholz, Seekiefer, Sperrholz Fichte: Jumbo-Zuschnittpreise (CHF/m²), von Hand erfasst 25.09.2026.
+// Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite. Eiche-Format sowie MDF und Rückwände: noch alte Richtwerte.
 const MATS = {
-  birke:  { name:'Multiplex Birke', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  t:[15,18,21], tDef:18, sheet:[2500,1250], price:55,
+  birke:  { name:'Multiplex Birke', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  t:[12,18,21], tDef:18, sheet:[1500,3000], price:99.95, prices:{ 12:69.95, 18:99.95, 21:149.9 },
             note:'Sichtbare Schichtkanten sind der typisch skandinavische Look. Einfach ölen, Kanten nur schleifen.' },
-  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  t:[18,20,26], tDef:20, sheet:[2400,600],  price:80,
+  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  t:[18,20,27], tDef:20, sheet:[2400,600],  price:129, prices:{ 18:109, 20:129, 27:149 },
             note:'Massivholz arbeitet leicht mit der Luftfeuchtigkeit. Leimholz gibt es meist bis 600 mm, teils 1200 mm breit.' },
-  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  t:[18,28],    tDef:18, sheet:[2000,600],  price:30,
+  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  t:[18,21,27], tDef:18, sheet:[2500,1210], price:60, prices:{ 18:60, 21:80, 27:95 },
             note:'Günstig und leicht zu bearbeiten, aber weich. Weissöl verhindert das Nachdunkeln ins Gelbliche.' },
-  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, t:[15], tDef:15, sheet:[2500,1250], price:48,
+  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, t:[12,15], tDef:15, sheet:[2500,1250], price:47.95, prices:{ 12:36.95, 15:47.95 },
             note:'Lebhafte, rötliche Maserung und sichtbare Schichtkanten. Günstiger als Birke, Oberfläche etwas rauer – gut schleifen.' },
-  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, t:[18], tDef:18, sheet:[2500,1250], price:65,
+  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, t:[12,15,18,21,24], tDef:18, sheet:[2500,1250], price:65, prices:{ 12:45, 15:53, 18:65, 21:73, 24:85 },
             note:'Helles Nadelholz mit sichtbaren Schichtkanten. Weicher als Birke, Weissöl hält den hellen Ton.' },
   mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, t:[16,19,22], tDef:19, sheet:[2800,2070], price:30,
             note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' },
