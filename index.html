@@ -393,7 +393,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </div>
     <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
     <dl class="summary" id="summary"></dl>
-    <div class="hacts"><button type="button" class="btn js-sammeln">In Sammlung</button><span class="copied js-sammelmsg" aria-live="polite"></span></div>
+    <div class="hacts"><button type="button" class="btn js-sammeln">In Sammlung</button><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -770,7 +770,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </section>
   </div>
 </div>
-<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-sammelmsg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
+<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -1473,25 +1473,37 @@ $('#bCopy').addEventListener('click', () => {
 });
 
 /* ---------- Zufall und Sammlung ---------- */
-// Formular komplett neu setzen (Laden, Zufall) und Kamera neu ausrichten.
-function applyData(data){
+const COLL = STORE + '-sammlung';
+let coll = [], aktiv = null, entfernt = null;
+try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
+function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
+// Formular komplett neu setzen (Laden, Zufall, Typwechsel) und Kamera neu ausrichten.
+// undo: Zustand davor merken, damit «Rückgängig» ihn zurückholt (beide Entwürfe und die geladene Variante).
+let vorher = null;
+function applyData(data, { undo = false } = {}){
+  if (undo) vorher = { entwuerfe: JSON.parse(JSON.stringify(entwuerfe)), aktiv };
   restore(data); syncMaterials(); syncVisibility();
   three.userMoved = false;
   render(); save(); placePills();
+}
+function rueckgaengig(){
+  if (!vorher) return;
+  const v = vorher; vorher = null;
+  entwuerfe = v.entwuerfe; aktiv = v.aktiv;
+  applyData(entwuerfe[entwuerfe.kind]);
+  renderColl();
+  flash('.js-msg', 'Wiederhergestellt.');
 }
 // Wechselt zum Entwurf des Typs; ohne Entwurf mit den Startwerten der Seite.
 function wechsleTyp(kind){
   applyData(entwuerfe && entwuerfe[kind] || { ...DEFAULTS, kind });
 }
+const undoBtn = '<button type="button" class="linkbtn" data-undo>Rückgängig</button>';
 $('#bZufall').addEventListener('click', () => {
-  applyData(zufall(formData()));
-  flash('.js-sammelmsg', '');
+  applyData(zufall(formData()), { undo:true });
+  flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
 });
 
-const COLL = STORE + '-sammlung';
-let coll = [], aktiv = null, entfernt = null;
-try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
-function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
 function flash(sel, html){
   for (const el of document.querySelectorAll(sel)) {
     el.innerHTML = html;
@@ -1522,10 +1534,11 @@ const sammeln = () => {
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
   if (gleich) e.name += ` (${gleich + 1})`;
   coll.push(e); aktiv = e.id; storeColl(); renderColl();
-  flash('.js-sammelmsg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+  flash('.js-msg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
 };
 for (const b of document.querySelectorAll('.js-sammeln')) b.addEventListener('click', sammeln);
-for (const m of document.querySelectorAll('.js-sammelmsg')) m.addEventListener('click', ev => {
+for (const m of document.querySelectorAll('.js-msg')) m.addEventListener('click', ev => {
+  if (ev.target.hasAttribute('data-undo')) return rueckgaengig();
   const id = ev.target.dataset.go;
   if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
 });
@@ -1537,7 +1550,10 @@ $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
   if (!act) return;
   const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
-  if (act === 'laden') { aktiv = e.id; applyData(e.data); flash('#collMsg', `«${esc(e.name)}» geladen.`); }
+  if (act === 'laden') {
+    applyData(e.data, { undo:true }); aktiv = e.id;
+    flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`);
+  }
   if (act === 'update') {
     coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id;
     flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
