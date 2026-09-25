@@ -240,6 +240,23 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .items small{display:block;color:var(--muted);font-size:12.5px}
 .tools{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
 
+/* Einkaufen */
+.warnhint{margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:9px;font-size:13.5px}
+.kauf{display:grid;gap:14px}
+.kauf section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kauf h3{font-size:15px;font-weight:600}
+.kauf .info{margin:2px 0 6px;font-size:13px;color:var(--muted);font-family:var(--f-mono)}
+.kauf ul{list-style:none;margin:0;padding:0;display:grid}
+.kauf li{border-bottom:1px dashed var(--line)}
+.kauf li:last-child{border-bottom:0}
+.kauf label{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:8px 0;cursor:pointer;font-size:14px}
+.kauf input{accent-color:var(--accent);width:20px;height:20px;margin:1px 0 0}
+.kauf small{display:block;color:var(--muted);font-size:12.5px}
+.kauf input:checked + span{color:var(--muted);text-decoration:line-through}
+.pplan{margin-top:18px}
+.pplan summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:15px;padding-block:8px}
+.bausub{max-width:420px;margin-bottom:14px}
+
 /* Bauablauf */
 .steps{list-style:none;margin:0;padding:0;counter-reset:st;display:grid;gap:12px;max-width:78ch}
 .steps li{counter-increment:st;display:grid;grid-template-columns:36px 1fr;gap:12px}
@@ -727,41 +744,50 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
     <section class="output">
       <div class="tabs" role="tablist" aria-label="Ergebnis">
-        <button class="tab" role="tab" id="tab-cut" aria-controls="p-cut" aria-selected="true">Materialliste<span class="count" id="cnt-cut"></span></button>
-        <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
-        <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
-        <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
+        <button class="tab" role="tab" id="tab-einkaufen" aria-controls="p-einkaufen" aria-selected="true">Einkaufen<span class="count" id="cnt-kauf"></span></button>
+        <button class="tab" role="tab" id="tab-bauen" aria-controls="p-bauen" aria-selected="false">Bauen</button>
         <button class="tab" role="tab" id="tab-coll" aria-controls="p-coll" aria-selected="false">Sammlung<span class="count" id="cnt-coll"></span></button>
         <span class="tabind" aria-hidden="true"></span>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-cut" aria-labelledby="tab-cut">
+      <div class="panel" role="tabpanel" id="p-einkaufen" aria-labelledby="tab-einkaufen">
+        <p class="warnhint js-warnhint" hidden></p>
         <div class="toolbar">
-          <p>Länge = Faserrichtung. <span class="hint-fine">Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</span><span class="hint-touch">Tipp auf eine Zeile, um das Teil in 3D und im Plattenplan hervorzuheben.</span></p>
-          <div><button type="button" class="btn" id="bCopy"><span class="swap"><span>Liste kopieren</span><span aria-hidden="true">✓ Kopiert</span></span></button> <span class="copied" id="copied" aria-live="polite"></span></div>
+          <p id="kaufKopf"></p>
+          <div class="acts">
+            <button type="button" class="btn" id="bTeilen"><span class="swap"><span>Liste teilen</span><span aria-hidden="true">✓ Kopiert</span></span></button>
+            <button type="button" class="btn ghost" id="bHakenWeg" hidden>Haken zurücksetzen</button>
+            <span class="copied" id="copied" aria-live="polite"></span>
+          </div>
         </div>
-        <div class="tablewrap"><table id="cutTable"></table></div>
-        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Materialliste als Text"></textarea>
+        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Einkaufsliste als Text"></textarea>
+        <div class="kauf" id="kaufListe"></div>
+        <details class="pplan" id="pplan">
+          <summary>Plattenplan für den Zuschnitt</summary>
+          <div class="toolbar">
+            <p>Vorschlag mit durchgehenden Schnitten, wie sie eine Plattensäge macht. Der Zuschnittservice optimiert oft noch selbst.</p>
+            <div class="legend"><span><i style="background:var(--part)"></i>Korpus</span><span><i style="background:var(--part-front)"></i>Front</span><span><i style="background:var(--part-back)"></i>Rückwand</span><span><i style="background:repeating-linear-gradient(45deg,var(--waste) 0 2px,transparent 2px 6px)"></i>Rest</span></div>
+          </div>
+          <div class="sheets" id="sheets"></div>
+        </details>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-sheet" aria-labelledby="tab-sheet" hidden>
-        <div class="toolbar">
-          <p>Vorschlag mit durchgehenden Schnitten, wie sie eine Plattensäge macht. Der Zuschnittservice optimiert oft noch selbst.</p>
-          <div class="legend"><span><i style="background:var(--part)"></i>Korpus</span><span><i style="background:var(--part-front)"></i>Front</span><span><i style="background:var(--part-back)"></i>Rückwand</span><span><i style="background:repeating-linear-gradient(45deg,var(--waste) 0 2px,transparent 2px 6px)"></i>Rest</span></div>
+      <div class="panel" role="tabpanel" id="p-bauen" aria-labelledby="tab-bauen" hidden>
+        <p class="warnhint js-warnhint" hidden></p>
+        <div class="seg bausub" role="radiogroup" aria-label="Bauen">
+          <input type="radio" name="bau" id="bau-teile" value="teile" checked><label for="bau-teile">Teile</label>
+          <input type="radio" name="bau" id="bau-ablaengen" value="ablaengen"><label for="bau-ablaengen" id="lbl-ablaengen">Ablängplan</label>
+          <input type="radio" name="bau" id="bau-ablauf" value="ablauf"><label for="bau-ablauf">Bauablauf</label>
         </div>
-        <div class="sheets" id="sheets"></div>
-      </div>
-
-      <div class="panel" role="tabpanel" id="p-hw" aria-labelledby="tab-hw" hidden>
-        <div class="cols">
-          <div class="box"><h3>Beschläge &amp; Kleinteile</h3><ul class="items" id="hwList"></ul></div>
-          <div class="box"><h3>Werkzeug</h3><ul class="tools" id="toolList"></ul>
-            <h3 style="margin-top:16px">Oberfläche</h3><ul class="items" id="finishList"></ul></div>
+        <div class="bau" id="b-teile">
+          <div class="toolbar"><p>Länge = Faserrichtung. Teile mit der Position beschriften. <span class="hint-fine">Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</span><span class="hint-touch">Tipp auf eine Zeile, um das Teil in 3D hervorzuheben.</span></p></div>
+          <div class="tablewrap"><table id="cutTable"></table></div>
         </div>
-      </div>
-
-      <div class="panel" role="tabpanel" id="p-steps" aria-labelledby="tab-steps" hidden>
-        <ol class="steps" id="steps"></ol>
+        <div class="bau" id="b-ablaengen" hidden>
+          <div class="toolbar"><p>Ganze Bretter nur ablängen. Jedes Teil ist so breit wie sein Brett.</p></div>
+          <div class="sheets" id="ablaengen"></div>
+        </div>
+        <div class="bau" id="b-ablauf" hidden><ol class="steps" id="steps"></ol></div>
       </div>
 
       <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
@@ -787,11 +813,13 @@ figure.sheet svg{width:100%;height:auto;display:block}
 <script src="sideboard.js"></script>
 <script src="reduit.js"></script>
 <script src="konfig.js"></script>
+<script src="einkauf.js"></script>
 <script>
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
 const form = $('#cfg');
+const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
 
 const HANDLES_HINGED = [['hole','Griffloch Ø 30 mm'],['knob','Holzknopf'],['push','Ohne Griff (Push-to-open)']];
 const HANDLES_SLIDING = [['shell','Griffmuschel rund'],['hole','Griffloch Ø 30 mm']];
@@ -933,7 +961,16 @@ function render(){
   const c = readCfg();
   const reduit = c.kind === 'reduit';
   R = reduit ? computeReduit(c) : computeSideboard(c);
-  renderSummary(R); renderWarns(R); renderCut(R); renderSheets(R); renderHw(R); renderSteps(R);
+  renderSummary(R); renderWarns(R); renderCut(R); renderSteps(R); renderKauf(R);
+  const zu = R.groups.filter(g => !g.boards), br = R.groups.filter(g => g.boards);
+  renderSheets(zu, $('#sheets')); renderSheets(br, $('#ablaengen'));
+  $('#pplan').hidden = !zu.length;
+  $('#bau-ablaengen').hidden = $('#lbl-ablaengen').hidden = !br.length;
+  if (!br.length && $('#bau-ablaengen').checked) { $('#bau-teile').checked = true; zeigeBau(); }
+  for (const w of document.querySelectorAll('.js-warnhint')) {
+    w.hidden = !R.warn.length;
+    w.innerHTML = `${R.warn.length} Warnung${R.warn.length === 1 ? '' : 'en'} · <button type="button" class="linkbtn" data-go="entwerfen">Zum Entwurf</button>`;
+  }
   $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
@@ -962,8 +999,6 @@ function renderSummary(R){
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
   $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
-  $('#cnt-cut').textContent = parts;
-  $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
 }
 function renderWarns(R){
   const box = $('#warns'), old = new Map([...box.children].map(el => [el.innerHTML, el]));
@@ -992,9 +1027,9 @@ function renderCut(R){
   html += `<tfoot><tr><td colspan="6">Plattenfläche total ${area.toFixed(2)} m² · alle Masse in mm</td></tr></tfoot>`;
   $('#cutTable').innerHTML = html;
 }
-function renderSheets(R){
+function renderSheets(groups, el){
   let html = '';
-  for (const g of R.groups) {
+  for (const g of groups) {
     const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
     let chips;
     if (g.boards) {
@@ -1027,17 +1062,49 @@ function renderSheets(R){
     if (!g.sheets.length) html += `<p class="hint">${g.boards ? 'Kein Teil passt auf diese Bretter.' : 'Keine Teile auf diesem Format.'}</p>`;
     html += `</div></div>`;
   }
-  $('#sheets').innerHTML = html;
-}
-function renderHw(R){
-  const chf = (q, p) => p ? ` · ≈ CHF ${Math.round(q * p)}` : '';
-  $('#hwList').innerHTML = R.hw.map(([q, n, s, p]) => `<li><span class="q">${q}×</span><span>${n}${s || p ? `<small>${s || ''}${chf(q, p)}</small>` : ''}</span></li>`).join('');
-  $('#toolList').innerHTML = R.tools.map(t => `<li>${t}</li>`).join('');
-  $('#finishList').innerHTML = R.finish.map(([q, n, s]) => `<li><span class="q">${q}</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
+  el.innerHTML = html;
 }
 function renderSteps(R){
   $('#steps').innerHTML = R.steps.map(([h, p, tip]) => `<li><div><h3>${h}</h3><p>${p}</p>${tip ? `<p class="tip">Tipp: ${tip}</p>` : ''}</div></li>`).join('');
 }
+
+const HAKEN = STORE + '-haken';
+let haken = {};
+try { haken = JSON.parse(localStorage.getItem(HAKEN) || '{}'); } catch (e) {}
+let kaufListe = [];
+const kaufTitel = R => R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H} mm` : `Sideboard ${R.W} × ${R.H} × ${R.Dtot} mm`;
+function renderKauf(R){
+  kaufListe = einkaufsliste(R);
+  const kind = R.kind === 'reduit' ? 'reduit' : 'sideboard';
+  const an = new Set(haken[kind] = hakenFiltern(haken[kind] || [], kaufListe));
+  const total = kaufListe.reduce((a, s) => a + s.zeilen.length, 0);
+  $('#kaufKopf').textContent = `${kaufTitel(R)} · ca. CHF ${Math.round(kostenGesamt(R) / 5) * 5}`;
+  $('#cnt-kauf').textContent = an.size ? `${an.size}/${total}` : '';
+  $('#bHakenWeg').hidden = !an.size;
+  $('#kaufListe').innerHTML = kaufListe.map(s => `<section><h3>${s.titel}</h3>${s.info ? `<p class="info">${s.info}</p>` : ''}<ul>${
+    s.zeilen.map(z => `<li><label><input type="checkbox" data-id="${esc(z.id)}"${an.has(z.id) ? ' checked' : ''}><span>${z.text}${z.sub ? `<small>${z.sub}</small>` : ''}</span></label></li>`).join('')
+  }</ul></section>`).join('');
+  try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
+}
+$('#kaufListe').addEventListener('change', ev => {
+  const id = ev.target.dataset.id, kind = R.kind === 'reduit' ? 'reduit' : 'sideboard';
+  const s = new Set(haken[kind] || []);
+  ev.target.checked ? s.add(id) : s.delete(id);
+  haken[kind] = [...s];
+  try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
+  $('#bHakenWeg').hidden = !s.size;
+  $('#cnt-kauf').textContent = s.size ? `${s.size}/${kaufListe.reduce((a, x) => a + x.zeilen.length, 0)}` : '';
+});
+$('#bHakenWeg').addEventListener('click', () => { haken[R.kind === 'reduit' ? 'reduit' : 'sideboard'] = []; renderKauf(R); });
+
+// Bauen: Unterreiter Teile | Ablängplan | Bauablauf
+function zeigeBau(){
+  const v = document.querySelector('input[name=bau]:checked').value;
+  for (const k of ['teile', 'ablaengen', 'ablauf']) $('#b-' + k).hidden = k !== v;
+  try { localStorage.setItem(STORE + '-bau', v); } catch (e) {}
+}
+$('.bausub').addEventListener('change', ev => { placePill(ev.currentTarget, true); zeigeBau(); });
+try { const b = localStorage.getItem(STORE + '-bau'); if (b && $('#bau-' + b)) $('#bau-' + b).checked = true; } catch (e) {}
 
 /* ---------- Hervorheben ---------- */
 let hlKey = null;
@@ -1055,7 +1122,7 @@ function highlight(key){
   }
 }
 function keyFromEl(el){ const h = el.closest('[data-key]'); return h ? decodeURIComponent(h.dataset.key) : null; }
-for (const sel of ['#cutTable', '#sheets']) {
+for (const sel of ['#cutTable', '#sheets', '#ablaengen']) {
   const el = $(sel);
   el.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') highlight(keyFromEl(e.target)); });
   el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') highlight(null); });
@@ -1460,25 +1527,24 @@ $('#bJump').addEventListener('click', () => {
   $(atOutput ? '.cfgwrap' : '.output').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 });
 
-// Kopieren
-// Maserung angeben nur bei Plattenteilen aus Material mit Maserung (nicht Rückwand, nicht Massivholz).
-const grainOf = r => R.M.grain && (r.kind === 'korpus' || r.kind === 'front');
-$('#bCopy').addEventListener('click', () => {
-  const lines = [`${R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H}` : `Sideboard ${R.W} × ${R.H} × ${R.D}`} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
-  for (const g of [...new Set(R.rows.map(r => r.group))]) {
-    lines.push('', g);
-    for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${grainOf(r) ? ' – Maserung längs' : ''}${r.note ? ' (' + r.note + ')' : ''}`);
-  }
-  const text = lines.join('\n');
+// Kopieren wird Teilen
+$('#bTeilen').addEventListener('click', async () => {
+  const text = listeText(kaufListe, `${kaufTitel(R)} – Einkaufsliste (Masse in mm, Länge = Faserrichtung)`);
   const box = $('#copyBox'), msg = $('#copied');
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ title:kaufTitel(R), text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
   const fallback = () => { box.hidden = false; box.value = text; box.focus(); box.select(); msg.textContent = 'Text markiert – mit Ctrl+C kopieren.'; };
   try {
-    navigator.clipboard.writeText(text).then(() => {
-      box.hidden = true; msg.textContent = '';
-      const b = $('#bCopy'); b.classList.add('done'); clearTimeout(b._t);
-      b._t = setTimeout(() => b.classList.remove('done'), 1800);
-    }, fallback);
+    await navigator.clipboard.writeText(text);
+    box.hidden = true; msg.textContent = '';
+    const b = $('#bTeilen'); b.classList.add('done'); clearTimeout(b._t);
+    b._t = setTimeout(() => b.classList.remove('done'), 1800);
   } catch (e) { fallback(); }
+});
+document.addEventListener('click', ev => {
+  const go = ev.target.closest('[data-go]');
+  if (go && go.dataset.go === 'entwerfen') $('.cfgwrap').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block:'start' });
 });
 
 /* ---------- Zufall und Sammlung ---------- */
@@ -1519,7 +1585,6 @@ function flash(sel, html){
     clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
   }
 }
-const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
 const SORT = STORE + '-sort', AKTIV = STORE + '-aktiv';
 let sortNach = 'datum';
@@ -1625,6 +1690,7 @@ syncMaterials();
 syncVisibility();
 try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
+zeigeBau();
 render();
 save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
