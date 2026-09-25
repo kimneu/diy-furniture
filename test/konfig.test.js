@@ -74,3 +74,49 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   assert.strictEqual(r.info.typ, 'Reduit U-Form');
   assert.ok(r.info.kosten > 0);
 });
+
+test('snapBreite rastet auf die nächste Brettbreite, bei Gleichstand die breitere', () => {
+  assert.strictEqual(K.snapBreite([200, 400], 335), 400);
+  assert.strictEqual(K.snapBreite([200, 400], 290), 200);
+  assert.strictEqual(K.snapBreite([200, 400], 300), 400);
+  assert.strictEqual(K.snapBreite([200, 400], 600), 400);
+  assert.strictEqual(K.snapBreite([500], 150), 500);
+});
+
+test('Zufall Reduit mit Brettmaterial würfelt nur Brettbreiten als Tiefe', () => {
+  const rnd = seeded(5);
+  for (let i = 0; i < 50; i++) {
+    const d = K.zufall({ ...FORM, kind:'reduit', mat:'gon_fichte', t:'18' }, rnd, 60, ['material']);
+    for (const k of ['dBack', 'dLeft', 'dRight']) assert.ok([200, 400].includes(Number(d[k])), `${k}=${d[k]}`);
+  }
+});
+
+test('Zufall hält gesperrte Gruppen fest', () => {
+  const rnd = seeded(9);
+  const sb = { ...FORM, mat:'eiche', t:'27', back:'ply6', price:'77', joint:'cam', w:'1500', h:'750', d:'420' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(sb, rnd, 60, ['material', 'verbindung', 'masse']);
+    for (const k of ['mat', 't', 'back', 'price', 'joint', 'w', 'h', 'd']) assert.strictEqual(d[k], sb[k], k);
+  }
+  const rd = { ...FORM, kind:'reduit', mat:'osb', t:'18', build:'free', sys:'posts', nicheL:true, nicheLW:'480', nicheLH:'1250' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(rd, rnd, 60, ['material', 'bauart', 'nische']);
+    for (const k of ['mat', 't', 'build', 'sys', 'nicheL', 'nicheLW', 'nicheLH']) assert.strictEqual(d[k], rd[k], k);
+    assert.ok(d.shape === 'U' || (d.shape === 'L' && d.corner === 'L'), 'Nische links braucht ein Regal links');
+  }
+});
+
+test('Zufall ohne Sperren würfelt weiterhin alles', () => {
+  const rnd = seeded(13), mats = new Set();
+  for (let i = 0; i < 30; i++) mats.add(K.zufall({ ...FORM, kind:'reduit' }, rnd).mat);
+  assert.ok(mats.size >= 3);
+});
+
+test('Feste Tablartiefen: Zufall wählt kein Brettmaterial, das sie verschieben würde', () => {
+  const rnd = seeded(17);
+  for (let i = 0; i < 40; i++) {
+    const d = K.zufall({ ...FORM, kind:'reduit', dBack:'350', dLeft:'250', dRight:'250' }, rnd, 60, ['tablare']);
+    assert.strictEqual(d.dBack, '350');
+    assert.ok(!MATS[d.mat].boards, d.mat);
+  }
+});
