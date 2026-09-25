@@ -46,7 +46,7 @@ Die gemeinsamen Daten wandern nach `shared.js`, damit die Node-Tests die Module 
 
 **Schnittstelle:** `computeReduit(c)` liefert dasselbe Ergebnisobjekt wie `computeSideboard(c)` (`rows`, `groups`, `boxes`, `extras`, `hw`, `tools`, `finish`, `steps`, `warn`, `level` …), ergänzt um:
 
-- `solid`: Liste der Massivholzteile (Querschnitt, Länge, Anzahl)
+- Massivholzteile als `rows` mit `kind:'solid'` (nicht im Plattenplan)
 - `buyCost`: Summe der Kaufteile in CHF
 - `room`: Raummasse und Türöffnung für die 3D-Wände
 - `kind: 'reduit'` (Sideboard: `kind: 'sideboard'`)
@@ -74,7 +74,7 @@ Bei «Reduit» werden «Masse», «Aufbau», «Front» ausgeblendet. Neue Gruppe
 
 «Material», «Platten & Preise», «Niveau» bleiben für beide Typen. «Verbindung» nur bei «selbststehend».
 
-Speicherung in `localStorage` getrennt pro Typ, damit ein Wechsel die andere Konfiguration nicht überschreibt.
+Speicherung in einem `localStorage`-Eintrag; typ-spezifische Felder haben eigene Namen, gemeinsame (Material, Platten) gelten für beide Typen. Ein Typwechsel überschreibt dadurch nichts.
 
 ## Geometrie
 
@@ -88,7 +88,9 @@ Koordinaten: Raum B (x) × T (z) × H (y), Tür mittig in der Vorderwand. Wandst
 | L | hinten + links *oder* rechts |
 | U | hinten + links + rechts |
 
-**Ecke:** Hinteres Segment läuft über die volle Breite. Seitensegmente beginnen bei `z = Tiefe hinten` und stossen davor an. Alle Tablare liegen auf gleicher Höhe; beim Einbau liegen die Seitentablare hinten auf der hinteren Auflage auf, es braucht dort keine eigene Stütze.
+**Ecke:** Hinteres Segment läuft über die volle Breite. Seitensegmente beginnen bei `z = Tiefe hinten` und stossen davor an. Alle Tablare liegen auf gleicher Höhe. Beim Einbau bekommt der Stoss eine **Eckleiste** (unter dem Stoss, an beide Tablare geschraubt); bei Bauart Wangen steht dort eine Wange.
+
+**Hintere Nische** nur auf einer Seite ohne Seitensegment (sonst läge sie unzugänglich hinter dem Seitenregal).
 
 **Seitensegment und Tür:** Läuft standardmässig bis zur Vorderwand (Ende an Wand).
 
@@ -148,7 +150,7 @@ supports[art](segment, shelves, cfg) → { parts, solid, hw, extras, warn }
 | Tab «Zuschnittliste» | «Materialliste» |
 | Tab «Plattenplan» | unverändert |
 | Tab «Beschläge & Werkzeug» | unverändert |
-| Gruppe «Zuschnitt» | «Platten & Preise», neues Feld «Preis Massivholz CHF/m» |
+| Gruppe «Zuschnitt» | «Platten & Preise» (Massivholzpreise kommen aus der Jumbo-Preistabelle, kein eigenes Feld) |
 | Summary «Aussenmass» | Reduit: «Raum» |
 | Summary «Material ca.» | «Holz ca.»; Reduit zusätzlich «Kaufteile ca.» |
 | «Liste kopieren» | unverändert, kopiert inkl. Massivholz |
