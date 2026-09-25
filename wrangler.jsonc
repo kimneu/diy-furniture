@@ -1,0 +1,13 @@
+{
+  "name": "diy-furniture",
+  "compatibility_date": "2026-09-25",
+  "assets": {
+    "directory": "."
+  },
+  "routes": [
+    { "pattern": "diy.hallo.kim", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": true,
+  "previews": {}
+}
