@@ -126,34 +126,33 @@ const SPAN = {
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 
-// Richtpreise in CHF (Stück bzw. pro Laufmeter bei unit 'm').
+// Richtpreise in CHF (Stück bzw. pro Laufmeter bei unit 'm'), Jumbo (jumbo.ch), recherchiert 25.09.2026.
+// est:true = Jumbo führt das Produkt, der Preis war aber nicht abrufbar (Bot-Schutz) – Schätzung, im Laden prüfen.
 const BUY = {
-  kant45:     { name:'Kantholz Fichte 45 × 45 mm', unit:'m', price:4.5 },
-  latte:      { name:'Dachlatte Fichte 24 × 48 mm', unit:'m', price:1.5 },
-  rail1000:   { name:'Wandschiene Alu, 1000 mm', price:9 },
-  rail1500:   { name:'Wandschiene Alu, 1500 mm', price:13 },
-  rail2000:   { name:'Wandschiene Alu, 2000 mm', price:17 },
-  rail2500:   { name:'Wandschiene Alu, 2500 mm', price:21 },
-  konsole200: { name:'Konsole für Wandschiene, 200 mm', price:5 },
-  konsole250: { name:'Konsole für Wandschiene, 250 mm', price:6 },
-  konsole300: { name:'Konsole für Wandschiene, 300 mm', price:7 },
-  konsole370: { name:'Konsole für Wandschiene, 370 mm', price:8 },
-  konsole470: { name:'Konsole für Wandschiene, 470 mm', price:9 },
-  winkel150:  { name:'Tablarwinkel Stahl, 150 mm', price:2.5 },
-  winkel200:  { name:'Tablarwinkel Stahl, 200 mm', price:3.5 },
-  winkel250:  { name:'Tablarwinkel Stahl, 250 mm', price:4.5 },
-  winkel300:  { name:'Tablarwinkel Stahl, 300 mm', price:6 },
-  shelfpin:   { name:'Bodenträger Ø 5 mm (Metall)', price:0.15 },
-  angle40:    { name:'Metallwinkel 40 × 40 mm inkl. Schrauben', price:1 },
-  dowel6:     { name:'Nylondübel 6 mm + Schraube 4,5 × 50 mm', price:0.15 },
-  hollow:     { name:'Hohlraumdübel Metall M5 inkl. Schraube', price:0.8 },
-  screw35:    { name:'Holzschrauben 4 × 35 mm', price:0.05 },
-  screw70:    { name:'Holzschrauben 5 × 70 mm', price:0.12 },
-  tipguard:   { name:'Kippschutz-Set (Wandbefestigung)', price:6 }
+  kant45:     { name:'Kantholz Fichte 45 × 45 mm', unit:'m', price:4.4 },        // Jumbo: Oecoplan Latte gehobelt 45x45 mm 2.5 m, CHF 10.95
+  latte:      { name:'Dachlatte Fichte 24 × 48 mm', unit:'m', price:1.2 },       // Jumbo: Oecoplan Latte roh 24x48 mm 2 m, CHF 2.40
+  rail1000:   { name:'Wandschiene Element System, 100 cm', price:12, est:true }, // Jumbo: Element-System Wandschiene Weiss 100 cm (2er-Pack)
+  rail1500:   { name:'Wandschiene Element System, 150 cm', price:17, est:true }, // Jumbo: Element-System Wandschiene Weiss 150 cm (2er-Pack)
+  rail2000:   { name:'Wandschiene Element System, 200 cm', price:22, est:true }, // Jumbo: Element System Wandschiene Weiss 200 cm (2er-Pack)
+  konsole250: { name:'Konsole Element System, 25 cm', price:7, est:true },       // Jumbo: Element-System Konsole Weiss 25 cm
+  konsole300: { name:'Konsole Element System, 30 cm', price:8, est:true },       // Jumbo: Konsole 30 cm weiss
+  konsole350: { name:'Konsole Element System, 35 cm', price:9, est:true },       // Jumbo: Konsole 35 cm weiss
+  konsole400: { name:'Konsole Element System, 40 cm', price:10, est:true },      // Jumbo: Element System Konsole Weiss 40 cm
+  konsole470: { name:'U-Träger Element System, 47 cm', price:13, est:true },     // Jumbo: Element System U-Träger zu Wandschiene 47 cm
+  winkel150:  { name:'Blechkonsole weiss 150 × 200 mm', price:3.5, est:true },   // Jumbo: Blechkonsole weiss 150 x 200 mm RAL 9016
+  winkel200:  { name:'Blechkonsole weiss 200 × 250 mm', price:4.5, est:true },   // Jumbo: Blechkonsole weiss 200 x 250 mm RAL 9016
+  winkel250:  { name:'Blechkonsole weiss 250 × 300 mm', price:5.5, est:true },   // Jumbo: Coop Blechkonsole Weiss 25 x 30 cm
+  shelfpin:   { name:'Steckbodenträger Ø 5 mm (Hettich)', price:0.34 },          // Jumbo: Hettich Steckbodenträger 20 Stück, CHF 6.75
+  angle40:    { name:'Winkelverbinder 40 × 40 mm inkl. Schrauben', price:1, est:true }, // Jumbo: Ayce Winkelverbinder 40 x 40 mm
+  dowel6:     { name:'Spreizdübel 6 mm + Schraube 4,5 × 50 mm', price:0.2, est:true }, // Jumbo: Fischer Dübel SX 6x30 S
+  hollow:     { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)', price:1.6 },  // Jumbo: Fischer HM 5 x 52 S, 4 Stück CHF 6.30
+  screw35:    { name:'Holzschrauben 4 × 35 mm', price:0.08, est:true },          // Jumbo: Spax Senkkopf Torx 4 x 35 mm, 25 Stück
+  screw70:    { name:'Holzschrauben 5 × 70 mm', price:0.19 },                    // Jumbo: SPAX 5 x 70 mm, 50 Stück CHF 9.50
+  tipguard:   { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)', price:22.5 }  // Jumbo: Abus TV-Kippsicherung Isa, 2 Stück; eigentliches Möbel-Kippschutz-Set nicht im Sortiment
 };
-const RAIL_LENS = [1000, 1500, 2000, 2500];
-const KONSOLE_LENS = [200, 250, 300, 370, 470];
-const WINKEL_LENS = [150, 200, 250, 300];
+const RAIL_LENS = [1000, 1500, 2000];
+const KONSOLE_LENS = [250, 300, 350, 400, 470];
+const WINKEL_LENS = [150, 200, 250];
 const SYS = {
   battens:  { name:'Leisten', level:1 },
   rails:    { name:'Wandschienen', level:1 },
@@ -283,6 +282,7 @@ const SUPPORTS = {
     const n = pieces(seg.u1 - seg.u0 - 100, ctx.max) + 1;
     const us = spread(seg.u0 + 50, seg.u1 - 50, n).map(r0);
     const kl = [...KONSOLE_LENS].reverse().find(l => l <= seg.depth - 10) || KONSOLE_LENS[0];
+    if (kl > seg.depth - 10) ctx.warn.push(`Die kürzeste Konsole (${kl} mm) steht bei ${seg.depth} mm tiefen Tablaren ${SIDE_NAME[seg.id]} vorne vor – Tablare tiefer machen oder Tablarwinkel wählen.`);
     for (const p of shelves) addShelf(ctx, seg, p, 'liegt auf Konsolen, von unten verschraubt');
     let konsolen = 0;
     for (const u of us) {
@@ -435,7 +435,7 @@ function freeModules(ctx, seg){
         ctx.backScrews += Math.ceil(2 * (w + top) / 150);
       } else ctx.buy('angle40', 4, 'ohne Rückwand: hinten in die Ecken');
       ctx.modules++;
-      if (top > 1200) { ctx.buy('tipguard', 1, 'ein Set pro Modul'); ctx.fix += 2; }
+      if (top > 1200) { ctx.tall++; ctx.fix += 2; }
     }
   }
 }
@@ -458,7 +458,7 @@ function computeReduit(c0){
   const raw = [], boxes = [], extras = [], buys = new Map();
   const ctx = {
     c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.short, warn, extras,
-    fix:0, lens:[], pins:0, backScrews:0, modules:0, grouped:new Map(),
+    fix:0, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
     add(name, L, B, th, group, note, kind, box, pm){
       const key = [name, r0(L), r0(B), th, group, note].join('|');
       raw.push({ key, name, L:r0(L), B:r0(B), t:th, group, note, kind, pm });
@@ -502,12 +502,13 @@ function computeReduit(c0){
   if (free) {
     hw.push(...jointHardware(c, ctx.lens, t, false, 'für Böden und Deckel'));
     if (ctx.pins) ctx.buy('shelfpin', ctx.pins, '4 pro Einlegeboden');
+    if (ctx.tall) ctx.buy('tipguard', Math.ceil(ctx.tall / 2), 'ein Gurt pro Modul, oben an die Wand');
     if (Bk) hw.push([ctx.backScrews, 'Senkkopfschrauben 3 × 16 mm', 'Rückwände, alle 15 cm']);
     else warn.push('Ohne Rückwand verziehen sich die Module leicht. Metallwinkel hinten in die Ecken sind eingeplant – eine Rückwand ist stabiler.');
   }
   const drywall = c.wall === 'drywall';
   if (ctx.fix) ctx.buy(drywall ? 'hollow' : 'dowel6', plusTen(ctx.fix), drywall ? 'für Gipskarton, wenn möglich in die Ständer' : 'für Beton oder Backstein, +10 % Reserve');
-  for (const [key, { qty, note }] of buys) hw.push([qty, BUY[key].name, note, BUY[key].price]);
+  for (const [key, { qty, note }] of buys) hw.push([qty, BUY[key].name, BUY[key].est ? `${note} · Preis geschätzt` : note, BUY[key].price]);
   if (drywall && ctx.fix) warn.push('Gipskarton trägt wenig: Leisten, Schienen und Winkel wenn möglich in die Ständer schrauben (meist alle 60 cm) und Hohlraumdübel verwenden. Für schwere Lasten besser selbststehend bauen.');
 
   const buyCost = hw.reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
