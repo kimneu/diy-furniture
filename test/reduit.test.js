@@ -330,3 +330,21 @@ test('Bauablauf: Schritt «Stösse verbinden» nur mit Stössen', () => {
   assert.ok(run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
   assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
 });
+
+/* ---------- Review-Befunde ---------- */
+const overlaps = (a, b) => [0, 1, 2].every(i => Math.abs(a.pos[i] - b.pos[i]) * 2 < a.size[i] + b.size[i] - 0.001);
+
+test('Pfostenrahmen: Stossleiste stösst nicht an den Pfosten', () => {
+  for (const mat of ['schaltafel', 'gon_fichte', 'regalbau']) {
+    const Rr = run({ mat, t: MATS[mat].tDef, shape:'I', rw:2400, rd:1400, doorW:800, sys:'posts' });
+    const joints = Rr.boxes.filter(b => b.key.startsWith('Stossleiste|')), posts = Rr.boxes.filter(b => b.key.startsWith('Kantholz'));
+    assert.ok(joints.length && posts.length, mat);
+    assert.ok(!joints.some(j => posts.some(p => overlaps(j, p))), mat);
+  }
+});
+
+test('Tiefenhinweis nennt nur Seiten, die wirklich auf einer Brettbreite liegen', () => {
+  const n = cfg({ mat:'gon_3s', shape:'U', rw:1000, doorW:700, dLeft:600, dRight:600 });
+  const hint = n.warn.find(w => w.includes('Brettbreite'));
+  assert.ok(!hint || !/links 350|rechts 350/.test(hint), hint);
+});

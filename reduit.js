@@ -52,7 +52,7 @@ function normReduit(c0){
       // Passt keine Brettbreite in die Begrenzung, bleibt die begrenzte Tiefe (die Teile melden dann «passt auf kein Brett»).
       const B = [...BM.widths].reverse().find(w => w <= c[k]);
       if (B != null) c[k] = B;
-      if (on && c[k] !== want[k]) moved.push(`${side} ${c[k]} mm`);
+      if (on && B != null && c[k] !== want[k]) moved.push(`${side} ${c[k]} mm`);
     }
     if (moved.length) warn.push(`Tiefe ${joinDe(moved)} gesetzt (Brettbreite ${BM.name}: ${BM.widths.join(', ')} mm).`);
   }
@@ -302,24 +302,25 @@ function shelfJoints(a, b, Lmax, cands){
   }
   return { cuts, added };
 }
-// Tablar p in Stücke teilen (nur bei ganzen Brettern). supports = Stützen-Mitten entlang u. Legt die Stossleisten an.
-function splitShelf(ctx, seg, p, supports){
+// Tablar p in Stücke teilen (nur bei ganzen Brettern). supports = Stützen-Mitten entlang u. Legt die Stossleisten an;
+// v1 = vorderes Ende der Stossleiste (vor Pfosten und Querlatten zurück).
+function splitShelf(ctx, seg, p, supports, v1 = seg.depth - 50){
   const { cuts, added } = shelfJoints(p.a, p.b, ctx.lmax(seg), supports.map(u => u + JOINT_OFF));
   if (!cuts.length) return { pieces:[p], supports:[] };
   const edges = [p.a, ...cuts, p.b];
   const pieces = edges.slice(1).map((b, i) => ({ ...p, a:edges[i], b, ends:[i === 0 ? p.ends[0] : 'joint', i === cuts.length ? p.ends[1] : 'joint'] }));
   for (const u of cuts) {
-    ctx.add('Stossleiste', seg.depth - 80, 48, 24, ctx.gSolid, 'unter dem Tablarstoss, an beide Stücke geschraubt', 'solid',
-      ctx.box(seg, { u0:u - 24, u1:u + 24, y0:p.y - 24, y1:p.y, v0:30, v1:seg.depth - 50 }, 'y', 'v', SOLID_FIN, [0, -60, 0]), BUY.latte.price);
+    ctx.add('Stossleiste', v1 - 30, 48, 24, ctx.gSolid, 'unter dem Tablarstoss, an beide Stücke geschraubt', 'solid',
+      ctx.box(seg, { u0:u - 24, u1:u + 24, y0:p.y - 24, y1:p.y, v0:30, v1 }, 'y', 'v', SOLID_FIN, [0, -60, 0]), BUY.latte.price);
     ctx.buy('screw35', 4, 'Stossleisten');
   }
   return { pieces, supports: added.map(u => u - JOINT_OFF) };
 }
 // Alle Tablare eines Segments teilen; gibt die Stücke und alle zusätzlichen Stützen (sortiert, eindeutig) zurück.
-function splitShelves(ctx, seg, shelves, supports){
+function splitShelves(ctx, seg, shelves, supports, v1){
   if (!ctx.boards) return { pieces:shelves, supports:[] };
   const pieces = [], more = [];
-  for (const p of shelves) { const s = splitShelf(ctx, seg, p, supports); pieces.push(...s.pieces); more.push(...s.supports); }
+  for (const p of shelves) { const s = splitShelf(ctx, seg, p, supports, v1); pieces.push(...s.pieces); more.push(...s.supports); }
   return { pieces, supports:[...new Set(more.map(r0))].sort((x, y) => x - y) };
 }
 
@@ -456,7 +457,8 @@ const SUPPORTS = {
       const k = Math.floor((q - p) / ctx.max);
       for (let j = 1; j <= k; j++) posts.push(r0(p + (q - p) * j / (k + 1) - 22));
     }
-    const split = splitShelves(ctx, seg, shelves, posts.map(u => u + 22));
+    // Pfosten stehen hinter der Querlatte (v bis Tiefe − 24, 45 tief): Stossleiste davor enden lassen.
+    const split = splitShelves(ctx, seg, shelves, posts.map(u => u + 22), seg.depth - 24 - 45 - 5);
     for (const s of split.supports) posts.push(r0(s - 22));
     for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Latten, vorne auf der Querlatte');
     for (const p of shelves) {

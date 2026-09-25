@@ -18,7 +18,7 @@ import { createRequire } from 'node:module';
 
 const here = p => new URL(p, import.meta.url).pathname;
 const require = createRequire(import.meta.url);
-const { FILE, format } = require('./preise-datei.cjs');
+const { FILE, format, checkBoardPage } = require('./preise-datei.cjs');
 const DATA = require(FILE);
 const { BACKS } = require('../shared.js');
 const SOURCES = JSON.parse(readFileSync(here('./jumbo-quellen.json'), 'utf8'));
@@ -151,15 +151,18 @@ async function boardPrices(page, keys) {
     const E = DATA.bretter && DATA.bretter[mat];
     if (!E) console.warn(`«${mat}» gibt es in preise.js noch nicht unter bretter – nur lesen`);
     const cur = E && E.formate.find(f => f.L === L && f.B === B);
+    if (!SOURCES[key]) { console.warn(`Keine Quelle für «${key}» in jumbo-quellen.json`); continue; }
     const p = await readBoardPage(page, SOURCES[key].url);
-    rows.push({ key, mat, L, B, price:p.price, was:cur ? cur.price : undefined, name:p.name, thick:p.thick, note: p.price ? null : 'kein Preis gelesen (Bot-Prüfung?) – später nochmals' });
+    const bad = checkBoardPage(p, { L, B, t: E && E.t });
+    rows.push({ key, mat, L, B, price: bad ? null : p.price, seen:p.price, was:cur ? cur.price : undefined, name:p.name, thick:p.thick,
+      note: bad ? `${bad} – nicht übernommen` : p.price ? null : 'kein Preis gelesen (Bot-Prüfung?) – später nochmals' });
     await sleep(PAUSE);
   }
   if (!rows.length) return rows;
   console.log('\nBrett                    Jumbo CHF   preise.js   Stärke  Produkt');
   for (const r of rows) {
     const flag = r.price !== r.was ? '*' : ' ';
-    console.log(`${flag}${r.key.padEnd(24)} ${String(r.price ?? '–').padStart(9)}   ${String(r.was ?? 'neu').padStart(9)}   ${String(r.thick ?? '–').padStart(6)}  ${r.name}${r.note ? '  · ' + r.note : ''}`);
+    console.log(`${flag}${r.key.padEnd(24)} ${String(r.seen ?? '–').padStart(9)}   ${String(r.was ?? 'neu').padStart(9)}   ${String(r.thick ?? '–').padStart(6)}  ${r.name}${r.note ? '  · ' + r.note : ''}`);
   }
   return rows;
 }
@@ -207,6 +210,7 @@ try {
     const all = cmd ? [cmd, ...args] : Object.keys(SOURCES);
     // Ein Material-Schlüssel ohne Format («mood_fichte») wählt alle seine Formate.
     const expand = k => k.includes(' ') || SOURCES[k] ? [k] : Object.keys(SOURCES).filter(s => s.startsWith(k + ' '));
+    for (const k of all) if (!expand(k).length) console.warn(`«${k}»: keine Quelle in jumbo-quellen.json`);
     const keys = all.flatMap(expand), plates = keys.filter(k => !k.includes(' '));
     const rows = [...(plates.length ? await prices(page, plates) : []), ...await boardPrices(page, keys.filter(k => k.includes(' ')))];
     if (doWrite) write(rows);

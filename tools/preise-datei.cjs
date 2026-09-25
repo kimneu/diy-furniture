@@ -22,4 +22,13 @@ function format(data){
   return HEAD + 'const PREISE = {\n' + groups.join(',\n') + '\n};\n' + TAIL;
 }
 
-module.exports = { FILE, format };
+// Passt die gelesene Produktseite zum Format in preise.js? null = ja, sonst der Grund (dann nicht schreiben).
+function checkBoardPage(page, want){
+  const d = page.dims || [];
+  if (!d.includes(want.L) || !d.includes(want.B)) return `Masse der Seite (${d.join(' × ') || '–'}) passen nicht zu ${want.L} × ${want.B}`;
+  const t = page.thick != null ? page.thick : d.length === 3 ? Math.min(...d) : null;
+  if (t != null && want.t != null && t !== want.t) return `Stärke der Seite (${t} mm) passt nicht zu ${want.t} mm`;
+  return null;
+}
+
+module.exports = { FILE, format, checkBoardPage };

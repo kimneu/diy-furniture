@@ -1176,7 +1176,8 @@ form.addEventListener('input', e => {
     const v = el.value === 'plinth' ? 80 : 160;
     $('#baseH').value = v; $('#baseH-r').value = v;
   }
-  if (el.name === 'mat') matMsg = '';
+  // Der Hinweis nach einem Typwechsel gilt nur bis zur nächsten Eingabe.
+  matMsg = '';
   if (el.name === 'kind') syncMaterials();
   syncVisibility(); render(); save();
 });

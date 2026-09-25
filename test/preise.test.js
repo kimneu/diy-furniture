@@ -44,3 +44,13 @@ test('Stärken und Standardpreis kommen aus preise.js', () => {
   assert.strictEqual(MATS.birke.price, PREISE.platten.birke.prices[18]);
   assert.deepStrictEqual(MATS.birke.sheet, PREISE.platten.birke.sheet);
 });
+
+test('checkBoardPage: nur schreiben, wenn Masse und Stärke zum Format passen', () => {
+  const { checkBoardPage } = require('../tools/preise-datei.cjs');
+  assert.strictEqual(checkBoardPage({ dims:[2000, 400, 18], thick:18 }, { L:2000, B:400, t:18 }), null);
+  assert.strictEqual(checkBoardPage({ dims:[2600, 400], thick:18 }, { L:2600, B:400, t:18 }), null);
+  assert.strictEqual(checkBoardPage({ dims:[2000, 400, 18], thick:null }, { L:2000, B:400, t:18 }), null);
+  assert.match(checkBoardPage({ dims:[1200, 400, 18], thick:18 }, { L:2000, B:400, t:18 }), /Masse/);
+  assert.match(checkBoardPage({ dims:[], thick:18 }, { L:2000, B:400, t:18 }), /Masse/);
+  assert.match(checkBoardPage({ dims:[2000, 400, 19], thick:19 }, { L:2000, B:400, t:18 }), /Stärke/);
+});
