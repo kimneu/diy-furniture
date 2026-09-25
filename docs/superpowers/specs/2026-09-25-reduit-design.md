@@ -99,7 +99,22 @@ Koordinaten: Raum B (x) × T (z) × H (y), Tür mittig in der Vorderwand. Wandst
 
 **Freie Enden** entstehen nur durch Tür-Aufschlag oder Nische. Regel: Liegt ein Tablar-Ende nicht an einer Wand, bekommt es eine Stütze – bei Bauart «Wangen» eine Wange, sonst einen Pfosten – plus Hinweis.
 
-**Durchbiegung:** Tabelle maximale freie Spannweite pro Material und Stärke (Daumenregel, z. B. Multiplex 18 mm ≈ 800 mm). Die Werte werden im Plan vom Nutzer festgelegt (Fachwissen). Überschreitung führt je nach Bauart zu mehr Trägern, einer Zwischenstütze oder einer Warnung (siehe Bauarten).
+**Durchbiegung:** Maximale freie Spannweite pro Material und Stärke (Daumenregel für ein belastetes Reduit-Tablar, ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200). MDF kriecht unter Dauerlast, daher tiefer.
+
+| Material | Stärke → max. Spannweite |
+|---|---|
+| Multiplex Birke | 15 → 650 · 18 → 800 · 21 → 950 |
+| Eiche Leimholz | 18 → 700 · 20 → 800 · 26 → 1000 |
+| Fichte Leimholz | 18 → 600 · 28 → 950 |
+| Sperrholz Seekiefer | 15 → 550 |
+| Sperrholz Fichte | 18 → 700 |
+| MDF | 16 → 450 · 19 → 550 · 22 → 650 |
+
+Tabelle als `SPAN` in `reduit.js`. Regeln, wenn die freie Spannweite **≥ max** ist:
+
+- Bauarten mit Trägern (Schienen, Winkel, Wangen, Pfostenrahmen): Träger-/Stützenanzahl wird so erhöht, dass jede Spannweite < max ist. Zusätzlich Meldung (Hinweis): «Spannweite ≥ X mm – Zwischenstütze(n) eingefügt.»
+- Leisten: Die Vorderkante liegt frei. Meldung (Warnung): «Tablar ≥ X mm frei gespannt – biegt sich vorne durch. Pfosten vorne oder dickeres Material wählen.»
+- Selbststehend: Module sind ≤ 900 mm; ist 900 ≥ max (z. B. MDF), wird die Modulbreite auf < max begrenzt und gemeldet.
 
 **Durchgang:** Bei U Warnung, wenn `B − Tiefe links − Tiefe rechts < 600 mm`.
 
