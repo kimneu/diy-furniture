@@ -150,6 +150,20 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);padding:7px 14px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent)}
 .copied{font-size:13px;color:var(--muted)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.acts .btn{flex:1}
+.acts .copied{flex-basis:100%}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.coll{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.coll li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.coll li.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.coll input{font:inherit;font-weight:600;font-size:15px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin-left:-7px;width:100%}
+.coll input:hover{border-color:var(--line)}
+.coll input:focus{border-color:var(--accent);outline:none;background:var(--raise)}
+.coll .meta{grid-column:1;font-size:13px;color:var(--muted)}
+.coll .meta b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.coll .do{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:560px){.coll li{grid-template-columns:minmax(0,1fr)}.coll .do{grid-column:1;grid-row:auto;justify-content:flex-start}}
 .copybox{width:100%;min-height:140px;font-family:var(--f-mono);font-size:12px;margin-top:10px;background:var(--raise);border:1px solid var(--line-strong);border-radius:8px;padding:8px}
 
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
@@ -237,6 +251,11 @@ figure.sheet svg{width:100%;height:auto;display:block}
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
         <div class="seg" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit"><label for="kind-reduit">Reduit</label></div>
+        <div class="acts">
+          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall</button>
+          <button type="button" class="btn" id="bSammeln">In Sammlung</button>
+          <span class="copied" id="sammelMsg" aria-live="polite"></span>
+        </div>
       </section>
       <section class="group" data-kind="sideboard">
         <h2>Masse</h2>
@@ -557,6 +576,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
         <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
         <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
+        <button class="tab" role="tab" id="tab-coll" aria-controls="p-coll" aria-selected="false">Sammlung<span class="count" id="cnt-coll"></span></button>
       </div>
 
       <div class="panel" role="tabpanel" id="p-cut" aria-labelledby="tab-cut">
@@ -588,6 +608,11 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <ol class="steps" id="steps"></ol>
       </div>
 
+      <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
+        <div class="toolbar"><p id="collSum"></p><span class="copied" id="collMsg" aria-live="polite"></span></div>
+        <ul class="coll" id="collList"></ul>
+      </div>
+
       <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
     </section>
   </div>
@@ -599,6 +624,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 <script src="shared.js"></script>
 <script src="sideboard.js"></script>
 <script src="reduit.js"></script>
+<script src="konfig.js"></script>
 <script>
 (() => {
 'use strict';
@@ -664,34 +690,21 @@ function syncVisibility(){
   $('#row-nicheR-dims').hidden = !f.get('nicheR');
   $('#grp-niche').hidden = !hasL && !hasR;
 }
-function readCfg(){
-  const f = new FormData(form);
-  const n = k => Number(f.get(k));
-  return {
-    W:n('w'), H:n('h'), D:n('d'), room:f.get('room'), mat:f.get('mat'), t:n('t'), back:f.get('back'), top:f.get('top'),
-    sections:n('sections'), shelves:n('shelves'), base:f.get('base'), baseH:n('baseH'), legShape:f.get('legShape'), taper:n('taper'), legColor:f.get('legColor'), joint:f.get('joint'),
-    front:f.get('front'), doorsPer:f.get('doorsPer'), slideN:f.get('slideN'), handle:f.get('handle'), color:f.get('color'),
-    sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:f.get('grain') === 'on', price:n('price'),
-    kind:f.get('kind'),
-    rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorIn:f.get('doorIn') === 'on', hinge:f.get('hinge'), wall:f.get('wall'),
-    shape:f.get('shape'), corner:f.get('corner'), build:f.get('build'), sys:f.get('sys'),
-    dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
-    nicheL:f.get('nicheL') === 'on', nicheLW:n('nicheLW'), nicheLH:n('nicheLH'),
-    nicheR:f.get('nicheR') === 'on', nicheRW:n('nicheRW'), nicheRH:n('nicheRH')
-  };
+function readCfg(){ return cfgFromData(formData()); }
+// Formularwerte als name → Wert (Radio: gewählter Wert, Checkbox: true/false).
+function formData(){
+  const data = {};
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+    else if (el.type === 'checkbox') data[el.name] = el.checked;
+    else data[el.name] = el.value;
+  }
+  data.katalog = catalogValues(data.mat, data.t);
+  return data;
 }
 function save(){
-  try {
-    const data = {};
-    for (const el of form.elements) {
-      if (!el.name) continue;
-      if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
-      else if (el.type === 'checkbox') data[el.name] = el.checked;
-      else data[el.name] = el.value;
-    }
-    data.katalog = catalogValues(data.mat, data.t);
-    localStorage.setItem(STORE, JSON.stringify(data));
-  } catch (e) {}
+  try { localStorage.setItem(STORE, JSON.stringify(formData())); } catch (e) {}
 }
 // Preis und Plattenformat aus dem Katalog. Gespeichert wird, was der Katalog beim Speichern sagte:
 // nur von Hand geänderte Werte überleben so ein Preis-Update in preise.js.
@@ -699,9 +712,11 @@ function catalogValues(mat, t){
   const M = MATS[mat];
   return { price:matPrice(M, Number(t)), sheetL:M.sheet[0], sheetB:M.sheet[1] };
 }
-function restore(){
-  let data = null;
-  try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+function stored(){
+  try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; }
+}
+// Setzt das Formular auf data (ohne data: Standardwerte des Materials). Ohne katalog gelten Preis und Format aus dem Katalog.
+function restore(data = stored()){
   const mat = data && MATS[data.mat] ? data.mat : 'birke';
   $('#mat').value = mat;
   fillThickness(mat, data && data.t);
@@ -715,7 +730,7 @@ function restore(){
     if (k in cat && (!data.katalog || Number(v) === data.katalog[k])) continue;
     const els = form.elements[k];
     if (!els) continue;
-    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === v; }
+    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === String(v); }
     else if (els.type === 'checkbox') els.checked = !!v;
     else els.value = v;
   }
@@ -1200,6 +1215,82 @@ $('#bCopy').addEventListener('click', () => {
   } catch (e) { fallback(); }
 });
 
+/* ---------- Zufall und Sammlung ---------- */
+// Formular komplett neu setzen (Laden, Zufall) und Kamera neu ausrichten.
+function applyData(data){
+  restore(data); syncVisibility();
+  three.userMoved = false;
+  render(); save();
+}
+$('#bZufall').addEventListener('click', () => {
+  applyData(zufall(formData()));
+  flash('#sammelMsg', '');
+});
+
+const COLL = STORE + '-sammlung';
+let coll = [], aktiv = null, entfernt = null;
+try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
+function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
+function flash(sel, html){
+  const el = $(sel); el.innerHTML = html;
+  clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+}
+const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
+const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
+function renderColl(){
+  $('#cnt-coll').textContent = coll.length || '';
+  const sum = coll.reduce((a, e) => a + e.info.kosten, 0);
+  $('#collSum').textContent = coll.length
+    ? `${coll.length} Möbel · zusammen ca. ${chf5(sum)} (Holz im Zuschnitt und Kaufteile, Preise beim Speichern)`
+    : 'Noch nichts gesammelt. «In Sammlung» merkt sich die aktuelle Konfiguration – so stellst du mehrere Möbel zusammen und vergleichst sie.';
+  $('#collList').innerHTML = coll.map(e => `
+    <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
+      <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
+      <div class="meta">${esc(e.info.typ)} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
+      <div class="do">
+        <button type="button" class="btn ghost" data-act="laden">Laden</button>
+        <button type="button" class="btn ghost" data-act="update" title="Mit der aktuellen Konfiguration überschreiben">Überschreiben</button>
+        <button type="button" class="btn ghost" data-act="weg">Entfernen</button>
+      </div>
+    </li>`).join('');
+}
+$('#bSammeln').addEventListener('click', () => {
+  const e = sammlungEintrag(formData(), R);
+  const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
+  if (gleich) e.name += ` (${gleich + 1})`;
+  coll.push(e); aktiv = e.id; storeColl(); renderColl();
+  flash('#sammelMsg', `«${esc(e.name)}» gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+});
+$('#sammelMsg').addEventListener('click', ev => {
+  const id = ev.target.dataset.go;
+  if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+});
+$('#collList').addEventListener('change', ev => {
+  const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
+  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); }
+});
+$('#collList').addEventListener('click', ev => {
+  const act = ev.target.dataset.act;
+  if (!act) return;
+  const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
+  if (act === 'laden') { aktiv = e.id; applyData(e.data); flash('#collMsg', `«${esc(e.name)}» geladen.`); }
+  if (act === 'update') {
+    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id;
+    flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
+  }
+  if (act === 'weg') {
+    entfernt = { e, i }; coll.splice(i, 1);
+    if (aktiv === e.id) aktiv = null;
+    flash('#collMsg', `«${esc(e.name)}» entfernt. <button type="button" class="linkbtn" id="bUndo">Rückgängig</button>`);
+  }
+  storeColl(); renderColl();
+});
+$('#collMsg').addEventListener('click', ev => {
+  if (ev.target.id !== 'bUndo' || !entfernt) return;
+  coll.splice(entfernt.i, 0, entfernt.e); entfernt = null;
+  storeColl(); renderColl(); flash('#collMsg', 'Wiederhergestellt.');
+});
+
 /* ---------- Start ---------- */
 fillMaterials();
 restore();
@@ -1207,5 +1298,6 @@ syncVisibility();
 try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
 render();
+renderColl();
 })();
 </script>
