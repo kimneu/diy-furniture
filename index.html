@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Martylko</title>
 <meta name="description" content="Konfigurator für DIY-Möbel – Sideboard und Reduit-Regale: Masse eingeben, Materialliste, Plattenplan, Beschläge und Bauablauf erhalten.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,6 +75,7 @@ button,input,select{font:inherit;color:inherit}
 }
 
 /* Steuerung */
+[hidden]{display:none!important}
 .group{padding-block:14px;border-bottom:1px solid var(--line);display:grid;gap:12px}
 .group:last-child{border-bottom:0}
 .group h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
@@ -234,6 +236,9 @@ figure.sheet svg{width:100%;height:auto;display:block}
   <div class="layout">
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
+        <div class="seg" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit"><label for="kind-reduit">Reduit</label></div>
+      </section>
+      <section class="group" data-kind="sideboard">
         <h2>Masse</h2>
         <div class="dim">
           <label for="w">Breite</label>
@@ -253,9 +258,131 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <p class="hint">Höhe inklusive Füsse bzw. Sockel. Tiefe inklusive Rückwand, ohne aufliegende Türen.</p>
       </section>
 
+      <section class="group" data-kind="reduit">
+        <h2>Raum</h2>
+        <div class="dim">
+          <label for="rw">Breite</label>
+          <div class="num"><input id="rw" name="rw" type="number" min="600" max="4000" step="10" value="1600" inputmode="numeric"><span>mm</span></div>
+          <input id="rw-r" type="range" min="600" max="4000" step="10" value="1600" data-for="rw" aria-label="Breite">
+        </div>
+        <div class="dim">
+          <label for="rd">Tiefe</label>
+          <div class="num"><input id="rd" name="rd" type="number" min="600" max="4000" step="10" value="1400" inputmode="numeric"><span>mm</span></div>
+          <input id="rd-r" type="range" min="600" max="4000" step="10" value="1400" data-for="rd" aria-label="Tiefe">
+        </div>
+        <div class="dim">
+          <label for="rh">Raumhöhe</label>
+          <div class="num"><input id="rh" name="rh" type="number" min="1800" max="3000" step="10" value="2400" inputmode="numeric"><span>mm</span></div>
+          <input id="rh-r" type="range" min="1800" max="3000" step="10" value="2400" data-for="rh" aria-label="Raumhöhe">
+        </div>
+        <div class="dim">
+          <label for="doorW">Türbreite</label>
+          <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
+          <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
+        </div>
+        <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
+        <div class="field" id="row-hinge">
+          <span class="lbl" id="lbl-hinge">Türband</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-hinge"><input type="radio" name="hinge" id="hinge-L" value="L" checked><label for="hinge-L">links</label><input type="radio" name="hinge" id="hinge-R" value="R"><label for="hinge-R">rechts</label></div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-wall">Wände</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-wall"><input type="radio" name="wall" id="wall-solid" value="solid" checked><label for="wall-solid">Beton / Backstein</label><input type="radio" name="wall" id="wall-drywall" value="drywall"><label for="wall-drywall">Gipskarton</label></div>
+        </div>
+        <p class="hint">Innenmasse von Wand zu Wand. Die Tür liegt mittig in der Vorderwand.</p>
+      </section>
+
+      <section class="group" data-kind="reduit">
+        <h2>Form</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-shape">Regal an</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
+        </div>
+        <div class="field" id="row-corner">
+          <span class="lbl" id="lbl-corner">Ecke</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit">
+        <h2>Bauart</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-build">Regal</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-build"><input type="radio" name="build" id="build-built" value="built" checked><label for="build-built">eingebaut</label><input type="radio" name="build" id="build-free" value="free"><label for="build-free">selbststehend</label></div>
+        </div>
+        <div class="cards" role="radiogroup" aria-label="Einbau-Art" id="row-sys">
+          <label class="card"><input type="radio" name="sys" value="battens" checked><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
+          <label class="card"><input type="radio" name="sys" value="rails"><b>Wandschienen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Senkrechte Schienen mit einhängbaren Konsolen. Höhen jederzeit verstellbar, teurer.</span></label>
+          <label class="card"><input type="radio" name="sys" value="brackets"><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
+          <label class="card"><input type="radio" name="sys" value="cheeks"><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
+          <label class="card"><input type="radio" name="sys" value="posts"><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Kanthölzer vorne, Latten als Auflage – das klassische Kellerregal. Trägt am meisten.</span></label>
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit">
+        <h2>Tablare</h2>
+        <div class="dim">
+          <label for="dBack">Tiefe hinten</label>
+          <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
+          <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
+        </div>
+        <div class="dim" id="row-dLeft">
+          <label for="dLeft">Tiefe links</label>
+          <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
+        </div>
+        <div class="dim" id="row-dRight">
+          <label for="dRight">Tiefe rechts</label>
+          <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
+        </div>
+        <div class="dim">
+          <label for="nShelves">Anzahl Tablare</label>
+          <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
+          <input id="nShelves-r" type="range" min="1" max="8" step="1" value="5" data-for="nShelves" aria-label="Anzahl Tablare">
+        </div>
+        <div class="dim">
+          <label for="gapBottom">Unterstes Tablar ab Boden</label>
+          <div class="num"><input id="gapBottom" name="gapBottom" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"><span>mm</span></div>
+          <input id="gapBottom-r" type="range" min="0" max="600" step="10" value="150" data-for="gapBottom" aria-label="Unterstes Tablar ab Boden">
+        </div>
+        <div class="dim">
+          <label for="gapTop">Oberstes Tablar bis Decke</label>
+          <div class="num"><input id="gapTop" name="gapTop" type="number" min="100" max="800" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="gapTop-r" type="range" min="100" max="800" step="10" value="300" data-for="gapTop" aria-label="Oberstes Tablar bis Decke">
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit">
+        <h2>Nische</h2>
+        <div class="field" id="row-nicheL">
+          <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
+          <div class="row2" id="row-nicheL-dims">
+            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <div class="field" id="row-nicheR">
+          <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
+          <div class="row2" id="row-nicheR-dims">
+            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <div class="field" id="row-nicheB">
+          <span class="lbl" id="lbl-nicheB">Nische hinten</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-nicheB"><input type="radio" name="nicheB" id="nicheB-none" value="none" checked><label for="nicheB-none">keine</label><input type="radio" name="nicheB" id="nicheB-L" value="L"><label for="nicheB-L">links</label><input type="radio" name="nicheB" id="nicheB-R" value="R"><label for="nicheB-R">rechts</label></div>
+        </div>
+          <div class="row2" id="row-nicheB-dims">
+            <div class="num wide"><input id="nicheBW" name="nicheBW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite hinten"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheBH" name="nicheBH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe hinten"><span>mm hoch</span></div>
+          </div>
+        <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
+      </section>
+
       <section class="group">
         <h2>Material</h2>
-        <div class="field">
+        <div class="field" id="row-room">
           <span class="lbl" id="lbl-room">Einsatzort</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
             <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
@@ -275,7 +402,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         </div>
         <div class="row2">
           <div class="field"><label for="t">Stärke</label><select id="t" name="t"></select></div>
-          <div class="field"><label for="back">Rückwand</label>
+          <div class="field" id="row-back"><label for="back">Rückwand</label>
             <select id="back" name="back">
               <option value="hdf3">HDF 3 mm</option>
               <option value="ply6">Sperrholz Pappel 5 mm</option>
@@ -286,7 +413,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <p class="hint" id="matNote"></p>
       </section>
 
-      <section class="group">
+      <section class="group" data-kind="sideboard">
         <h2>Aufbau</h2>
         <div class="field">
           <span class="lbl" id="lbl-top">Deckel</span>
@@ -347,7 +474,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         </div>
       </section>
 
-      <section class="group">
+      <section class="group" id="grp-joint">
         <h2>Verbindung</h2>
         <div class="cards" role="radiogroup" aria-label="Verbindung">
           <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
@@ -357,7 +484,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         </div>
       </section>
 
-      <section class="group">
+      <section class="group" data-kind="sideboard">
         <h2>Front</h2>
         <div class="field">
           <span class="lbl" id="lbl-front">Türen</span>
@@ -428,6 +555,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
           <div>
             <button type="button" class="vbtn" id="bDoors" aria-pressed="false">Türen öffnen</button>
             <button type="button" class="vbtn" id="bExplode" aria-pressed="false">Explosionsansicht</button>
+            <button type="button" class="vbtn" id="bWall" aria-pressed="false" hidden>Vorderwand aus</button>
           </div>
           <div><button type="button" class="vbtn" id="bReset">Ansicht zurücksetzen</button></div>
         </div>
@@ -483,6 +611,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="shared.js"></script>
 <script src="sideboard.js"></script>
+<script src="reduit.js"></script>
 <script>
 (() => {
 'use strict';
@@ -523,6 +652,27 @@ function syncVisibility(){
   $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
   $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' ? 'Weiss' : 'Holz';
   $('#matNote').textContent = MATS[mat].note;
+  // Möbeltyp
+  const kind = f.get('kind'), reduit = kind === 'reduit', free = f.get('build') === 'free';
+  for (const sec of form.querySelectorAll('[data-kind]')) sec.hidden = sec.dataset.kind !== kind;
+  $('#grp-joint').hidden = reduit && !free;
+  $('#row-room').hidden = reduit;
+  $('#row-back').hidden = reduit && !free;
+  if (!reduit) return;
+  const shape = f.get('shape'), corner = f.get('corner');
+  const hasL = shape === 'U' || (shape === 'L' && corner === 'L');
+  const hasR = shape === 'U' || (shape === 'L' && corner === 'R');
+  $('#row-corner').hidden = shape !== 'L';
+  $('#row-sys').hidden = free;
+  $('#row-hinge').hidden = !f.get('doorIn');
+  $('#row-dLeft').hidden = $('#row-nicheL').hidden = !hasL;
+  $('#row-dRight').hidden = $('#row-nicheR').hidden = !hasR;
+  $('#row-nicheL-dims').hidden = !f.get('nicheL');
+  $('#row-nicheR-dims').hidden = !f.get('nicheR');
+  // Hintere Nische nur, wo kein Seitenregal davor steht
+  $('#nicheB-L').disabled = hasL; $('#nicheB-R').disabled = hasR;
+  if (($('#nicheB-L').checked && hasL) || ($('#nicheB-R').checked && hasR)) $('#nicheB-none').checked = true;
+  $('#row-nicheB-dims').hidden = new FormData(form).get('nicheB') === 'none';
 }
 function readCfg(){
   const f = new FormData(form);
@@ -531,7 +681,14 @@ function readCfg(){
     W:n('w'), H:n('h'), D:n('d'), room:f.get('room'), mat:f.get('mat'), t:n('t'), back:f.get('back'), top:f.get('top'),
     sections:n('sections'), shelves:n('shelves'), base:f.get('base'), baseH:n('baseH'), legShape:f.get('legShape'), taper:n('taper'), legColor:f.get('legColor'), joint:f.get('joint'),
     front:f.get('front'), doorsPer:f.get('doorsPer'), slideN:f.get('slideN'), handle:f.get('handle'), color:f.get('color'),
-    sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:f.get('grain') === 'on', price:n('price')
+    sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:f.get('grain') === 'on', price:n('price'),
+    kind:f.get('kind'),
+    rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorIn:f.get('doorIn') === 'on', hinge:f.get('hinge'), wall:f.get('wall'),
+    shape:f.get('shape'), corner:f.get('corner'), build:f.get('build'), sys:f.get('sys'),
+    dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
+    nicheL:f.get('nicheL') === 'on', nicheLW:n('nicheLW'), nicheLH:n('nicheLH'),
+    nicheR:f.get('nicheR') === 'on', nicheRW:n('nicheRW'), nicheRH:n('nicheRH'),
+    nicheB:f.get('nicheB'), nicheBW:n('nicheBW'), nicheBH:n('nicheBH')
   };
 }
 function save(){
@@ -570,10 +727,12 @@ function restore(){
 let R = null;
 function render(){
   const c = readCfg();
-  R = computeSideboard(c);
+  const reduit = c.kind === 'reduit';
+  R = reduit ? computeReduit(c) : computeSideboard(c);
   renderSummary(R); renderWarns(R); renderCut(R); renderSheets(R); renderHw(R); renderSteps(R);
-  $('#dimTag').textContent = `${R.W} × ${R.H} × ${R.Dtot} mm`;
-  $('#bDoors').hidden = c.front === 'open';
+  $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
+  $('#bDoors').hidden = reduit || c.front === 'open';
+  $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
 }
 function renderSummary(R){
@@ -581,6 +740,21 @@ function renderSummary(R){
   const cost = R.groups.reduce((a, g) => a + g.partArea / 1e6 * g.price, 0);
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
+  const chf = v => `CHF ${Math.round(v / 5) * 5}`;
+  if (R.kind === 'reduit') {
+    $('#summary').innerHTML = `
+    <div><dt>Raum</dt><dd>${R.W} × ${R.D} × ${R.H} <small>mm</small></dd></div>
+    <div><dt>Teile</dt><dd>${parts}</dd></div>
+    <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
+    <div><dt>Holz ca.</dt><dd>${chf(cost + R.solidCost)}</dd></div>
+    <div><dt>Kaufteile ca.</dt><dd>${chf(R.buyCost)}</dd></div>
+    `;
+    const why = R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`;
+    $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
+    $('#cnt-cut').textContent = parts;
+    $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
+    return;
+  }
   $('#summary').innerHTML = `
     <div><dt>Aussenmass</dt><dd>${R.W} × ${R.H} × ${R.Dtot} <small>mm</small></dd></div>
     <div><dt>Teile</dt><dd>${parts}</dd></div>
@@ -675,7 +849,7 @@ for (const sel of ['#cutTable', '#sheets']) {
 
 /* ---------- 3D ---------- */
 const S = 0.001;
-const three = { ok:false, byKey:{}, doors:[], open:0, openT:0, ex:0, exT:0, userMoved:false, texCache:{}, matCache:{} };
+const three = { hideFront:false, ok:false, byKey:{}, doors:[], open:0, openT:0, ex:0, exT:0, userMoved:false, texCache:{}, matCache:{} };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function shade(hex, f){
@@ -913,6 +1087,23 @@ function build3D(R){
       m.castShadow = true;
       place(m, [e.x, e.h/2, e.z], [0, -80, 0]); root.add(m);
     }
+    if (e.type === 'wall') {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(e.size[0]*S, e.size[1]*S, e.size[2]*S), stdMat({ color:'#CFCAC0', transparent:true, opacity:0.22, depthWrite:false }));
+      m.receiveShadow = true;
+      m.userData.front = !!e.front; m.visible = !(e.front && three.hideFront);
+      place(m, e.pos, [0, 0, 0]); root.add(m);
+    }
+    if (e.type === 'metal') {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(e.size[0]*S, e.size[1]*S, e.size[2]*S), trackMat.clone());
+      m.castShadow = m.receiveShadow = true;
+      place(m, e.pos, e.ex); root.add(m);
+    }
+    if (e.type === 'niche') {
+      const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(e.size[0]*S, e.size[1]*S, e.size[2]*S));
+      const m = new THREE.LineSegments(g, new THREE.LineDashedMaterial({ color:0x3a8aa0, dashSize:0.03, gapSize:0.02 }));
+      m.computeLineDistances();
+      place(m, e.pos, [0, 0, 0]); root.add(m);
+    }
     if (e.type === 'track') {
       const m = new THREE.Mesh(new THREE.BoxGeometry(e.len*S, 8*S, e.depth*S), trackMat.clone());
       m.castShadow = m.receiveShadow = true;
@@ -963,6 +1154,12 @@ $('#bExplode').addEventListener('click', e => {
   three.exT = three.exT ? 0 : 1;
   e.currentTarget.setAttribute('aria-pressed', String(!!three.exT));
 });
+$('#bWall').addEventListener('click', e => {
+  three.hideFront = !three.hideFront;
+  e.currentTarget.setAttribute('aria-pressed', String(three.hideFront));
+  e.currentTarget.textContent = three.hideFront ? 'Vorderwand ein' : 'Vorderwand aus';
+  if (three.ok) for (const o of three.root.children) if (o.userData.front) o.visible = !three.hideFront;
+});
 $('#bReset').addEventListener('click', () => { three.userMoved = false; if (three.ok && R) fitCamera(R); });
 
 // Tabs
@@ -986,7 +1183,7 @@ tabs.forEach((t, i) => {
 
 // Kopieren
 $('#bCopy').addEventListener('click', () => {
-  const lines = [`Sideboard ${R.W} × ${R.H} × ${R.D} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
+  const lines = [`${R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H}` : `Sideboard ${R.W} × ${R.H} × ${R.D}`} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
   for (const g of [...new Set(R.rows.map(r => r.group))]) {
     lines.push('', g);
     for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${r.note ? ' (' + r.note + ')' : ''}`);

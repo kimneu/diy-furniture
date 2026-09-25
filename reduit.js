@@ -243,8 +243,18 @@ function freeEndPosts(ctx, seg, shelves){
     ctx.buy('angle40', n, 'Tablare an die Stütze');
   }
 }
+// Gleichartige Meldungen mehrerer Wände zu einer zusammenfassen.
+function groupWarn(ctx, key, part, text){
+  const g = ctx.grouped.get(key) || { parts:[], text };
+  g.parts.push(part);
+  ctx.grouped.set(key, g);
+}
+const joinDe = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1] : a[0];
 function spanWarn(ctx, seg, len, text){
-  ctx.warn.push(`Die Tablare ${SIDE_NAME[seg.id]} spannen ${r0(len)} mm – ${text}`);
+  groupWarn(ctx, 'span|' + text, `${SIDE_NAME[seg.id]} (${r0(len)} mm)`, p => `Die Tablare ${p} ${text}`);
+}
+function extraWarn(ctx, seg, what){
+  groupWarn(ctx, 'extra|' + what, SIDE_NAME[seg.id], p => `Spannweite ${p} ≥ ${ctx.max} mm – ${what} eingeplant.`);
 }
 
 const SUPPORTS = {
@@ -266,7 +276,7 @@ const SUPPORTS = {
     }
     freeEndPosts(ctx, seg, shelves);
     const longest = Math.max(...shelves.map(p => p.b - p.a));
-    if (longest >= ctx.max) spanWarn(ctx, seg, longest, `vorne liegen sie frei und biegen sich bei ${ctx.matShort} ${ctx.t} mm ab ca. ${ctx.max} mm durch. Pfostenrahmen, Wandschienen oder dickeres Material wählen.`);
+    if (longest >= ctx.max) spanWarn(ctx, seg, longest, `liegen vorne frei – bei ${ctx.matShort} ${ctx.t} mm biegen sie sich ab ca. ${ctx.max} mm Spannweite durch. Pfostenrahmen, Wandschienen oder dickeres Material wählen.`);
   },
 
   rails(ctx, seg, shelves){
@@ -294,7 +304,7 @@ const SUPPORTS = {
     ctx.buy('screw35', konsolen * 2, 'Tablare auf die Konsolen');
     for (const p of shelves) if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     freeEndPosts(ctx, seg, shelves);
-    if (n > 2) ctx.warn.push(`Spannweite ${SIDE_NAME[seg.id]} ≥ ${ctx.max} mm – ${n - 2} zusätzliche Schiene${n - 2 > 1 ? 'n' : ''} eingeplant.`);
+    if (n > 2) extraWarn(ctx, seg, 'zusätzliche Schienen');
   },
 
   brackets(ctx, seg, shelves){
@@ -317,7 +327,7 @@ const SUPPORTS = {
     ctx.fix += count * 2;
     ctx.buy('screw35', count * 2, 'Tablare auf die Winkel');
     freeEndPosts(ctx, seg, shelves);
-    if (extra) ctx.warn.push(`Spannweite ${SIDE_NAME[seg.id]} ≥ ${ctx.max} mm – zusätzliche Winkel eingeplant.`);
+    if (extra) extraWarn(ctx, seg, 'zusätzliche Winkel');
   },
 
   cheeks(ctx, seg, shelves){
@@ -343,8 +353,7 @@ const SUPPORTS = {
       }
     }
     ctx.buy('shelfpin', n * 4, '4 pro Tablar');
-    const bays = pos.length - 1 - (nicheEdge != null ? 1 : 0);
-    if (pos.length - 1 > (nicheEdge != null ? 2 : 1)) ctx.warn.push(`Spannweite ${SIDE_NAME[seg.id]} ≥ ${ctx.max} mm – Zwischenwangen eingeplant (${bays > 0 ? pos.length - 1 : 1} Felder).`);
+    if (pos.length - 1 > (nicheEdge != null ? 2 : 1)) extraWarn(ctx, seg, 'Zwischenwangen');
   },
 
   posts(ctx, seg, shelves){
@@ -376,14 +385,14 @@ const SUPPORTS = {
     for (let i = 0; i < pts.length - 1; i++) {
       const p = pts[i], q = pts[i + 1];
       const isNiche = edge != null && (seg.niche.at === 'end' ? p >= edge : q <= edge);
-      if (isNiche) { if (q - p >= ctx.max) spanWarn(ctx, seg, q - p, `über der Nische liegt die Vorderkante frei (≥ ${ctx.max} mm). Nische schmaler machen.`); continue; }
+      if (isNiche) { if (q - p >= ctx.max) spanWarn(ctx, seg, q - p, `liegen über der Nische vorne frei – ab ca. ${ctx.max} mm biegen sie sich durch. Nische schmaler machen.`); continue; }
       const k = Math.floor((q - p) / ctx.max);
       for (let j = 1; j <= k; j++) posts.push(r0(p + (q - p) * j / (k + 1) - 22));
     }
     const inner = seg.depth - 24;
     for (const u of posts) addPost(ctx, seg, u, top, 'Pfosten, vom Boden bis zum obersten Tablar', inner);
     ctx.buy('screw70', plusTen(posts.length * ctx.levels.length * 2), 'Querlatten an die Pfosten');
-    if (posts.length > (seg.ends.includes('free') ? 1 : 0) + (edge != null ? 1 : 0)) ctx.warn.push(`Spannweite ${SIDE_NAME[seg.id]} ≥ ${ctx.max} mm – Zwischenpfosten eingeplant.`);
+    if (posts.length > (seg.ends.includes('free') ? 1 : 0) + (edge != null ? 1 : 0)) extraWarn(ctx, seg, 'Zwischenpfosten');
   }
 };
 const plusTen = x => Math.ceil(x * 1.1);
@@ -449,7 +458,7 @@ function computeReduit(c0){
   const raw = [], boxes = [], extras = [], buys = new Map();
   const ctx = {
     c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.short, warn, extras,
-    fix:0, lens:[], pins:0, backScrews:0, modules:0,
+    fix:0, lens:[], pins:0, backScrews:0, modules:0, grouped:new Map(),
     add(name, L, B, th, group, note, kind, box, pm){
       const key = [name, r0(L), r0(B), th, group, note].join('|');
       raw.push({ key, name, L:r0(L), B:r0(B), t:th, group, note, kind, pm });
@@ -467,6 +476,7 @@ function computeReduit(c0){
     if (free) freeModules(ctx, seg);
     else SUPPORTS[c.sys](ctx, seg, shelfPieces(seg, levels));
   }
+  for (const g of ctx.grouped.values()) warn.push(g.text(joinDe(g.parts)));
 
   // Aggregieren
   const rowsMap = new Map();
