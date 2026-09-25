@@ -32,8 +32,9 @@ function computeData(d){
 /* ---------- Zufall ---------- */
 // Würfelt eine Konfiguration, die ohne Warnungen aufgeht. Sideboard: ein Möbeltyp mit passenden
 // Proportionen. Reduit: der Raum (Masse, Tür, Wände) bleibt, gewürfelt wird das Regal darin.
-// Hinweise, die zum Möbel gehören und kein Fehler sind (Kippschutz, Bad), sind erlaubt.
-const HARMLOS = /kippt leicht|^Bad:/;
+// Hinweise, die zum Möbel gehören und kein Fehler sind, sind erlaubt: Kippschutz, Bad, Gipskarton (gehört
+// zum Raum) und was die Berechnung schon selbst löst (zusätzliche Winkel/Pfosten eingeplant, Tiefe auf Brettbreite).
+const HARMLOS = /kippt leicht|^Bad:|^Gipskarton|eingeplant|gesetzt \(Brettbreite/;
 const SB_TYPES = [
   // [Name, Breite, Höhe, Tiefe, Untergestell]
   ['Lowboard',   [1400, 2200], [420, 600],  [350, 450], ['legs', 'legs', 'plinth']],
