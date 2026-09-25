@@ -5,6 +5,7 @@
    Suchen:      node jumbo-preise.mjs suche "Dreischichtplatte" "OSB"      → Produkte mit URL, um Quellen zu finden
                 (statt Suchbegriff geht auch eine Kategorie-URL)
    Preise:      node jumbo-preise.mjs [schlüssel …]                        → alle (oder einzelne) Quellen aus jumbo-quellen.json
+   Bretter:     node jumbo-preise.mjs gon_fichte                          → alle Formate eines Brett-Materials (Schlüssel «material LxB» in jumbo-quellen.json)
    Nachführen:  node jumbo-preise.mjs --schreiben [schlüssel …]            → wie oben, dann ../preise.js aktualisieren
 
    Ohne --schreiben vergleicht das Skript nur mit preise.js. Mit --schreiben übernimmt es Preis und max. Zuschnitt
@@ -61,6 +62,25 @@ function perM2(r) {
   return (price / (dims[0] * dims[1] / 1e6)).toFixed(2) + '/m²';
 }
 
+// Produktseite eines ganzen Bretts: Stückpreis («BEST PRICE» im Text oder JSON-LD), Masse aus dem Namen.
+async function readBoardPage(page, url) {
+  await open(page, url);
+  await page.waitForSelector('h1', { timeout:30000 });
+  await page.waitForTimeout(1500);
+  return page.evaluate(() => {
+    const name = document.querySelector('h1')?.textContent.trim() || '';
+    const text = document.body.innerText;
+    const ld = [...document.querySelectorAll('script[type="application/ld+json"]')].map(s => s.textContent).join(' ').match(/"price"\s*:\s*"?([\d.]+)/);
+    const best = text.match(/BEST\s*PRICE\s*([\d'.]+)/i) || text.match(/([\d'.]+)(?:\.-)?\s*\n+\s*(?:inkl\.|Mit Supercard)/);
+    const price = Number((ld && ld[1]) || (best && best[1].replace(/'/g, ''))) || null;
+    const d = name.match(/(\d+)\s*x\s*(\d+)(?:\s*x\s*(\d+))?\s*(mm|cm)/i);
+    const f = d && /cm/i.test(d[4]) ? 10 : 1;
+    const dims = d ? [d[1], d[2], d[3]].filter(Boolean).map(Number).map(v => v * f) : [];
+    const thick = text.match(/(?:Stärke|Dicke|Plattenstärke)[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*mm/i);
+    return { name, price, dims, thick: thick ? Number(thick[1].replace(',', '.')) : null };
+  });
+}
+
 async function search(page, terms) {
   for (const q of terms) {
     await open(page, /^https?:/.test(q) ? q : `${BASE}/search?text=${encodeURIComponent(q)}`);
@@ -77,7 +97,7 @@ async function search(page, terms) {
       return [...out.values()];
     });
     console.log(`\n## ${q}`);
-    for (const r of rows) console.log(`${r.url.includes('/holzzuschnitt/') ? 'Z' : ' '} ${r.price.padStart(8)} ${perM2(r).padStart(9)}  ${r.name}\n             ${r.url}`);
+    for (const r of rows) console.log(`${r.url.includes('/holzzuschnitt/') ? 'Z' : ' '} ${(r.price || 'Preis: Produktseite').padStart(8)} ${perM2(r).padStart(9)}  ${r.name}\n             ${r.url}`);
     await sleep(PAUSE);
   }
 }
@@ -123,9 +143,31 @@ async function prices(page, keys) {
 }
 
 // Gelesene Werte in preise.js übernehmen: nur bekannte Stärken, keine Varianten.
+// Ganze Bretter: Schlüssel «<material> <L>x<B>», eine Produktseite pro Format.
+async function boardPrices(page, keys) {
+  const rows = [];
+  for (const key of keys) {
+    const [mat, fmt] = key.split(' '), [L, B] = fmt.split('x').map(Number);
+    const E = DATA.bretter && DATA.bretter[mat];
+    if (!E) console.warn(`«${mat}» gibt es in preise.js noch nicht unter bretter – nur lesen`);
+    const cur = E && E.formate.find(f => f.L === L && f.B === B);
+    const p = await readBoardPage(page, SOURCES[key].url);
+    rows.push({ key, mat, L, B, price:p.price, was:cur ? cur.price : undefined, name:p.name, thick:p.thick, note: p.price ? null : 'kein Preis gelesen (Bot-Prüfung?) – später nochmals' });
+    await sleep(PAUSE);
+  }
+  if (!rows.length) return rows;
+  console.log('\nBrett                    Jumbo CHF   preise.js   Stärke  Produkt');
+  for (const r of rows) {
+    const flag = r.price !== r.was ? '*' : ' ';
+    console.log(`${flag}${r.key.padEnd(24)} ${String(r.price ?? '–').padStart(9)}   ${String(r.was ?? 'neu').padStart(9)}   ${String(r.thick ?? '–').padStart(6)}  ${r.name}${r.note ? '  · ' + r.note : ''}`);
+  }
+  return rows;
+}
+
 function write(rows) {
   const today = new Date().toISOString().slice(0, 10), changed = [];
   for (const key of new Set(rows.map(r => r.key))) {
+    if (key.includes(' ')) continue;
     if (key.includes('~')) continue;
     const cur = current(key), mine = rows.filter(r => r.key === key && !r.note && r.price != null && cur.price(r.t) !== undefined);
     if (!mine.length) continue;
@@ -143,6 +185,13 @@ function write(rows) {
     }
     E.stand = today;
   }
+  for (const r of rows.filter(r => r.mat && r.price)) {
+    const E = DATA.bretter[r.mat], f = E && E.formate.find(x => x.L === r.L && x.B === r.B);
+    if (!E) continue;
+    if (!f) { console.warn(`${r.key}: Format fehlt in preise.js – von Hand aufnehmen`); continue; }
+    if (f.price !== r.price) changed.push(`${r.key}: ${f.price} → ${r.price}`);
+    f.price = r.price; E.stand = today;
+  }
   writeFileSync(FILE, format(DATA));
   console.log(changed.length ? `\npreise.js nachgeführt:\n  ${changed.join('\n  ')}` : '\npreise.js: keine Änderungen, nur «stand» aktualisiert');
   console.log('Danach: node --test (im Hauptordner) und den Diff von preise.js prüfen.');
@@ -155,7 +204,11 @@ const page = ctx.pages()[0] || await ctx.newPage();
 try {
   if (cmd === 'suche') await search(page, args);
   else {
-    const rows = await prices(page, cmd ? [cmd, ...args] : Object.keys(SOURCES));
+    const all = cmd ? [cmd, ...args] : Object.keys(SOURCES);
+    // Ein Material-Schlüssel ohne Format («mood_fichte») wählt alle seine Formate.
+    const expand = k => k.includes(' ') || SOURCES[k] ? [k] : Object.keys(SOURCES).filter(s => s.startsWith(k + ' '));
+    const keys = all.flatMap(expand), plates = keys.filter(k => !k.includes(' '));
+    const rows = [...(plates.length ? await prices(page, plates) : []), ...await boardPrices(page, keys.filter(k => k.includes(' ')))];
     if (doWrite) write(rows);
   }
 } finally {
