@@ -611,8 +611,8 @@ const STORE = 'sideboard-werkbank-v2';
 // Plattenmaterial nach Preis sortiert, mit m²-Preis in der Auswahl.
 const MAT_LABEL = { mdf:'MDF (zum Lackieren)' };
 function fillMaterials(){
-  $('#mat').innerHTML = Object.entries(MATS).sort((a, b) => a[1].price - b[1].price)
-    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name} · CHF ${M.price}/m²</option>`).join('');
+  $('#mat').innerHTML = Object.entries(MATS).sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef))
+    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name} · CHF ${matPrice(M, M.tDef)}/m²</option>`).join('');
 }
 function fillThickness(mat, keep){
   const sel = $('#t'), M = MATS[mat];
@@ -724,7 +724,7 @@ function render(){
 }
 function renderSummary(R){
   const main = R.groups[0], back = R.groups[1];
-  const cost = R.groups.reduce((a, g) => a + g.partArea / 1e6 * g.price, 0);
+  const { cut: cost, whole } = sheetCosts(R.groups);
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
   const chf = v => `CHF ${Math.round(v / 5) * 5}`;
@@ -733,7 +733,8 @@ function renderSummary(R){
     <div><dt>Raum</dt><dd>${R.W} × ${R.D} × ${R.H} <small>mm</small></dd></div>
     <div><dt>Teile</dt><dd>${parts}</dd></div>
     <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Holz ca.</dt><dd>${chf(cost + R.solidCost)}</dd></div>
+    <div><dt>Holz Zuschnitt ca.</dt><dd>${chf(cost + R.solidCost)}</dd></div>
+    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>
     <div><dt>Kaufteile ca.</dt><dd>${chf(R.buyCost)}</dd></div>
     `;
     const why = R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`;
@@ -746,7 +747,8 @@ function renderSummary(R){
     <div><dt>Aussenmass</dt><dd>${R.W} × ${R.H} × ${R.Dtot} <small>mm</small></dd></div>
     <div><dt>Teile</dt><dd>${parts}</dd></div>
     <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Holz ca.</dt><dd>CHF ${Math.round(cost / 5) * 5}</dd></div>
+    <div><dt>Holz Zuschnitt ca.</dt><dd>${chf(cost)}</dd></div>
+    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole)}</dd></div>
     `;
   const why = `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
   $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
@@ -758,7 +760,7 @@ function renderWarns(R){
 }
 function renderCut(R){
   const groups = [...new Set(R.rows.map(r => r.group))];
-  let html = `<thead><tr><th>Pos</th><th>Bauteil</th><th>Anz.</th><th>Länge × Breite</th><th>Stärke</th><th>Hinweis</th></tr></thead>`;
+  let html = `<thead><tr><th>Pos</th><th>Bauteil</th><th>Anz.</th><th>${R.M.grain ? 'Länge (Maserung) × Breite' : 'Länge × Breite'}</th><th>Stärke</th><th>Hinweis</th></tr></thead>`;
   let area = 0;
   for (const g of groups) {
     const rows = R.rows.filter(r => r.group === g);
@@ -780,7 +782,7 @@ function renderSheets(R){
   for (const g of R.groups) {
     const [SL, SB] = g.sheet;
     const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
-    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}</p><div class="sheetlist">`;
+    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · Zuschnitt ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)} · ganze Platten ${g.sheets.length} × ${(SL*SB/1e6).toFixed(2)} m² = CHF ${Math.round(g.sheets.length*SL*SB/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}</p><div class="sheetlist">`;
     g.sheets.forEach((sh, i) => {
       html += `<figure class="sheet"><figcaption><span>Platte ${i + 1}</span><span>${sh.parts.length} Teile</span></figcaption>
         <svg viewBox="-12 -12 ${SL + 24} ${SB + 24}" role="img" aria-label="Plattenplan ${g.label}, Platte ${i + 1}">
@@ -1114,8 +1116,9 @@ form.addEventListener('input', e => {
   if (el.name === 'mat') {
     const M = MATS[el.value];
     fillThickness(el.value, $('#t').value);
-    $('#sheetL').value = M.sheet[0]; $('#sheetB').value = M.sheet[1]; $('#price').value = M.price;
+    $('#sheetL').value = M.sheet[0]; $('#sheetB').value = M.sheet[1]; $('#price').value = matPrice(M, Number($('#t').value));
   }
+  if (el.name === 't') $('#price').value = matPrice(MATS[$('#mat').value], Number(el.value));
   if (el.name === 'front') fillHandles(el.value, $('#handle').value);
   if (el.name === 'base') {
     const v = el.value === 'plinth' ? 80 : 160;
@@ -1169,11 +1172,13 @@ tabs.forEach((t, i) => {
 });
 
 // Kopieren
+// Maserung angeben nur bei Plattenteilen aus Material mit Maserung (nicht Rückwand, nicht Massivholz).
+const grainOf = r => R.M.grain && (r.kind === 'korpus' || r.kind === 'front');
 $('#bCopy').addEventListener('click', () => {
   const lines = [`${R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H}` : `Sideboard ${R.W} × ${R.H} × ${R.D}`} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
   for (const g of [...new Set(R.rows.map(r => r.group))]) {
     lines.push('', g);
-    for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${r.note ? ' (' + r.note + ')' : ''}`);
+    for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${grainOf(r) ? ' – Maserung längs' : ''}${r.note ? ' (' + r.note + ')' : ''}`);
   }
   const text = lines.join('\n');
   const box = $('#copyBox'), msg = $('#copied');

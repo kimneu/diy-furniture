@@ -20,13 +20,13 @@ const MATS = {
   // Günstige, robuste Platten – gut für Reduit, Keller und Werkstatt. coated = fertige Beschichtung, nicht ölen.
   // Preise: Jumbo (jumbo.ch), reguläre Preise, recherchiert 25.09.2026.
   schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, t:[27], tDef:27, sheet:[2500,500], price:32,   // Jumbo: Schalungstafel 3-S 27x2500x500 mm, CHF 39.95
-            note:'Gelb beschichtete Dreischichtplatte vom Bau: sehr robust, wasserfest, günstig. Nur 50 cm breit – tiefere Teile passen nicht. Kanten mit Lack oder Öl schützen.' },
+            note:'Die gelbe Platte von der Baustelle: sehr robust und wasserfest, die Oberfläche ist schon fertig. Gibt es nur 50 cm breit – tiefere Teile passen nicht darauf. Die Schnittkanten einmal lackieren oder ölen.' },
   osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, t:[12,15,18,22], tDef:18, sheet:[2770,2070], price:30,   // Jumbo: OSB-3 V100 PEFC 18 mm, CHF 29.95/m²
-            note:'Grobe Späne, rustikaler Werkstatt-Look. Stabil und robust. Kanten gut schleifen, ölen oder roh lassen.' },
+            note:'Aus grossen, gepressten Holzspänen – sieht rustikal aus, wie in einer Werkstatt. Stabil und robust. Kanten gut schleifen, dann ölen oder roh lassen.' },
   dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, t:[19,27], tDef:19, sheet:[2525,675], price:70,   // Jumbo: Dreischichtplatte Fichte 19 mm 2525x675, CHF 119 (27 mm ca. CHF 93/m²)
-            note:'Sieht aus wie Massivholz, verzieht sich aber kaum. Weich wie Fichte – Weissöl hält den hellen Ton.' },
+            note:'Drei verleimte Holzschichten: sieht aus wie Massivholz, verzieht sich aber kaum. Fichte ist weich und bekommt schnell Dellen – Weissöl hält den hellen Ton.' },
   dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, t:[16,19], tDef:19, sheet:[2800,2070], price:25,   // Jumbo: Oecoplan Span weiss PE 16 mm, CHF 24.95/m²
-            note:'Fertige weisse Melaminoberfläche, günstig. Sichtbare Kanten mit Kantenband bügeln. Biegt sich unter Last stärker durch als Sperrholz.' }
+            note:'Weiss beschichtet wie bei Fertigmöbeln – fertig, kein Streichen nötig. An den Schnittkanten sieht man die Spanplatte: mit weissem Kantenband überbügeln. Hängt als Tablar schneller durch als Sperrholz.' }
 };
 const BACKS = {
   none: null,
@@ -41,6 +41,17 @@ const JOINTS = {
   dowels: { name:'Holzdübel', level:2 },
   cam:    { name:'Exzenter', level:2 }
 };
+
+/* ---------- Preise ---------- */
+// m²-Preis einer Stärke; prices = { Stärke: CHF/m² } überschreibt den Materialpreis.
+function matPrice(M, t){ return (M.prices && M.prices[t]) || M.price; }
+// Holzkosten zweier Einkaufsarten: Zuschnitt (nur Teilefläche) oder ganze Platten.
+function sheetCosts(groups){
+  return {
+    cut: groups.reduce((a, g) => a + g.partArea / 1e6 * g.price, 0),
+    whole: groups.reduce((a, g) => a + g.sheets.length * g.sheet[0] * g.sheet[1] / 1e6 * g.price, 0)
+  };
+}
 
 /* ---------- Verbindungen ---------- */
 // Beschläge für die gewählte Korpusverbindung. lens = Längen aller Stösse (mm), what = wofür die Schrauben sind.
@@ -120,4 +131,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools };
+if (typeof module !== 'undefined') module.exports = { clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts };
