@@ -111,6 +111,7 @@ function boxOf(seg, W, D, b, thin, grain, fin, ex){
 // Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
 const SPAN = {
   birke:     { 12:500, 15:650, 18:800, 21:950 },
+  birkesi:   { 12:500, 15:650, 18:800, 21:950 },
   eiche:     { 18:700, 20:800, 26:1000, 27:1050 },
   fichte:    { 18:600, 21:720, 27:900, 28:950 },
   seekiefer: { 12:450, 15:550 },

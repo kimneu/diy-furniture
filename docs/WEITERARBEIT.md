@@ -24,6 +24,7 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteil-Preise `BUY` |
 | `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau |
 | `test/reduit.test.js`, `test/shared.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise |
+| `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json` | Jumbo-Preise lesen und mit dem Katalog vergleichen (siehe «Preise nachführen») |
 
 Wenn sich Katalogdaten ändern, schlägt der Snapshot-Test fehl. Dann prüfen, dass sich nur `R.M` (das Materialobjekt) unterscheidet, und die Fixture neu schreiben (siehe Commit `b424766`).
 
@@ -31,30 +32,35 @@ Wenn sich Katalogdaten ändern, schlägt der Snapshot-Test fehl. Dann prüfen, d
 
 - Plattenpreise sind **Jumbo-Zuschnittpreise pro m²**. Jumbo verlangt im Zuschnitt denselben m²-Preis wie für die ganze Platte, darum zeigt die Summary beides: «Holz Zuschnitt» (nur Teilefläche) und «Holz ganze Platten» (Plattenzahl × Plattenfläche).
 - Preise pro Stärke: `MATS[k].prices = { Stärke: CHF/m² }`, `price` = Preis der Standardstärke (für die Sortierung).
-- jumbo.ch sperrt automatische Abfragen (403, auch mit Playwright). Preise darum von Hand erfassen oder die Jumbo-Suchseite kopieren (Ctrl+A, Ctrl+C) und Claude einfügen.
+- Rückwände: `hdf3` = Oecoplan MDF Lack Line 1-seitig weiss 3 mm (ersetzt «HDF weiss»), `hf3` = Hartfaserplatte roh 3 mm, `ply6` = Oecoplan Sperrholz Pappel A/B 5 mm.
 
-### Erfasst (von Hand, 25.09.2026)
+### Preise nachführen: `tools/jumbo-preise.mjs`
 
-| Material | Stärke → CHF/m² | Plattenformat (Maserung zuerst) |
-|---|---|---|
-| Multiplex Birke | 12 → 69.95 · 18 → 99.95 · 21 → 149.90 (9 mm = 59.95, nicht aufgenommen) | 1500 × 3000 |
-| Eiche Leimholz | 18 → 109 · 20 → 129 · 27 → 149 | **offen** (noch 2400 × 600) |
-| Fichte Leimholz (Zuschnitt) | 18 → 60 · 21 → 80 · 27 → 95 | 2500 × 1210 |
-| Sperrholz Seekiefer | 12 → 36.95 · 15 → 47.95 | 2500 × 1250 (angenommen) |
-| Sperrholz Fichte | 12 → 45 · 15 → 53 · 18 → 65 · 21 → 73 · 24 → 85 | 2500 × 1250 (angenommen) |
+jumbo.ch sperrt normale Automatisierung (403, auch mit Playwright). Das Skript nutzt darum **Patchright** (getarntes Playwright) mit einem sichtbaren Chrome-Fenster und eigenem Profil (`tools/.jumbo-profile`, nicht im Repo).
 
-Aus der Jumbo-Suche (Subagent, reguläre Preise): Schaltafel 27 mm 32 CHF/m² (2500 × 500), OSB-3 30 CHF/m² (2770 × 2070), Dreischicht Fichte 19 mm 70 CHF/m² (2525 × 675), Spanplatte weiss 25 CHF/m² (2800 × 2070).
+```sh
+cd tools && npm install                                  # einmalig
+node jumbo-preise.mjs suche "OSB" "Sperrholz Pappel"     # Produkte + URLs finden (Z = Zuschnitt)
+node jumbo-preise.mjs                                    # alle Quellen: Preis pro Stärke + max. Zuschnitt, Vergleich mit shared.js
+node jumbo-preise.mjs osb ply6                           # nur einzelne
+```
+
+- Quellen: `tools/jumbo-quellen.json`, Schlüssel = Material aus `MATS`/`BACKS`, optional `birke~Variante` für Alternativen. Pro Material genügt eine Produkt-URL; die übrigen Stärken liest das Skript aus der Stärke-Auswahl.
+- Das Skript ändert keinen Code. Abweichungen (mit `*`) von Hand in `shared.js` übernehmen, dann Snapshot-Fixture prüfen und neu schreiben.
+- Schonend: eine Seite nach der anderen, 4–5,5 s Pause. `tools/` ist in `.assetsignore`, wird also nicht deployt.
+- Stand 25.09.2026: alle Platten und Rückwände gelesen und übernommen. Schaltafel gibt es nicht im Zuschnitt (ganze Tafel 27 × 2000 × 500, CHF 29.50), OSB 22 mm nicht mehr im Angebot.
 
 ### Noch offen
 
-- [ ] **MDF roh** (zum Lackieren): Stärken, CHF/m², Format – Jumbo hat viele Varianten, nur rohes MDF ist relevant.
-- [ ] **Rückwände:** HDF weiss 3 mm und Sperrholz Pappel 5 mm.
-- [ ] **Plattenformat Eiche Leimholz.**
-- [ ] Kaufteile in `reduit.js` → `BUY`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel, Schrauben 4 × 35 sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert).
-- [ ] Richtpreise für Sideboard-Beschläge (Scharniere, Schiebetürbeschlag, Füsse) fehlen ganz.
+- [ ] **Gespeicherte Konfiguration überschreibt neue Katalogpreise:** `restore()` in `index.html` stellt auch `price`, `sheetL`, `sheetB` aus localStorage wieder her. Wer die Seite schon benutzt hat, sieht nach einer Preisänderung noch den alten Preis, bis er das Material neu wählt.
+- [ ] **Ganze Bretter/Platten in festen Formaten** (siehe Ideen): entschieden, dass der Konfigurator Bretter in mehreren Breiten richtig rechnen soll – aber nur mit sinnvollen Produkten (z. B. keine OSB-Platten mit Nut und Feder). Zuerst gemeinsam entwerfen.
+- [ ] Kaufteile in `reduit.js` → `BUY`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel, Schrauben 4 × 35 sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert). Skript um Stückpreise erweitern.
+- [ ] Richtpreise für Sideboard-Beschläge (Scharniere, Schiebetürbeschlag, Füsse) fehlen ganz; ebenso Verbindungsbeschläge und Rückwandschrauben (beide Möbel) und Oberfläche (Öl, Grundierung, Lack).
+- [ ] Ungenau, aber keine Preise: Spannweiten `SPAN` (Daumenregel), Ergiebigkeit von Farbe/Öl (10 bzw. 22 m²/l), Schnittkosten beim Zuschnitt nicht eingerechnet.
 
 ## Ideen (noch nicht entschieden)
 
+- **Günstige ganze Platten** (Jumbo «Holzplatten», nach Preis sortiert, 25.09.2026, CHF/m² aus Stückpreis): Regalbauplatte weiss 16 mm 1150 × 200…600 ≈ 30–36 (Kanten schon beschichtet), Mood Leimholz Fichte A 18 mm 800…2500 × 200…600 ≈ 44–48 (Zuschnitt Fichte B: 59.95), Mood Eiche 18 mm 2000 × 600 ≈ 76 (Zuschnitt B/C: 109), Vielzweckplatte 1500 × 500 × 20 ≈ 22, OSB mini 1220 × 610 × 15 ≈ 11. Go/on-Fichtenbretter online ohne Preis.
 - **Leimholzbrett Fichte in Standardbreiten** als eigenes Material. Jumbo-Preise 18 mm: 2000 × 400 = 20.50, 1200 × 400 = 12.50, 2000 × 200 = 10.20, 1200 × 200 = 5.60 → ca. **CHF 26/m²** statt 60 im Zuschnitt. Für Reduit-Tablare mit 200/400 mm Tiefe viel günstiger. Der Konfigurator müsste Tablare aus ganzen Brettern rechnen (Länge ablängen, Breite = Brettbreite).
 - **Materialauswahl mit Filter** (Optik wählen, dann passende Platten; beim Sideboard die rustikalen ausblenden): besprochen, vorerst verworfen – die nach Preis sortierte Liste reicht.
 - **Maserung pro Bauteil wählbar**: verworfen; die Richtung wird automatisch festgelegt und in der Materialliste ausgewiesen.
