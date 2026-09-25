@@ -81,7 +81,7 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 
 ## Ideen (noch nicht entschieden)
 
-- **Ansichten trennen** (Entwerfen / Bauplan / Sammlung): vorgeschlagen am 25.09.2026, Entscheid offen.
+- **Ansichten trennen** (Entwerfen / Bauplan / Sammlung, evtl. Möbelwahl als erster Schritt): vorgeschlagen am 25.09.2026, Entscheid offen. Prompt für die Diskussion: `docs/prompts/ansichten-flow.md`.
 
 - **Materialauswahl mit Filter** (Optik wählen, dann passende Platten; beim Sideboard die rustikalen ausblenden): besprochen, vorerst verworfen – die nach Preis sortierte Liste reicht.
 - **Maserung pro Bauteil wählbar**: verworfen; die Richtung wird automatisch festgelegt und in der Materialliste ausgewiesen.
