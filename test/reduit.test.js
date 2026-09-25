@@ -144,7 +144,8 @@ test('Kosten: Holz und Kaufteile getrennt', () => {
 test('alle Kombinationen liefern gültige Teile', () => {
   for (const shape of ['I', 'L', 'U']) for (const build of ['built', 'free'])
     for (const sys of ['battens', 'rails', 'brackets', 'cheeks', 'posts'])
-      for (const extra of [{}, { nicheL:true, nicheR:true }, { doorIn:true, hinge:'R' }, { mat:'mdf', t:19, back:'none' }]) {
+      for (const extra of [{}, { nicheL:true, nicheR:true }, { doorIn:true, hinge:'R' }, { mat:'mdf', t:19, back:'none' },
+                           { mat:'gon_fichte', t:18 }, { mat:'regalbau', t:16, nicheL:true }, { mat:'mood_fichte', t:18, doorIn:true, hinge:'L' }, { mat:'schaltafel', t:27 }]) {
         const Rr = run({ shape, build, sys, ...extra });
         const tag = JSON.stringify({ shape, build, sys, extra });
         assert.ok(Rr.rows.length > 0, tag);
@@ -188,12 +189,79 @@ test('beschichtete Platten werden nicht geölt', () => {
   }
 });
 
-test('Schaltafel: 50 cm breit – zu tiefe Teile werden gemeldet', () => {
-  const Rr = run({ mat:'schaltafel', t:27, sheetL:2500, sheetB:500, dBack:550 });
-  assert.ok(Rr.warn.some(w => w.includes('passt nicht auf die Platte')));
-});
-
 test('zusammengefasste Warnungen nennen jede Wand nur einmal', () => {
   const w = run({ shape:'U', rh:2400, sys:'rails' }).warn.find(x => x.includes('zwei Stücke'));
   assert.ok(w && !w.includes('hinten, hinten'), w);
+});
+
+/* ---------- Ganze Bretter ---------- */
+const boardRun = over => run({ mat:'gon_fichte', t:18, ...over });
+
+test('Schaltafel: Tiefe rastet auf 500 mm (Tafelbreite) ein', () => {
+  const n = cfg({ mat:'schaltafel', dBack:550 });
+  assert.strictEqual(n.cfg.dBack, 500);
+  assert.ok(n.warn.some(w => w.includes('Brettbreite')), JSON.stringify(n.warn));
+});
+
+test('Brett-Material: Tiefen rasten auf Brettbreiten ein, mit einem Hinweis', () => {
+  const n = cfg({ mat:'gon_fichte', shape:'U', dBack:350, dLeft:250, dRight:400 });
+  assert.deepStrictEqual([n.cfg.dBack, n.cfg.dLeft, n.cfg.dRight], [400, 400, 400]);
+  const hint = n.warn.filter(w => w.includes('Brettbreite'));
+  assert.strictEqual(hint.length, 1);
+  assert.ok(hint[0].includes('hinten') && hint[0].includes('links') && !hint[0].includes('rechts'), hint[0]);
+});
+
+test('Brett-Material: Begrenzung rundet auf eine kleinere Brettbreite ab', () => {
+  // rw 900 → Seiten zusammen max 600 → je 300 → go/on abgerundet auf 200
+  const n = cfg({ mat:'gon_fichte', shape:'U', rw:900, doorW:600, dLeft:400, dRight:400 });
+  assert.deepStrictEqual([n.cfg.dLeft, n.cfg.dRight], [200, 200]);
+});
+
+test('Brett-Material: keine Breite passt in die Begrenzung → begrenzte Tiefe bleibt, Teile gemeldet', () => {
+  const n = cfg({ mat:'gon_3s', shape:'U', rw:1000, doorW:700, dLeft:600, dRight:600 });
+  assert.ok(n.cfg.dLeft + n.cfg.dRight <= 1000 - 300, JSON.stringify(n.cfg));
+  const Rr = run({ mat:'gon_3s', t:19, shape:'U', rw:1000, doorW:700, dLeft:600, dRight:600 });
+  assert.ok(Rr.rows.length > 0);
+  assert.ok(Rr.warn.some(w => w.includes('passt auf kein Brett')), JSON.stringify(Rr.warn));
+});
+
+test('Plattenmaterial: Tiefen bleiben frei', () => {
+  assert.strictEqual(cfg({ mat:'birke', dBack:350 }).cfg.dBack, 350);
+});
+
+test('Brett-Material: Teilbreite = Brettbreite, Bretter statt Platten, Kosten = Stückpreise', () => {
+  const Rr = boardRun({ shape:'I', rw:1600, dBack:400, sys:'rails' });
+  const shelves = rowsNamed(Rr, 'Tablar');
+  assert.ok(shelves.length && shelves.every(r => r.B === 400), JSON.stringify(shelves));
+  const g = Rr.groups[0];
+  assert.strictEqual(g.boards, true);
+  assert.ok(g.sheets.length > 0 && g.sheets.every(s => s.B === 400 && [1200, 2000].includes(s.L)));
+  const { whole } = sheetCosts(Rr.groups);
+  assert.strictEqual(Math.round(whole * 100), Math.round(g.sheets.reduce((a, s) => a + s.price, 0) * 100));
+  const lines = Rr.hw.filter(h => h[1].startsWith('go/on Leimholz Fichte'));
+  assert.strictEqual(lines.reduce((a, h) => a + h[0], 0), g.sheets.length);
+  // Bretter zählen nicht als Kaufteile
+  const buyWithout = Rr.hw.filter(h => !h[1].startsWith('go/on')).reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
+  assert.strictEqual(Math.round(Rr.buyCost * 100), Math.round(buyWithout * 100));
+});
+
+test('Brett-Material: Leisten werden Dachlatten, keine 40er-Teile aus dem Brett', () => {
+  const Rr = boardRun({ shape:'U', sys:'battens' });
+  assert.ok(!Rr.rows.some(r => r.kind === 'korpus' && r.B === 40), JSON.stringify(Rr.rows.filter(r => r.B === 40)));
+  const strips = Rr.rows.filter(r => r.name === 'Leiste' || r.name === 'Eckleiste');
+  assert.ok(strips.length && strips.every(r => r.kind === 'solid' && r.B === 48 && r.t === 24));
+});
+
+test('Brett-Material: zu lange Wangen → Warnung mit Alternativen, keine NaN', () => {
+  const Rr = run({ mat:'regalbau', t:16, shape:'I', rw:1600, rh:2400, sys:'cheeks' });
+  const w = Rr.warn.find(x => x.includes('länger als das längste Brett'));
+  assert.ok(w && w.includes('Mood Leimholz Fichte A'), JSON.stringify(Rr.warn));
+  const { whole } = sheetCosts(Rr.groups);
+  assert.ok(Number.isFinite(whole) && Number.isFinite(Rr.buyCost));
+});
+
+test('Brett-Material: Bauablauf spricht vom Ablängen, nicht vom Zuschnitt', () => {
+  const Rr = boardRun({});
+  assert.ok(Rr.steps.some(s => s[1].includes('ablängen')));
+  assert.ok(!Rr.steps.some(s => s[1].includes('im Baumarkt zuschneiden')));
 });
