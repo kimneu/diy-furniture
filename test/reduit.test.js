@@ -91,3 +91,79 @@ test('Randfall: Tür breiter als Seitenregal lang – Segment entfällt', () => 
   assert.deepStrictEqual(l.segs.map(s => s.id), ['back', 'left']);
   assert.ok(l.warn.some(w => w.includes('entfällt')));
 });
+
+/* ---------- Bauarten ---------- */
+const base = { mat:'birke', t:18, back:'hdf3', joint:'pocket', room:'living', sheetL:2500, sheetB:1250, kerf:4, grain:true, price:55 };
+const run = over => R.computeReduit({ ...R.REDUIT_DEFAULTS, ...base, ...over });
+const qtyOf = (Rr, text) => Rr.hw.filter(h => h[1].startsWith(text)).reduce((a, h) => a + h[0], 0);
+const rowsNamed = (Rr, name) => Rr.rows.filter(r => r.name === name);
+
+test('Spannweiten-Tabelle', () => {
+  assert.strictEqual(R.maxSpan('birke', 18), 800);
+  assert.strictEqual(R.maxSpan('mdf', 19), 550);
+  assert.strictEqual(R.maxSpan('unbekannt', 18), 700);
+});
+
+test('Schienen: Anzahl aus Spannweite (1600 mm, 50 mm eingerückt, max 800 → 3 Schienen à 750 mm)', () => {
+  const Rr = run({ shape:'I', rw:1600, sys:'rails' });
+  assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 3);
+  assert.strictEqual(qtyOf(Rr, 'Konsole'), 3 * 5);
+  assert.ok(Rr.warn.some(w => w.includes('Spannweite')));
+});
+
+test('Leisten: frei gespannte Vorderkante ≥ max gibt Warnung', () => {
+  assert.ok(run({ shape:'I', rw:1600, sys:'battens' }).warn.some(w => w.includes('biegen')));
+  assert.ok(!run({ shape:'I', rw:700, rd:900, doorW:600, sys:'battens' }).warn.some(w => w.includes('biegen')));
+});
+
+test('Wangen: Nischenkante ist eine Wangenposition', () => {
+  const s = { id:'left', depth:300, u0:400, u1:1400, ends:['corner', 'wall'], niche:{ at:'end', w:450, h:1300 } };
+  const pos = R.cheekPositions(s, 18, 800);
+  assert.ok(pos.some(p => Math.abs(p + 9 - (1400 - 450)) < 1), JSON.stringify(pos));
+  assert.strictEqual(pos[0], 400);
+});
+
+test('Selbststehend: Modul-Aufteilung', () => {
+  assert.deepStrictEqual(R.moduleSplit(1580, 800, 18).m, 2);
+  const mdf = R.moduleSplit(1580, 550, 19);
+  assert.strictEqual(mdf.m, 3);
+  assert.ok(mdf.w - 2 * 19 < 550);
+});
+
+test('Stütze am freien Ende (Tür nach innen)', () => {
+  const Rr = run({ shape:'U', doorIn:true, hinge:'L', sys:'rails' });
+  assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
+});
+
+test('Gipskarton: Hohlraumdübel und Warnung', () => {
+  const Rr = run({ wall:'drywall', sys:'battens' });
+  assert.ok(qtyOf(Rr, 'Hohlraumdübel') > 0);
+  assert.ok(Rr.warn.some(w => w.includes('Gipskarton')));
+});
+
+test('Kosten: Holz und Kaufteile getrennt', () => {
+  const Rr = run({ sys:'posts' });
+  assert.ok(Rr.solidCost > 0);
+  assert.ok(Rr.buyCost > 0);
+  assert.strictEqual(Rr.kind, 'reduit');
+});
+
+test('alle Kombinationen liefern gültige Teile', () => {
+  for (const shape of ['I', 'L', 'U']) for (const build of ['built', 'free'])
+    for (const sys of ['battens', 'rails', 'brackets', 'cheeks', 'posts'])
+      for (const extra of [{}, { nicheL:true, nicheR:true, nicheB:'R' }, { doorIn:true, hinge:'R' }, { mat:'mdf', t:19, back:'none' }]) {
+        const Rr = run({ shape, build, sys, ...extra });
+        const tag = JSON.stringify({ shape, build, sys, extra });
+        assert.ok(Rr.rows.length > 0, tag);
+        for (const r of Rr.rows) assert.ok(r.L > 0 && r.B > 0 && Number.isFinite(r.L) && Number.isFinite(r.B), tag + ' ' + JSON.stringify(r));
+        for (const b of Rr.boxes) assert.ok(b.size.every(v => v > 0 && Number.isFinite(v)) && b.pos.every(Number.isFinite), tag + ' box ' + JSON.stringify(b));
+        for (const h of Rr.hw) assert.ok(h[0] > 0 && Number.isFinite(h[0]), tag + ' hw ' + h[1]);
+        assert.ok(Number.isFinite(Rr.buyCost) && Number.isFinite(Rr.solidCost), tag);
+      }
+});
+
+test('Randfall: sehr kleiner Raum selbststehend', () => {
+  const Rr = run({ rw:600, rd:600, shape:'U', build:'free' });
+  assert.ok(rowsNamed(Rr, 'Seite').length > 0);
+  assert.ok(Rr.rows.every(r => Number.isFinite(r.L)));
+});
