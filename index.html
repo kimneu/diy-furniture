@@ -595,6 +595,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="preise.js"></script>
 <script src="shared.js"></script>
 <script src="sideboard.js"></script>
 <script src="reduit.js"></script>
@@ -688,8 +689,15 @@ function save(){
       else if (el.type === 'checkbox') data[el.name] = el.checked;
       else data[el.name] = el.value;
     }
+    data.katalog = catalogValues(data.mat, data.t);
     localStorage.setItem(STORE, JSON.stringify(data));
   } catch (e) {}
+}
+// Preis und Plattenformat aus dem Katalog. Gespeichert wird, was der Katalog beim Speichern sagte:
+// nur von Hand geänderte Werte überleben so ein Preis-Update in preise.js.
+function catalogValues(mat, t){
+  const M = MATS[mat];
+  return { price:matPrice(M, Number(t)), sheetL:M.sheet[0], sheetB:M.sheet[1] };
 }
 function restore(){
   let data = null;
@@ -699,9 +707,12 @@ function restore(){
   fillThickness(mat, data && data.t);
   const front = data && data.front || 'hinged';
   fillHandles(front, data && data.handle);
+  const cat = catalogValues(mat, $('#t').value);
+  for (const k in cat) $('#' + k).value = cat[k];
   if (!data) return;
   for (const [k, v] of Object.entries(data)) {
-    if (k === 't' || k === 'handle' || k === 'mat') continue;
+    if (k === 't' || k === 'handle' || k === 'mat' || k === 'katalog') continue;
+    if (k in cat && (!data.katalog || Number(v) === data.katalog[k])) continue;
     const els = form.elements[k];
     if (!els) continue;
     if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === v; }

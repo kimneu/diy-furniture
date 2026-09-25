@@ -19,19 +19,23 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Formular, Renderer, 3D (three.js r128) |
-| `shared.js` | Plattenkatalog `MATS` (Preise, Formate, Stärken), Rückwände `BACKS`, Zuschnitt-Packer `pack`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
+| `preise.js` | **Nur Daten:** Preise, Stärken, Plattenformate, Stand und Quelle für Platten, Rückwände und Kaufteile (JSON in Script-Hülle, ohne Build ladbar) |
+| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
 | `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
-| `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteil-Preise `BUY` |
-| `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau |
+| `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
+| `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau (mit eingefrorenen Preisen `test/fixtures/preise.json`) |
+| `test/preise.test.js` | Form und Vollständigkeit von `preise.js` |
 | `test/reduit.test.js`, `test/shared.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise |
-| `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json` | Jumbo-Preise lesen und mit dem Katalog vergleichen (siehe «Preise nachführen») |
+| `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json`, `tools/preise-datei.cjs` | Jumbo-Preise lesen, mit `preise.js` vergleichen und nachführen (siehe «Preise nachführen») |
 
-Wenn sich Katalogdaten ändern, schlägt der Snapshot-Test fehl. Dann prüfen, dass sich nur `R.M` (das Materialobjekt) unterscheidet, und die Fixture neu schreiben (siehe Commit `b424766`).
+Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet, und die Fixture neu schreiben (siehe Commit `b424766`).
 
 ## Preise
 
 - Plattenpreise sind **Jumbo-Zuschnittpreise pro m²**. Jumbo verlangt im Zuschnitt denselben m²-Preis wie für die ganze Platte, darum zeigt die Summary beides: «Holz Zuschnitt» (nur Teilefläche) und «Holz ganze Platten» (Plattenzahl × Plattenfläche).
-- Preise pro Stärke: `MATS[k].prices = { Stärke: CHF/m² }`, `price` = Preis der Standardstärke (für die Sortierung).
+- Alle Preise und Formate stehen in `preise.js`, jeder Eintrag mit `stand` (Datum der letzten Kontrolle) und `quelle`. Der Code enthält keine Preise mehr.
+- Preise pro Stärke: `platten[k].prices = { Stärke: CHF/m² }`. Die angebotenen Stärken ergeben sich daraus; `MATS[k].price` = Preis der Standardstärke (für die Sortierung). Eine neue Stärke braucht zusätzlich einen `SPAN`-Wert in `reduit.js` (Test prüft das).
+- Gespeicherte Konfigurationen merken sich die Katalogwerte beim Speichern (`katalog`). Beim Laden gelten die aktuellen Katalogwerte, ausser Preis oder Format wurden von Hand geändert.
 - Rückwände: `hdf3` = Oecoplan MDF Lack Line 1-seitig weiss 3 mm (ersetzt «HDF weiss»), `hf3` = Hartfaserplatte roh 3 mm, `ply6` = Oecoplan Sperrholz Pappel A/B 5 mm.
 
 ### Preise nachführen: `tools/jumbo-preise.mjs`
@@ -43,18 +47,23 @@ cd tools && npm install                                  # einmalig
 node jumbo-preise.mjs suche "OSB" "Sperrholz Pappel"     # Produkte + URLs finden (Z = Zuschnitt)
 node jumbo-preise.mjs                                    # alle Quellen: Preis pro Stärke + max. Zuschnitt, Vergleich mit shared.js
 node jumbo-preise.mjs osb ply6                           # nur einzelne
+node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js nachführen
 ```
 
 - Quellen: `tools/jumbo-quellen.json`, Schlüssel = Material aus `MATS`/`BACKS`, optional `birke~Variante` für Alternativen. Pro Material genügt eine Produkt-URL; die übrigen Stärken liest das Skript aus der Stärke-Auswahl.
-- Das Skript ändert keinen Code. Abweichungen (mit `*`) von Hand in `shared.js` übernehmen, dann Snapshot-Fixture prüfen und neu schreiben.
+- Ohne `--schreiben` vergleicht das Skript nur. Mit `--schreiben` übernimmt es Preise und max. Zuschnitt bekannter Stärken in `preise.js` und setzt `stand` auf heute. Neue oder weggefallene Stärken meldet es nur, Varianten (`~`) werden nie geschrieben, und bei je Stärke verschiedenem Zuschnittmass bleibt das Format stehen. Danach `node --test` und den Diff prüfen.
 - Schonend: eine Seite nach der anderen, 4–5,5 s Pause. `tools/` ist in `.assetsignore`, wird also nicht deployt.
 - Stand 25.09.2026: alle Platten und Rückwände gelesen und übernommen. Schaltafel gibt es nicht im Zuschnitt (ganze Tafel 27 × 2000 × 500, CHF 29.50), OSB 22 mm nicht mehr im Angebot.
 
 ### Noch offen
 
-- [ ] **Gespeicherte Konfiguration überschreibt neue Katalogpreise:** `restore()` in `index.html` stellt auch `price`, `sheetL`, `sheetB` aus localStorage wieder her. Wer die Seite schon benutzt hat, sieht nach einer Preisänderung noch den alten Preis, bis er das Material neu wählt.
+- [x] **Preise aus dem Code nehmen:** erledigt – `preise.js`, Skript mit `--schreiben`, Snapshot mit eingefrorenen Preisen.
+- [x] **Gespeicherte Konfiguration überschreibt neue Katalogpreise:** erledigt (siehe «Preise»). Nebenbei: beim ersten Besuch standen Preis 55 und Format 2500 × 1250 statt der Birke-Werte im Formular.
 - [ ] **Ganze Bretter/Platten in festen Formaten** (siehe Ideen): entschieden, dass der Konfigurator Bretter in mehreren Breiten richtig rechnen soll – aber nur mit sinnvollen Produkten (z. B. keine OSB-Platten mit Nut und Feder). Zuerst gemeinsam entwerfen.
-- [ ] Kaufteile in `reduit.js` → `BUY`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel, Schrauben 4 × 35 sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert). Skript um Stückpreise erweitern.
+  - Sicher dabei: **go/on Leimholzbrett Fichte** 18 mm (200/400 × 1200/2000).
+  - Vorschlag, noch offen: Regalbauplatte weiss 16 mm (1150 × 200…600, Kanten beschichtet), Mood Eiche 18 mm 2000 × 600 (Sideboard-Tiefe, ≈ 76 statt 109/m²), evtl. Mood Fichte A 18 mm. Schaltafel ist schon ein festes Format und gehört ins neue Modell. Nicht: OSB mini, Vielzweckplatte.
+  - Reihenfolge: zuerst Preise in die Datendatei auslagern, dann die festen Formate dort mit erfassen.
+- [ ] Kaufteile in `preise.js` → `kaufteile`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel, Schrauben 4 × 35 sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert). Skript um Stückpreise erweitern.
 - [ ] Richtpreise für Sideboard-Beschläge (Scharniere, Schiebetürbeschlag, Füsse) fehlen ganz; ebenso Verbindungsbeschläge und Rückwandschrauben (beide Möbel) und Oberfläche (Öl, Grundierung, Lack).
 - [ ] Ungenau, aber keine Preise: Spannweiten `SPAN` (Daumenregel), Ergiebigkeit von Farbe/Öl (10 bzw. 22 m²/l), Schnittkosten beim Zuschnitt nicht eingerechnet.
 

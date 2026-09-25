@@ -5,15 +5,21 @@
    Suchen:      node jumbo-preise.mjs suche "Dreischichtplatte" "OSB"      → Produkte mit URL, um Quellen zu finden
                 (statt Suchbegriff geht auch eine Kategorie-URL)
    Preise:      node jumbo-preise.mjs [schlüssel …]                        → alle (oder einzelne) Quellen aus jumbo-quellen.json
+   Nachführen:  node jumbo-preise.mjs --schreiben [schlüssel …]            → wie oben, dann ../preise.js aktualisieren
 
-   Das Skript ändert nichts am Code: es vergleicht nur mit MATS/BACKS in shared.js.
+   Ohne --schreiben vergleicht das Skript nur mit preise.js. Mit --schreiben übernimmt es Preis und max. Zuschnitt
+   bekannter Stärken und setzt «stand» auf heute. Neue oder weggefallene Stärken meldet es nur (neue brauchen einen
+   SPAN-Wert in reduit.js). Varianten («fichte~Langformat») werden nur verglichen, nie geschrieben.
    Schonend: eine Seite nach der anderen, einige Sekunden Pause dazwischen. */
 import { chromium } from 'patchright';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const here = p => new URL(p, import.meta.url).pathname;
-const { MATS, BACKS, matPrice } = createRequire(import.meta.url)('../shared.js');
+const require = createRequire(import.meta.url);
+const { FILE, format } = require('./preise-datei.cjs');
+const DATA = require(FILE);
+const { BACKS } = require('../shared.js');
 const SOURCES = JSON.parse(readFileSync(here('./jumbo-quellen.json'), 'utf8'));
 const PAUSE = 4000;
 const BASE = 'https://www.jumbo.ch/de';
@@ -76,10 +82,11 @@ async function search(page, terms) {
   }
 }
 
-// Schlüssel = Material aus MATS/BACKS, optional mit «~Variante» für mehrere Jumbo-Produkte zum selben Material.
+// Schlüssel = Eintrag in preise.js (platten/rueckwaende), optional mit «~Variante» für mehrere Jumbo-Produkte zum selben Material.
 function current(src) {
-  const key = src.split('~')[0], M = MATS[key] || BACKS[key];
-  return M && { sheet: M.sheet, price: t => (MATS[key] ? matPrice(M, t) : M.price), t: M.t };
+  const key = src.split('~')[0], P = DATA.platten[key], B = DATA.rueckwaende[key];
+  if (P) return { entry: P, sheet: P.sheet, price: t => P.prices[t], t: Object.keys(P.prices).map(Number) };
+  return B && BACKS[key] && { entry: B, sheet: B.sheet, price: t => (t === BACKS[key].t ? B.price : undefined), t: BACKS[key].t };
 }
 
 async function prices(page, keys) {
@@ -88,7 +95,7 @@ async function prices(page, keys) {
     const src = SOURCES[key];
     if (!src) { console.warn(`Keine Quelle für «${key}» in jumbo-quellen.json`); continue; }
     const cur = current(key);
-    if (!cur) { console.warn(`«${key}» gibt es weder in MATS noch in BACKS`); continue; }
+    if (!cur) { console.warn(`«${key}» gibt es in preise.js weder unter platten noch unter rueckwaende`); continue; }
     const want = src.t || [cur.t].flat();
     const first = await readCutPage(page, src.url);
     // Ohne Stärke-Auswahl gibt es nur diese eine Stärke (aus dem Produktnamen).
@@ -101,6 +108,8 @@ async function prices(page, keys) {
       const p = pages.get(t);
       rows.push({ key, t, name:p.name, price:p.price, was:cur.price(t), max:`${p.maxL} × ${p.maxB}`, sheet:cur.sheet.join(' × ') });
     }
+    const extra = first.thick.map(o => o.t).filter(t => !want.includes(t));
+    if (extra.length && !src.t) rows.push({ key, t:'', note:`weitere Stärken bei Jumbo: ${extra.join('/')} (neu aufnehmen: von Hand in preise.js und SPAN)` });
     await sleep(PAUSE);
   }
   console.log('\nSchlüssel              Stärke  Jumbo CHF/m²  Code CHF/m²  Jumbo max. Zuschnitt  Code Platte   Produkt');
@@ -109,15 +118,46 @@ async function prices(page, keys) {
     const flag = r.price !== r.was || r.max !== r.sheet ? '*' : ' ';
     console.log(`${flag}${r.key.padEnd(21)} ${String(r.t).padStart(4)}   ${String(r.price).padStart(10)}   ${String(r.was).padStart(10)}   ${r.max.padStart(18)}  ${String(r.sheet).padStart(12)}   ${r.name}`);
   }
-  console.log('\n* = weicht vom Code ab');
+  console.log('\n* = weicht von preise.js ab');
+  return rows;
 }
 
-const [cmd, ...args] = process.argv.slice(2);
+// Gelesene Werte in preise.js übernehmen: nur bekannte Stärken, keine Varianten.
+function write(rows) {
+  const today = new Date().toISOString().slice(0, 10), changed = [];
+  for (const key of new Set(rows.map(r => r.key))) {
+    if (key.includes('~')) continue;
+    const cur = current(key), mine = rows.filter(r => r.key === key && !r.note && r.price != null && cur.price(r.t) !== undefined);
+    if (!mine.length) continue;
+    const E = cur.entry;
+    for (const r of mine) {
+      if (E.prices) { if (E.prices[r.t] !== r.price) changed.push(`${key} ${r.t} mm: ${E.prices[r.t]} → ${r.price}`); E.prices[r.t] = r.price; }
+      else { if (E.price !== r.price) changed.push(`${key}: ${E.price} → ${r.price}`); E.price = r.price; }
+    }
+    // Ein Format pro Material: nur übernehmen, wenn alle gelesenen Stärken dasselbe max. Zuschnittmass haben.
+    const maxes = new Set(mine.map(r => r.max));
+    if (maxes.size > 1) console.warn(`${key}: max. Zuschnitt je Stärke verschieden (${[...maxes].join(', ')}) – Format nicht geändert`);
+    else {
+      const sheet = [...maxes][0].split(' × ').map(Number);
+      if (sheet.every(v => v > 0) && sheet.join() !== E.sheet.join()) { changed.push(`${key} Format: ${E.sheet.join(' × ')} → ${sheet.join(' × ')}`); E.sheet = sheet; }
+    }
+    E.stand = today;
+  }
+  writeFileSync(FILE, format(DATA));
+  console.log(changed.length ? `\npreise.js nachgeführt:\n  ${changed.join('\n  ')}` : '\npreise.js: keine Änderungen, nur «stand» aktualisiert');
+  console.log('Danach: node --test (im Hauptordner) und den Diff von preise.js prüfen.');
+}
+
+const argv = process.argv.slice(2), doWrite = argv.includes('--schreiben');
+const [cmd, ...args] = argv.filter(a => a !== '--schreiben');
 const ctx = await chromium.launchPersistentContext(here('./.jumbo-profile'), { channel:'chrome', headless:false, viewport:null });
 const page = ctx.pages()[0] || await ctx.newPage();
 try {
   if (cmd === 'suche') await search(page, args);
-  else await prices(page, cmd ? [cmd, ...args] : Object.keys(SOURCES));
+  else {
+    const rows = await prices(page, cmd ? [cmd, ...args] : Object.keys(SOURCES));
+    if (doWrite) write(rows);
+  }
 } finally {
   await ctx.close();
 }

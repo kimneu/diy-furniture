@@ -124,30 +124,34 @@ const SPAN = {
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 
-// Richtpreise in CHF (Stück bzw. pro Laufmeter bei unit 'm'), Jumbo (jumbo.ch), recherchiert 25.09.2026.
+// Kaufteile bei Jumbo. Preise (CHF pro Stück bzw. pro Laufmeter bei unit 'm') und Quellen in preise.js → kaufteile.
 // est:true = Jumbo führt das Produkt, der Preis war aber nicht abrufbar (Bot-Schutz) – Schätzung, im Laden prüfen.
-const BUY = {
-  kant45:     { name:'Kantholz Fichte 45 × 45 mm', unit:'m', price:4.4 },        // Jumbo: Oecoplan Latte gehobelt 45x45 mm 2.5 m, CHF 10.95
-  latte:      { name:'Dachlatte Fichte 24 × 48 mm', unit:'m', price:1.2 },       // Jumbo: Oecoplan Latte roh 24x48 mm 2 m, CHF 2.40
-  rail1000:   { name:'Wandschiene Element System, 100 cm', price:12, est:true }, // Jumbo: Element-System Wandschiene Weiss 100 cm (2er-Pack)
-  rail1500:   { name:'Wandschiene Element System, 150 cm', price:17, est:true }, // Jumbo: Element-System Wandschiene Weiss 150 cm (2er-Pack)
-  rail2000:   { name:'Wandschiene Element System, 200 cm', price:22, est:true }, // Jumbo: Element System Wandschiene Weiss 200 cm (2er-Pack)
-  konsole250: { name:'Konsole Element System, 25 cm', price:7, est:true },       // Jumbo: Element-System Konsole Weiss 25 cm
-  konsole300: { name:'Konsole Element System, 30 cm', price:8, est:true },       // Jumbo: Konsole 30 cm weiss
-  konsole350: { name:'Konsole Element System, 35 cm', price:9, est:true },       // Jumbo: Konsole 35 cm weiss
-  konsole400: { name:'Konsole Element System, 40 cm', price:10, est:true },      // Jumbo: Element System Konsole Weiss 40 cm
-  konsole470: { name:'U-Träger Element System, 47 cm', price:13, est:true },     // Jumbo: Element System U-Träger zu Wandschiene 47 cm
-  winkel150:  { name:'Blechkonsole weiss 150 × 200 mm', price:3.5, est:true },   // Jumbo: Blechkonsole weiss 150 x 200 mm RAL 9016
-  winkel200:  { name:'Blechkonsole weiss 200 × 250 mm', price:4.5, est:true },   // Jumbo: Blechkonsole weiss 200 x 250 mm RAL 9016
-  winkel250:  { name:'Blechkonsole weiss 250 × 300 mm', price:5.5, est:true },   // Jumbo: Coop Blechkonsole Weiss 25 x 30 cm
-  shelfpin:   { name:'Steckbodenträger Ø 5 mm (Hettich)', price:0.34 },          // Jumbo: Hettich Steckbodenträger 20 Stück, CHF 6.75
-  angle40:    { name:'Winkelverbinder 40 × 40 mm inkl. Schrauben', price:1, est:true }, // Jumbo: Ayce Winkelverbinder 40 x 40 mm
-  dowel6:     { name:'Spreizdübel 6 mm + Schraube 4,5 × 50 mm', price:0.2, est:true }, // Jumbo: Fischer Dübel SX 6x30 S
-  hollow:     { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)', price:1.6 },  // Jumbo: Fischer HM 5 x 52 S, 4 Stück CHF 6.30
-  screw35:    { name:'Holzschrauben 4 × 35 mm', price:0.08, est:true },          // Jumbo: Spax Senkkopf Torx 4 x 35 mm, 25 Stück
-  screw70:    { name:'Holzschrauben 5 × 70 mm', price:0.19 },                    // Jumbo: SPAX 5 x 70 mm, 50 Stück CHF 9.50
-  tipguard:   { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)', price:22.5 }  // Jumbo: Abus TV-Kippsicherung Isa, 2 Stück; eigentliches Möbel-Kippschutz-Set nicht im Sortiment
+const BUY_INFO = {
+  kant45:    { name:'Kantholz Fichte 45 × 45 mm', unit:'m' },
+  latte:     { name:'Dachlatte Fichte 24 × 48 mm', unit:'m' },
+  rail1000:  { name:'Wandschiene Element System, 100 cm' },
+  rail1500:  { name:'Wandschiene Element System, 150 cm' },
+  rail2000:  { name:'Wandschiene Element System, 200 cm' },
+  konsole250: { name:'Konsole Element System, 25 cm' },
+  konsole300: { name:'Konsole Element System, 30 cm' },
+  konsole350: { name:'Konsole Element System, 35 cm' },
+  konsole400: { name:'Konsole Element System, 40 cm' },
+  konsole470: { name:'U-Träger Element System, 47 cm' },
+  winkel150: { name:'Blechkonsole weiss 150 × 200 mm' },
+  winkel200: { name:'Blechkonsole weiss 200 × 250 mm' },
+  winkel250: { name:'Blechkonsole weiss 250 × 300 mm' },
+  shelfpin:  { name:'Steckbodenträger Ø 5 mm (Hettich)' },
+  angle40:   { name:'Winkelverbinder 40 × 40 mm inkl. Schrauben' },
+  dowel6:    { name:'Spreizdübel 6 mm + Schraube 4,5 × 50 mm' },
+  hollow:    { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)' },
+  screw35:   { name:'Holzschrauben 4 × 35 mm' },
+  screw70:   { name:'Holzschrauben 5 × 70 mm' },
+  tipguard:  { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)' }
 };
+const BUY = Object.fromEntries(Object.entries(BUY_INFO).map(([k, b]) => {
+  const P = PRICE_DATA.kaufteile[k] || { price:0, est:true };
+  return [k, { ...b, price:P.price, ...(P.est ? { est:true } : {}) }];
+}));
 const RAIL_LENS = [1000, 1500, 2000];
 const KONSOLE_LENS = [250, 300, 350, 400, 470];
 const WINKEL_LENS = [150, 200, 250];
