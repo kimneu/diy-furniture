@@ -26,6 +26,8 @@ Files:
 - `sideboard.js` – sideboard calculation
 - `reduit.js` – reduit calculation (layout, support systems, prices)
 
+Notes for continuing work (open prices, ideas): `docs/WEITERARBEIT.md`.
+
 Tests (Node 18+, no dependencies):
 
 ```sh
