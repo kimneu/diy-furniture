@@ -265,3 +265,68 @@ test('Brett-Material: Bauablauf spricht vom Ablängen, nicht vom Zuschnitt', () 
   assert.ok(Rr.steps.some(s => s[1].includes('ablängen')));
   assert.ok(!Rr.steps.some(s => s[1].includes('im Baumarkt zuschneiden')));
 });
+
+/* ---------- Stösse ---------- */
+test('shelfJoints: kurz genug → kein Stoss', () => {
+  assert.deepStrictEqual(R.shelfJoints(0, 1900, 2000, []), { cuts:[], added:[] });
+});
+
+test('shelfJoints: ohne Stütze in der Mitte, mit Stützen neben der nächstgelegenen', () => {
+  assert.deepStrictEqual(R.shelfJoints(0, 2400, 2000, []), { cuts:[1200], added:[1200] });
+  assert.deepStrictEqual(R.shelfJoints(0, 2400, 2000, [845, 1645]), { cuts:[845], added:[] });
+  const j = R.shelfJoints(0, 3000, 1150, [545, 1045, 1545, 2045, 2545]);
+  const edges = [0, ...j.cuts, 3000];
+  assert.strictEqual(j.cuts.length, 2);
+  assert.ok(edges.slice(1).every((u, i) => u - edges[i] <= 1150), JSON.stringify(j));
+});
+
+const pieceLens = Rr => rowsNamed(Rr, 'Tablar').map(r => r.L);
+
+test('Stoss über Schiene: 2400 Wand mit go/on → Stücke ≤ 2000, eine Stossleiste pro Höhe', () => {
+  const Rr = run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails', nShelves:5 });
+  assert.ok(pieceLens(Rr).every(L => L <= 2000), JSON.stringify(pieceLens(Rr)));
+  assert.strictEqual(Rr.rows.filter(r => r.name === 'Stossleiste').reduce((a, r) => a + r.qty, 0), 5);
+  assert.ok(!Rr.warn.some(w => w.includes('länger als das längste Brett')), JSON.stringify(Rr.warn));
+});
+
+test('Stoss mit Regalbauplatte (1150): 3 Stücke pro Tablar', () => {
+  const Rr = run({ mat:'regalbau', t:16, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails', nShelves:4 });
+  assert.ok(pieceLens(Rr).every(L => L <= 1150));
+  assert.strictEqual(Rr.rows.filter(r => r.name === 'Stossleiste').reduce((a, r) => a + r.qty, 0), 8);
+});
+
+test('Stoss bei Leisten: Pfosten an jeder Stossstelle', () => {
+  const Rr = run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'battens' });
+  assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('Tablarstoss')));
+  assert.ok(pieceLens(Rr).every(L => L <= 2000));
+});
+
+test('Stoss bei Tablarwinkeln und Pfostenrahmen: Stücke ≤ Lmax', () => {
+  for (const sys of ['brackets', 'posts']) {
+    const Rr = run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys });
+    assert.ok(pieceLens(Rr).every(L => L <= 2000), sys + ' ' + JSON.stringify(pieceLens(Rr)));
+    assert.ok(Rr.rows.some(r => r.name === 'Stossleiste'), sys);
+  }
+});
+
+test('Stoss mit Nische: oben und unten korrekt gestossen', () => {
+  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, dLeft:300, nicheL:true, nicheLW:500, nicheLH:1300, sys:'rails' });
+  assert.ok(pieceLens(Rr).every(L => L <= 1150), JSON.stringify(pieceLens(Rr)));
+  assert.ok(!Rr.warn.some(w => w.includes('länger als das längste Brett')), JSON.stringify(Rr.warn));
+});
+
+test('Stoss und freies Ende (Tür nach innen): Stütze am freien Ende bleibt', () => {
+  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, doorIn:true, hinge:'L', sys:'rails' });
+  assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
+  assert.ok(pieceLens(Rr).every(L => L <= 1150));
+});
+
+test('Plattenmaterial: keine Stösse', () => {
+  const Rr = run({ shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' });
+  assert.ok(!Rr.rows.some(r => r.name === 'Stossleiste'));
+});
+
+test('Bauablauf: Schritt «Stösse verbinden» nur mit Stössen', () => {
+  assert.ok(run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
+  assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
+});
