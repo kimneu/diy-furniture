@@ -32,6 +32,43 @@ const JOINTS = {
   cam:    { name:'Exzenter', level:2 }
 };
 
+/* ---------- Verbindungen ---------- */
+// Beschläge für die gewählte Korpusverbindung. lens = Längen aller Stösse (mm), what = wofür die Schrauben sind.
+function jointHardware(c, lens, t, bath, what){
+  const hw = [];
+  const ss = bath ? ', Edelstahl A2' : '';
+  const glueName = bath ? 'Holzleim D4 (wasserfest)' : 'Holzleim D3';
+  const per = len => {
+    switch (c.joint) {
+      case 'screws': case 'pocket': return Math.max(2, Math.ceil((len - 80) / 150) + 1);
+      case 'dowels': return Math.max(3, Math.ceil((len - 80) / 120) + 1);
+      default: return len < 350 ? 2 : 3;
+    }
+  };
+  const conn = lens.reduce((a, l) => a + per(l), 0);
+  const plus = x => Math.ceil(x * 1.1);
+  if (c.joint === 'screws') {
+    hw.push([plus(conn), c.mat === 'mdf' ? 'Konfirmat-Schrauben 7 × 50 mm' + ss : `Holzschrauben Senkkopf ${t <= 16 ? '4 × 40' : t >= 26 ? '5 × 60' : '4 × 50'} mm${ss}`, `${what}, +10 % Reserve`]);
+    hw.push([plus(conn), 'Abdeckkappen (optional)', 'passend zur Holzfarbe']);
+  } else if (c.joint === 'pocket') {
+    hw.push([plus(conn), `Taschenlochschrauben ${t <= 16 ? '25' : t >= 26 ? '38' : '32'} mm, Grobgewinde${bath ? ', rostfrei beschichtet' : ''}`, c.mat === 'mdf' ? 'für MDF/Plattenwerkstoffe' : 'für Holz/Plattenwerkstoffe']);
+    hw.push([1, glueName, 'optional für zusätzliche Festigkeit']);
+  } else if (c.joint === 'dowels') {
+    hw.push([plus(conn), `Holzdübel ${t <= 16 ? '6 × 30' : '8 × 40'} mm, geriffelt`, 'Buche, +10 % Reserve']);
+    hw.push([1, glueName, '500 g reichen für mehrere Möbel']);
+  } else {
+    hw.push([plus(conn), 'Exzenterverbinder Ø 15 mm inkl. Verbindungsbolzen', `für ${t <= 19 ? '16–19' : '19–22'} mm Platten`]);
+    hw.push([plus(conn), 'Holzdübel 8 × 30 mm', 'als Führung zwischen den Exzentern, ohne Leim (bleibt zerlegbar)']);
+  }
+  return hw;
+}
+function jointTools(c, t, tools){
+  if (c.joint === 'pocket') tools.add('Taschenloch-Bohrlehre mit Stufenbohrer');
+  if (c.joint === 'screws') { tools.add('Kegelsenker'); if (c.mat === 'mdf') tools.add('Stufenbohrer für Konfirmat'); }
+  if (c.joint === 'dowels') { tools.add('Dübellehre oder Dübelmarkierer Ø ' + (t <= 16 ? 6 : 8)); tools.add('Gummihammer'); }
+  if (c.joint === 'cam') { tools.add('Forstnerbohrer Ø 15 mm'); tools.add('Bohrschablone für Exzenter (empfohlen)'); }
+}
+
 /* ---------- Guillotine-Packen ---------- */
 function pack(items, SL, SB, kerf, margin, rotate){
   const UW = SL - 2*margin + kerf, UH = SB - 2*margin + kerf;
@@ -73,4 +110,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack };
+if (typeof module !== 'undefined') module.exports = { clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools };

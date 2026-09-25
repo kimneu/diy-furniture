@@ -1,5 +1,5 @@
 <title>Martylko</title>
-<meta name="description" content="Konfigurator für ein einfaches DIY-Sideboard: Masse eingeben, Zuschnittliste, Plattenplan, Beschläge und Bauablauf erhalten.">
+<meta name="description" content="Konfigurator für DIY-Möbel – Sideboard und Reduit-Regale: Masse eingeben, Materialliste, Plattenplan, Beschläge und Bauablauf erhalten.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -225,7 +225,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
       </svg>
       <div>
         <h1>Martylko</h1>
-        <p>Masse eingeben – Zuschnitt, Beschläge und Bauablauf erhalten.</p>
+        <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
       </div>
     </div>
     <dl class="summary" id="summary"></dl>
@@ -400,7 +400,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
       </section>
 
       <section class="group">
-        <h2>Zuschnitt</h2>
+        <h2>Platten &amp; Preise</h2>
         <div class="field">
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
@@ -439,7 +439,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
     <section class="output">
       <div class="tabs" role="tablist" aria-label="Ergebnis">
-        <button class="tab" role="tab" id="tab-cut" aria-controls="p-cut" aria-selected="true">Zuschnittliste<span class="count" id="cnt-cut"></span></button>
+        <button class="tab" role="tab" id="tab-cut" aria-controls="p-cut" aria-selected="true">Materialliste<span class="count" id="cnt-cut"></span></button>
         <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
         <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
         <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
@@ -451,7 +451,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
           <div><button type="button" class="btn" id="bCopy">Liste kopieren</button> <span class="copied" id="copied" aria-live="polite"></span></div>
         </div>
         <div class="tablewrap"><table id="cutTable"></table></div>
-        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Zuschnittliste als Text"></textarea>
+        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Materialliste als Text"></textarea>
       </div>
 
       <div class="panel" role="tabpanel" id="p-sheet" aria-labelledby="tab-sheet" hidden>
@@ -585,7 +585,7 @@ function renderSummary(R){
     <div><dt>Aussenmass</dt><dd>${R.W} × ${R.H} × ${R.Dtot} <small>mm</small></dd></div>
     <div><dt>Teile</dt><dd>${parts}</dd></div>
     <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Material ca.</dt><dd>CHF ${Math.round(cost / 5) * 5}</dd></div>
+    <div><dt>Holz ca.</dt><dd>CHF ${Math.round(cost / 5) * 5}</dd></div>
     `;
   const why = `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
   $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
@@ -602,14 +602,16 @@ function renderCut(R){
   for (const g of groups) {
     const rows = R.rows.filter(r => r.group === g);
     const n = rows.reduce((a, r) => a + r.qty, 0);
-    html += `<tbody class="grp"><tr><th colspan="6">${g}<span>${n} Teile</span></th></tr></tbody><tbody>`;
+    const solid = rows[0].kind === 'solid';
+    const lm = solid ? ` · ${(rows.reduce((a, r) => a + r.qty * r.L, 0) / 1000).toFixed(1)} m` : '';
+    html += `<tbody class="grp"><tr><th colspan="6">${g}<span>${n} Teile${lm}</span></th></tr></tbody><tbody>`;
     for (const r of rows) {
-      area += r.qty * r.L * r.B / 1e6;
+      if (!solid) area += r.qty * r.L * r.B / 1e6;
       html += `<tr data-key="${encodeURIComponent(r.key)}"><td class="pos">${r.pos}</td><td>${r.name}</td><td class="n">${r.qty}×</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.t}</td><td class="note">${r.note || '–'}</td></tr>`;
     }
     html += `</tbody>`;
   }
-  html += `<tfoot><tr><td colspan="6">Zuschnittfläche total ${area.toFixed(2)} m² · alle Masse in mm</td></tr></tfoot>`;
+  html += `<tfoot><tr><td colspan="6">Plattenfläche total ${area.toFixed(2)} m² · alle Masse in mm</td></tr></tfoot>`;
   $('#cutTable').innerHTML = html;
 }
 function renderSheets(R){
@@ -640,7 +642,8 @@ function renderSheets(R){
   $('#sheets').innerHTML = html;
 }
 function renderHw(R){
-  $('#hwList').innerHTML = R.hw.map(([q, n, s]) => `<li><span class="q">${q}×</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
+  const chf = (q, p) => p ? ` · ≈ CHF ${Math.round(q * p)}` : '';
+  $('#hwList').innerHTML = R.hw.map(([q, n, s, p]) => `<li><span class="q">${q}×</span><span>${n}${s || p ? `<small>${s || ''}${chf(q, p)}</small>` : ''}</span></li>`).join('');
   $('#toolList').innerHTML = R.tools.map(t => `<li>${t}</li>`).join('');
   $('#finishList').innerHTML = R.finish.map(([q, n, s]) => `<li><span class="q">${q}</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
 }
@@ -837,7 +840,7 @@ function initThree(){
     };
     tick();
   } catch (e) {
-    el.innerHTML = '<div class="nogl">Die 3D-Vorschau braucht WebGL. Zuschnittliste und Plattenplan funktionieren trotzdem.</div>';
+    el.innerHTML = '<div class="nogl">Die 3D-Vorschau braucht WebGL. Materialliste und Plattenplan funktionieren trotzdem.</div>';
   }
 }
 function applyAnim(){
@@ -983,7 +986,7 @@ tabs.forEach((t, i) => {
 
 // Kopieren
 $('#bCopy').addEventListener('click', () => {
-  const lines = [`Sideboard ${R.W} × ${R.H} × ${R.D} mm – Zuschnittliste (Länge = Faserrichtung, Masse in mm)`];
+  const lines = [`Sideboard ${R.W} × ${R.H} × ${R.D} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
   for (const g of [...new Set(R.rows.map(r => r.group))]) {
     lines.push('', g);
     for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${r.note ? ' (' + r.note + ')' : ''}`);

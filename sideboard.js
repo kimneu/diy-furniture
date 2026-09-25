@@ -159,28 +159,7 @@ function computeSideboard(c){
   // Beschläge
   const hw = [];
   const lens = [Dp, Dp, Dp, Dp]; for (let i = 1; i < n; i++) lens.push(dd, dd);
-  const per = len => {
-    switch (c.joint) {
-      case 'screws': case 'pocket': return Math.max(2, Math.ceil((len - 80) / 150) + 1);
-      case 'dowels': return Math.max(3, Math.ceil((len - 80) / 120) + 1);
-      default: return len < 350 ? 2 : 3;
-    }
-  };
-  const conn = lens.reduce((a, l) => a + per(l), 0);
-  const plus = x => Math.ceil(x * 1.1);
-  if (c.joint === 'screws') {
-    hw.push([plus(conn), c.mat === 'mdf' ? 'Konfirmat-Schrauben 7 × 50 mm' + ss : `Holzschrauben Senkkopf ${t <= 16 ? '4 × 40' : t >= 26 ? '5 × 60' : '4 × 50'} mm${ss}`, 'für Deckel, Boden und Mittelwände, +10 % Reserve']);
-    hw.push([plus(conn), 'Abdeckkappen (optional)', 'passend zur Holzfarbe']);
-  } else if (c.joint === 'pocket') {
-    hw.push([plus(conn), `Taschenlochschrauben ${t <= 16 ? '25' : t >= 26 ? '38' : '32'} mm, Grobgewinde${bath ? ', rostfrei beschichtet' : ''}`, c.mat === 'mdf' ? 'für MDF/Plattenwerkstoffe' : 'für Holz/Plattenwerkstoffe']);
-    hw.push([1, glueName, 'optional für zusätzliche Festigkeit']);
-  } else if (c.joint === 'dowels') {
-    hw.push([plus(conn), `Holzdübel ${t <= 16 ? '6 × 30' : '8 × 40'} mm, geriffelt`, 'Buche, +10 % Reserve']);
-    hw.push([1, glueName, '500 g reichen für mehrere Möbel']);
-  } else {
-    hw.push([plus(conn), 'Exzenterverbinder Ø 15 mm inkl. Verbindungsbolzen', `für ${t <= 19 ? '16–19' : '19–22'} mm Platten`]);
-    hw.push([plus(conn), 'Holzdübel 8 × 30 mm', 'als Führung zwischen den Exzentern, ohne Leim (bleibt zerlegbar)']);
-  }
+  hw.push(...jointHardware(c, lens, t, bath, 'für Deckel, Boden und Mittelwände'));
   if (Bk) hw.push([Math.ceil(2*(W + Hc)/150) + (n - 1)*Math.ceil(Hc/200), 'Senkkopfschrauben 3 × 16 mm' + ss, 'Rückwand, alle 15 cm, auch in die Mittelwände']);
   else hw.push([4, 'Metallwinkel 40 × 40 mm inkl. Schrauben', 'hinten in die Ecken, gegen Verziehen']);
   if (c.shelves) hw.push([4*n*c.shelves, bath ? 'Bodenträger Ø 5 mm, Edelstahl' : 'Bodenträger Ø 5 mm (Metall)', '4 pro Einlegeboden']);
@@ -233,10 +212,7 @@ function computeSideboard(c){
 
   // Werkzeug
   const tools = new Set(['Akkuschrauber mit Bit-Set', 'Holzbohrer 3–8 mm mit Tiefenstopp', 'Schraubzwingen (mind. 4)', 'Anschlagwinkel und Doppelmeter', 'Schwingschleifer oder Schleifklotz', 'Bleistift und Vorstecher']);
-  if (c.joint === 'pocket') tools.add('Taschenloch-Bohrlehre mit Stufenbohrer');
-  if (c.joint === 'screws') { tools.add('Kegelsenker'); if (c.mat === 'mdf') tools.add('Stufenbohrer für Konfirmat'); }
-  if (c.joint === 'dowels') { tools.add('Dübellehre oder Dübelmarkierer Ø ' + (t <= 16 ? 6 : 8)); tools.add('Gummihammer'); }
-  if (c.joint === 'cam') { tools.add('Forstnerbohrer Ø 15 mm'); tools.add('Bohrschablone für Exzenter (empfohlen)'); }
+  jointTools(c, t, tools);
   if (c.shelves) tools.add('Lochreihen-Bohrschablone (32-mm-Raster) + Bohrer Ø 5 mm');
   if (hinged) tools.add('Forstnerbohrer Ø 35 mm + Scharnier-Bohrlehre');
   if (sliding) { tools.add('Eisensäge zum Kürzen der Schienen'); if (c.handle === 'shell') tools.add('Forstnerbohrer Ø 35 mm'); }
