@@ -50,20 +50,24 @@ button,input,select{font:inherit;color:inherit}
 .mono,.num input,td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
 /* Kopf */
-.top{display:flex;flex-wrap:wrap;gap:14px 40px;align-items:flex-end;justify-content:space-between;padding-block:6px 16px;border-bottom:1px solid var(--line)}
+/* Festes Raster, damit der Kopf bei anderen Werten (Zufall, Laden) nicht umbricht und die Seite springt. */
+.top{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind" "sum acts";gap:14px 40px;align-items:center;padding-block:6px 16px;border-bottom:1px solid var(--line)}
+.brand{grid-area:brand}
 .brand{display:flex;gap:14px;align-items:center}
 .brand svg{flex:none;color:var(--accent)}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
-.summary{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0}
-.kindbar{flex:0 1 260px;align-self:center}
+.summary{grid-area:sum;display:grid;grid-auto-flow:column;grid-template-columns:auto auto minmax(0,1fr);grid-auto-columns:auto;gap:6px 28px;margin:0;min-width:0}
+.kindbar{grid-area:kind;width:260px}
 .kindbar label{padding-block:8px;font-size:14px;font-weight:600}
-.hacts{display:grid;gap:4px;justify-items:end;align-self:center;max-width:220px}
+.hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
 .hacts .copied{text-align:right;font-size:12.5px}
 .summary div{display:flex;flex-direction:column}
 .summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
-.summary .wide dd{white-space:normal}
+.summary .wide{min-width:0}
+.summary .wide dd{overflow:hidden;text-overflow:ellipsis}
+.summary .price dd{min-height:44px}
 .summary .price dd b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1;color:var(--accent)}
 .summary .price dd small{display:block;font-family:var(--f-body)}
 .summary small{color:var(--muted);font-size:12px}
@@ -323,14 +327,15 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .mbar div:has(> .copied:not(:empty)) #mMeta{display:none}
   .mbtns{display:flex;gap:8px;flex:none}
   .hacts{display:none}
-  .kindbar{flex-basis:100%}
+  .top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "kind" "sum"}
+  .kindbar{width:auto}
 }
 @media (max-width:640px){
   .top{gap:12px;padding-bottom:12px}
   .brand svg{width:34px;height:34px}
   .brand h1{font-size:22px}
   .brand p{font-size:13px}
-  .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;width:100%}
+  .summary{grid-auto-flow:row;grid-template-columns:1fr 1fr;gap:10px 16px}
   .summary .wide{grid-column:1 / -1}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-bottom:0}
   .tab{border:1px solid var(--line);border-radius:8px;background:var(--raise);margin:0;white-space:normal;text-align:left;padding:8px 12px}
@@ -937,7 +942,7 @@ function renderSummary(R){
   $('#summary').innerHTML =
     item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
     item('Teile', parts) +
-    item(boards ? 'Bretter' : 'Platten', sheets, 'wide') +
+    item(boards ? 'Bretter' : 'Platten', `<span title="${sheets}">${sheets}</span>`, 'wide') +
     (boards ? item('Holz ganze Bretter ca.', `<b>${chf(woodWhole)}</b>`, 'price')
             : item('Holz Zuschnitt ca.', `<b>${chf(wood)}</b><small>ganze Platten ${chf(woodWhole)}</small>`, 'price')) +
     (reduit ? item('Kaufteile ca.', `<b>${chf(R.buyCost)}</b>`, 'price') : '');
