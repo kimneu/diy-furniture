@@ -22,7 +22,7 @@ python3 -m http.server 8000
 Files:
 
 - `index.html` – form, rendering, 3D preview
-- `preise.js` – prices, thicknesses and panel sizes (data only, updated by `tools/jumbo-preise.mjs --schreiben`)
+- `preise.js` – prices, thicknesses and panel sizes, including whole boards in fixed sizes for the Reduit (data only, updated by `tools/jumbo-preise.mjs --schreiben`)
 - `shared.js` – material catalogs, panel packing, joint hardware
 - `sideboard.js` – sideboard calculation
 - `reduit.js` – reduit calculation (layout, support systems, prices)
