@@ -138,7 +138,8 @@ const SPAN = {
   gon_fichte:{ 18:600 },
   gon_3s:    { 19:650 },
   mood_fichte:{ 18:600 },
-  regalbau:  { 16:400 }
+  regalbau:  { 16:400 },
+  moebel_weiss:{ 18:470 }
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 

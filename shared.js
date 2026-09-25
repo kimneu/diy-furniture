@@ -39,7 +39,9 @@ const MAT_INFO = {
   mood_fichte: { name:'Mood Leimholz Fichte A', short:'Mood Fichte', color:'#EAD6A8', ply:false, grain:true, boards:true,
             note:'Schöne Sichtqualität A, viele Formate von 800 bis 2500 lang und 200 bis 600 breit.' },
   regalbau: { name:'Regalbauplatte weiss', short:'Regalbauplatte', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
-            note:'Weiss beschichtet, die Längskanten sind schon bekantet. Nur 1150 lang – lange Tablare werden über einer Stütze gestossen.' }
+            note:'Weiss beschichtet, die Längskanten sind schon bekantet. Nur 1150 lang – lange Tablare werden über einer Stütze gestossen.' },
+  moebel_weiss: { name:'Möbelplatte weiss', short:'Möbelplatte', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
+            note:'Weiss beschichtet, 2600 lang und 250 bis 600 breit – ähnlich günstig wie die Regalbauplatte, aber lang genug für die meisten Reduit-Wände.' }
 };
 const BACK_INFO = {
   hdf3: { name:'MDF weiss beschichtet', t:3, color:'#F0EFEA', ply:false },

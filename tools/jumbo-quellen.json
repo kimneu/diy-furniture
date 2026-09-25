@@ -38,5 +38,10 @@
   "mood_fichte 2000x600": { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzplatten/massivholzplatten/mood-leimholzplatte-fichte-a-2000-x-600-x-18-mm/p/6901207" },
   "mood_fichte 2500x300": { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzplatten/massivholzplatten/mood-leimholzplatte-fichte-a-2500-x-300-x-18-mm/p/6901209" },
   "mood_fichte 2500x400": { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzplatten/massivholzplatten/mood-leimholzplatte-fichte-a-2500-x-400-x-18-mm/p/6901211" },
-  "mood_fichte 2500x600": { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzplatten/massivholzplatten/mood-leimholzplatte-fichte-a-2500-x-600-x-18-mm/p/6901213" }
+  "mood_fichte 2500x600": { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzplatten/massivholzplatten/mood-leimholzplatte-fichte-a-2500-x-600-x-18-mm/p/6901213" },
+  "moebel_weiss 2600x250":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x25-cm-weiss/p/6416987" },
+  "moebel_weiss 2600x300":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x30-cm-weiss/p/6416988" },
+  "moebel_weiss 2600x400":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x40-cm-weiss/p/6416989" },
+  "moebel_weiss 2600x500":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x50-cm-weiss/p/6416990" },
+  "moebel_weiss 2600x600":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x60-cm-weiss/p/6416991" }
 }
