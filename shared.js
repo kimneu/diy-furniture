@@ -23,26 +23,49 @@ const MAT_INFO = {
   mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, tDef:19,
             note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' },
   // Günstige, robuste Platten – gut für Reduit, Keller und Werkstatt. coated = fertige Beschichtung, nicht ölen.
-  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, tDef:27,
-            note:'Die gelbe Platte von der Baustelle: sehr robust und wasserfest, die Oberfläche ist schon fertig. Gibt es nur 50 cm breit – tiefere Teile passen nicht darauf. Die Schnittkanten einmal lackieren oder ölen.' },
+  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, boards:true,
+            note:'Die gelbe Platte von der Baustelle: sehr robust und wasserfest, die Oberfläche ist schon fertig. Gibt es nur als ganze Tafel 2000 × 500 – die Tiefe richtet sich danach. Die Schnittkanten einmal lackieren oder ölen.' },
   osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, tDef:18,
             note:'Aus grossen, gepressten Holzspänen – sieht rustikal aus, wie in einer Werkstatt. Stabil und robust. Kanten gut schleifen, dann ölen oder roh lassen.' },
   dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, tDef:19,
             note:'Drei verleimte Holzschichten: sieht aus wie Massivholz, verzieht sich aber kaum. Fichte ist weich und bekommt schnell Dellen – Weissöl hält den hellen Ton.' },
   dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, tDef:19,
-            note:'Weiss beschichtet wie bei Fertigmöbeln – fertig, kein Streichen nötig. An den Schnittkanten sieht man die Spanplatte: mit weissem Kantenband überbügeln. Hängt als Tablar schneller durch als Sperrholz.' }
+            note:'Weiss beschichtet wie bei Fertigmöbeln – fertig, kein Streichen nötig. An den Schnittkanten sieht man die Spanplatte: mit weissem Kantenband überbügeln. Hängt als Tablar schneller durch als Sperrholz.' },
+  // Ganze Bretter in festen Formaten (nur ablängen, nur Reduit). Formate und Stückpreise in preise.js → bretter.
+  gon_fichte: { name:'go/on Leimholz Fichte', short:'go/on Fichte', color:'#EAD6A8', ply:false, grain:true, boards:true,
+            note:'Ganze Bretter 200 oder 400 breit, 1200 oder 2000 lang – viel günstiger als der Zuschnitt. Die Regaltiefe richtet sich nach der Brettbreite. Weissöl hält den hellen Ton.' },
+  gon_3s: { name:'go/on 3-Schicht Fichte', short:'go/on 3-Schicht', color:'#E6CF9E', ply:true, grain:true, boards:true,
+            note:'Dreischichtplatte, 600 breit und 1200 oder 2500 lang. Verzieht sich kaum – nur für 60 cm tiefe Regale.' },
+  mood_fichte: { name:'Mood Leimholz Fichte A', short:'Mood Fichte', color:'#EAD6A8', ply:false, grain:true, boards:true,
+            note:'Schöne Sichtqualität A, viele Formate von 800 bis 2500 lang und 200 bis 600 breit.' },
+  regalbau: { name:'Regalbauplatte weiss', short:'Regalbauplatte', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
+            note:'Weiss beschichtet, die Längskanten sind schon bekantet. Nur 1150 lang – lange Tablare werden über einer Stütze gestossen.' }
 };
 const BACK_INFO = {
   hdf3: { name:'MDF weiss beschichtet', t:3, color:'#F0EFEA', ply:false },
   hf3:  { name:'Hartfaser roh', t:3, color:'#9C7A55', ply:false },
   ply6: { name:'Sperrholz Pappel', t:5, color:'#E8D9B8', ply:true }
 };
-// Stärken = Stärken mit Preis; ohne Preis fällt ein Material weg. price = Preis der Standardstärke (für die Sortierung).
-const MATS = Object.fromEntries(Object.entries(MAT_INFO).filter(([k]) => PRICE_DATA.platten[k]).map(([k, M]) => {
-  const { prices, sheet } = PRICE_DATA.platten[k], t = Object.keys(prices).map(Number).sort((a, b) => a - b);
+// Plattenmaterial: Stärken = Stärken mit Preis; price = Preis der Standardstärke (für die Sortierung).
+function plateMat(M, P){
+  if (!P) return null;
+  const t = Object.keys(P.prices).map(Number).sort((a, b) => a - b);
   const tDef = t.includes(M.tDef) ? M.tDef : t[0];
-  return [k, { ...M, t, tDef, sheet, price:prices[tDef], prices }];
-}));
+  return { ...M, t, tDef, sheet:P.sheet, price:P.prices[tDef], prices:P.prices };
+}
+// Brett-Material: Formate nach Breite, dann Länge; price = günstigster m²-Preis (Sortierung, Anzeige «ab»), sheet = grösstes Format.
+function boardMat(M, P){
+  if (!P || !P.formate.length) return null;
+  const boards = P.formate.map(f => ({ L:f.L, B:f.B, price:f.price })).sort((a, b) => a.B - b.B || a.L - b.L);
+  const big = boards.reduce((a, f) => f.L > a.L || (f.L === a.L && f.B > a.B) ? f : a);
+  const perM2 = Math.min(...boards.map(f => f.price / (f.L * f.B / 1e6)));
+  return { ...M, t:[P.t], tDef:P.t, boards, widths:[...new Set(boards.map(f => f.B))], est:!!P.est,
+    sheet:[big.L, big.B], price:Math.round(perM2 * 100) / 100 };
+}
+// Ohne Preis fällt ein Material weg.
+const MATS = Object.fromEntries(Object.entries(MAT_INFO)
+  .map(([k, M]) => [k, M.boards ? boardMat(M, (PRICE_DATA.bretter || {})[k]) : plateMat(M, PRICE_DATA.platten[k])])
+  .filter(([, M]) => M));
 const BACKS = { none:null, ...Object.fromEntries(Object.entries(BACK_INFO).filter(([k]) => PRICE_DATA.rueckwaende[k])
   .map(([k, B]) => [k, { ...B, sheet:PRICE_DATA.rueckwaende[k].sheet, price:PRICE_DATA.rueckwaende[k].price }])) };
 const COLORS = { weiss:'#EEEDE7', salbei:'#A7B39E', taube:'#8E9FAB', anthrazit:'#3E4447' };
@@ -57,12 +80,51 @@ const JOINTS = {
 /* ---------- Preise ---------- */
 // m²-Preis einer Stärke; prices = { Stärke: CHF/m² } überschreibt den Materialpreis.
 function matPrice(M, t){ return (M.prices && M.prices[t]) || M.price; }
-// Holzkosten zweier Einkaufsarten: Zuschnitt (nur Teilefläche) oder ganze Platten.
+// Holzkosten zweier Einkaufsarten: Zuschnitt (nur Teilefläche) oder ganze Platten. Ganze Bretter: nur Stückpreise.
 function sheetCosts(groups){
+  const whole = g => g.boards ? g.sheets.reduce((a, s) => a + s.price, 0) : g.sheets.length * g.sheet[0] * g.sheet[1] / 1e6 * g.price;
   return {
-    cut: groups.reduce((a, g) => a + g.partArea / 1e6 * g.price, 0),
-    whole: groups.reduce((a, g) => a + g.sheets.length * g.sheet[0] * g.sheet[1] / 1e6 * g.price, 0)
+    cut: groups.reduce((a, g) => a + (g.boards ? whole(g) : g.partArea / 1e6 * g.price), 0),
+    whole: groups.reduce((a, g) => a + whole(g), 0)
   };
+}
+
+/* ---------- Ganze Bretter ---------- */
+// Nur ablängen: ein Teil der Breite b bekommt die kleinste Brettbreite B mit b ≤ B ≤ b + BOARD_SLACK, sonst null.
+const BOARD_SLACK = 15;
+function boardWidthFor(widths, b){
+  const B = widths.find(w => w >= b && w <= b + BOARD_SLACK);
+  return B == null ? null : B;
+}
+// 1D-Packen pro Brettbreite: längste Teile zuerst auf das längste Format (First Fit), dann je Brett das günstigste Format, das die Teile fasst.
+function packBoards(items, boards, kerf){
+  const widths = [...new Set(boards.map(f => f.B))].sort((a, b) => a - b);
+  const sheets = [], unplaced = [], byW = new Map();
+  const miss = it => { if (!unplaced.some(u => u.key === it.key)) unplaced.push(it); };
+  for (const it of items) {
+    const B = boardWidthFor(widths, it.B);
+    if (B == null) { miss(it); continue; }
+    if (!byW.has(B)) byW.set(B, []);
+    byW.get(B).push(it);
+  }
+  for (const B of widths) {
+    const fmts = boards.filter(f => f.B === B), Lmax = Math.max(...fmts.map(f => f.L));
+    const bins = [];
+    for (const it of (byW.get(B) || []).slice().sort((a, b) => b.L - a.L)) {
+      if (it.L > Lmax) { miss(it); continue; }
+      const bin = bins.find(b => b.len + kerf + it.L <= Lmax);
+      if (bin) { bin.parts.push(it); bin.len += kerf + it.L; } else bins.push({ parts:[it], len:it.L });
+    }
+    for (const bin of bins) {
+      const f = fmts.filter(f => f.L >= bin.len).reduce((a, f) => f.price < a.price ? f : a);
+      let x = 0;
+      const parts = bin.parts.map(it => { const p = { it, x, y:0, w:it.L, h:B, rot:false }; x += it.L + kerf; return p; });
+      sheets.push({ L:f.L, B, price:f.price, parts });
+    }
+  }
+  const used = sheets.reduce((a, s) => a + s.parts.reduce((b, p) => b + p.w * p.h, 0), 0);
+  const partArea = items.reduce((a, it) => a + it.L * it.B, 0);
+  return { sheets, unplaced, used, partArea, total: sheets.reduce((a, s) => a + s.L * s.B, 0) };
 }
 
 /* ---------- Verbindungen ---------- */
@@ -143,4 +205,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards };

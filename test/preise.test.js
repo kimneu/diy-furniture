@@ -15,6 +15,7 @@ test('jedes Material, jede Rückwand und jedes Kaufteil hat einen Preis', () => 
   for (const k of src.match(/const MAT_INFO = \{([\s\S]*?)\n\};/)[1].match(/^  (\w+):/gm).map(s => s.trim().slice(0, -1)))
     assert.ok(MATS[k], `${k} fehlt in preise.js → platten`);
   for (const [k, B] of Object.entries(BACKS)) if (k !== 'none') assert.ok(B.price > 0 && B.sheet.length === 2, k);
+  for (const [k, e] of Object.entries(PREISE.bretter)) assert.ok(MATS[k] && MATS[k].boards, `bretter.${k} ohne Material in MAT_INFO`);
   for (const [k, b] of Object.entries(R.BUY)) assert.ok(PREISE.kaufteile[k] && b.price > 0, `${k} fehlt in preise.js → kaufteile`);
 });
 

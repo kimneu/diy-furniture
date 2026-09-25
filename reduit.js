@@ -120,7 +120,11 @@ const SPAN = {
   schaltafel:{ 27:1000 },
   osb:       { 12:450, 15:550, 18:650, 22:800 },
   dreischicht:{ 19:650, 27:950 },
-  dekorspan: { 16:400, 19:500 }
+  dekorspan: { 16:400, 19:500 },
+  gon_fichte:{ 18:600 },
+  gon_3s:    { 19:650 },
+  mood_fichte:{ 18:600 },
+  regalbau:  { 16:400 }
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 
