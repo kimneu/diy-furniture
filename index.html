@@ -56,6 +56,10 @@ button,input,select{font:inherit;color:inherit}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
 .summary{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0}
+.kindbar{flex:0 1 260px;align-self:center}
+.kindbar label{padding-block:8px;font-size:14px;font-weight:600}
+.hacts{display:grid;gap:4px;justify-items:end;align-self:center;max-width:220px}
+.hacts .copied{text-align:right;font-size:12.5px}
 .summary div{display:flex;flex-direction:column}
 .summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -309,6 +313,17 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .mbar{display:flex;position:fixed;z-index:10;left:0;right:0;bottom:0;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
+  .mbar > div:first-child{min-width:0}
+  .mbar #mMeta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar b{white-space:nowrap}
+  .mbar .nm{display:none}
+  .mbar .copied:not(:empty)::before{content:"✓ "}
+  .mbar .copied:empty{display:none}
+  .mbar .copied:not(:empty){display:block;color:var(--ink)}
+  .mbar div:has(> .copied:not(:empty)) #mMeta{display:none}
+  .mbtns{display:flex;gap:8px;flex:none}
+  .hacts{display:none}
+  .kindbar{flex-basis:100%}
 }
 @media (max-width:640px){
   .top{gap:12px;padding-bottom:12px}
@@ -371,7 +386,9 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
       </div>
     </div>
+    <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
     <dl class="summary" id="summary"></dl>
+    <div class="hacts"><button type="button" class="btn js-sammeln">In Sammlung</button><span class="copied js-sammelmsg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -395,11 +412,8 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
-        <div class="seg" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit"><label for="kind-reduit">Reduit</label></div>
         <div class="acts">
           <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall</button>
-          <button type="button" class="btn" id="bSammeln">In Sammlung</button>
-          <span class="copied" id="sammelMsg" aria-live="polite"></span>
         </div>
       </section>
       <section class="group" data-kind="sideboard">
@@ -457,18 +471,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
       </section>
 
       <section class="group" data-kind="reduit">
-        <h2>Form</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-shape">Regal an</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
-        </div>
-        <div class="field" id="row-corner">
-          <span class="lbl" id="lbl-corner">Ecke</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
-        </div>
-      </section>
-
-      <section class="group" data-kind="reduit">
         <h2>Bauart</h2>
         <div class="field">
           <span class="lbl" id="lbl-build">Regal</span>
@@ -480,6 +482,18 @@ figure.sheet svg{width:100%;height:auto;display:block}
           <label class="card"><input type="radio" name="sys" value="brackets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10l4 4M4 16l4 4"/></svg><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
           <label class="card"><input type="radio" name="sys" value="cheeks"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="4" height="18" rx=".5"/><rect x="17" y="3" width="4" height="18" rx=".5"/><path d="M7 9h10M7 15h10"/></svg><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
           <label class="card"><input type="radio" name="sys" value="posts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Kanthölzer vorne, Latten als Auflage – das klassische Kellerregal. Trägt am meisten.</span></label>
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit">
+        <h2>Form</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-shape">Regal an</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
+        </div>
+        <div class="field" id="row-corner">
+          <span class="lbl" id="lbl-corner">Ecke</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
         </div>
       </section>
 
@@ -534,33 +548,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
           </div>
         </div>
         <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
-      </section>
-
-      <section class="group">
-        <h2>Material</h2>
-        <div class="field" id="row-room">
-          <span class="lbl" id="lbl-room">Einsatzort</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
-            <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
-            <input type="radio" name="room" id="room-bath" value="bath"><label for="room-bath">Badezimmer</label>
-          </div>
-        </div>
-        <div class="field">
-          <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
-          <select id="mat" name="mat"></select>
-        </div>
-        <div class="row2">
-          <div class="field"><label for="t">Stärke</label><select id="t" name="t"></select></div>
-          <div class="field" id="row-back"><label for="back">Rückwand</label>
-            <select id="back" name="back">
-              <option value="hdf3">MDF weiss 3 mm</option>
-              <option value="hf3">Hartfaser roh 3 mm</option>
-              <option value="ply6">Sperrholz Pappel 5 mm</option>
-              <option value="none">keine</option>
-            </select>
-          </div>
-        </div>
-        <p class="hint" id="matNote"></p>
       </section>
 
       <section class="group" data-kind="sideboard">
@@ -624,16 +611,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
         </div>
       </section>
 
-      <section class="group" id="grp-joint">
-        <h2>Verbindung</h2>
-        <div class="cards" role="radiogroup" aria-label="Verbindung">
-          <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
-          <label class="card"><input type="radio" name="joint" value="screws"><b>Verschraubt</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Von aussen durch die Platte geschraubt. Am einfachsten – Schraubenköpfe bleiben sichtbar.</span></label>
-          <label class="card"><input type="radio" name="joint" value="dowels"><b>Holzdübel</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Dübel und Leim, komplett unsichtbar. Genaues Anzeichnen nötig – eine Dübellehre hilft.</span></label>
-          <label class="card"><input type="radio" name="joint" value="cam"><b>Exzenter</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Zerlegbar wie ein Fertigmöbel. Präzise Bohrungen mit Forstnerbohrer Ø 15 mm.</span></label>
-        </div>
-      </section>
-
       <section class="group" data-kind="sideboard">
         <h2>Front</h2>
         <div class="field">
@@ -673,6 +650,43 @@ figure.sheet svg{width:100%;height:auto;display:block}
             <input type="radio" name="color" id="c-taube" value="taube"><label for="c-taube"><span class="sw" style="background:#8E9FAB"></span>Tauben&shy;blau</label>
             <input type="radio" name="color" id="c-anthrazit" value="anthrazit"><label for="c-anthrazit"><span class="sw" style="background:#3E4447"></span>Anthrazit</label>
           </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Material</h2>
+        <div class="field" id="row-room">
+          <span class="lbl" id="lbl-room">Einsatzort</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
+            <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
+            <input type="radio" name="room" id="room-bath" value="bath"><label for="room-bath">Badezimmer</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
+          <select id="mat" name="mat"></select>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="t">Stärke</label><select id="t" name="t"></select></div>
+          <div class="field" id="row-back"><label for="back">Rückwand</label>
+            <select id="back" name="back">
+              <option value="hdf3">MDF weiss 3 mm</option>
+              <option value="hf3">Hartfaser roh 3 mm</option>
+              <option value="ply6">Sperrholz Pappel 5 mm</option>
+              <option value="none">keine</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" id="matNote"></p>
+      </section>
+
+      <section class="group" id="grp-joint">
+        <h2>Verbindung</h2>
+        <div class="cards" role="radiogroup" aria-label="Verbindung">
+          <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
+          <label class="card"><input type="radio" name="joint" value="screws"><b>Verschraubt</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Von aussen durch die Platte geschraubt. Am einfachsten – Schraubenköpfe bleiben sichtbar.</span></label>
+          <label class="card"><input type="radio" name="joint" value="dowels"><b>Holzdübel</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Dübel und Leim, komplett unsichtbar. Genaues Anzeichnen nötig – eine Dübellehre hilft.</span></label>
+          <label class="card"><input type="radio" name="joint" value="cam"><b>Exzenter</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Zerlegbar wie ein Fertigmöbel. Präzise Bohrungen mit Forstnerbohrer Ø 15 mm.</span></label>
         </div>
       </section>
 
@@ -751,7 +765,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </section>
   </div>
 </div>
-<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span></div><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div>
+<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-sammelmsg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -927,8 +941,8 @@ function renderSummary(R){
     (boards ? item('Holz ganze Bretter ca.', `<b>${chf(woodWhole)}</b>`, 'price')
             : item('Holz Zuschnitt ca.', `<b>${chf(wood)}</b><small>ganze Platten ${chf(woodWhole)}</small>`, 'price')) +
     (reduit ? item('Kaufteile ca.', `<b>${chf(R.buyCost)}</b>`, 'price') : '');
-  $('#mPrice').textContent = reduit ? `${chf(wood)} + ${chf(R.buyCost)}` : chf(wood);
-  $('#mMeta').textContent = reduit ? `${woodName} + Kaufteile · ${parts} Teile` : `${woodName} · ${parts} Teile`;
+  $('#mPrice').textContent = chf(wood);
+  $('#mMeta').textContent = reduit ? `+ ${chf(R.buyCost)} Kaufteile · ${woodName}` : `${woodName} · ${parts} Teile`;
   const why = reduit
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
@@ -1306,7 +1320,7 @@ function build3D(R){
 }
 
 /* ---------- Ereignisse ---------- */
-form.addEventListener('input', e => {
+function onInput(e){
   const el = e.target;
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
@@ -1324,7 +1338,9 @@ form.addEventListener('input', e => {
   matMsg = '';
   if (el.name === 'kind') syncMaterials();
   syncVisibility(); render(); save();
-});
+}
+form.addEventListener('input', onInput);
+$('#kindBar').addEventListener('input', onInput);
 form.addEventListener('change', e => {
   const el = e.target;
   if (el.type === 'number' && el.value !== '') {
@@ -1391,12 +1407,14 @@ function placePill(seg, anim){
   if (!anim) { seg.offsetWidth; seg.classList.remove('still'); }
 }
 const segRO = new ResizeObserver(es => { for (const e of es) placePill(e.target, false); });
-for (const seg of form.querySelectorAll('.seg')) segRO.observe(seg);
-form.addEventListener('change', e => { const seg = e.target.closest('.seg'); if (seg) placePill(seg, true); });
+const pillOnChange = e => { const seg = e.target.closest('.seg'); if (seg) placePill(seg, true); };
+for (const seg of document.querySelectorAll('.seg')) segRO.observe(seg);
+form.addEventListener('change', pillOnChange);
+$('#kindBar').addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
-const OPEN = ['Masse', 'Raum', 'Material', 'Niveau'];
+const OPEN = ['Masse', 'Raum', 'Bauart', 'Material', 'Niveau'];
 const chevron = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const heads = [...form.querySelectorAll('.group > h2')].map(h => {
   const g = h.parentElement, b = document.createElement('button');
@@ -1457,7 +1475,7 @@ function applyData(data){
 }
 $('#bZufall').addEventListener('click', () => {
   applyData(zufall(formData()));
-  flash('#sammelMsg', '');
+  flash('.js-sammelmsg', '');
 });
 
 const COLL = STORE + '-sammlung';
@@ -1465,8 +1483,10 @@ let coll = [], aktiv = null, entfernt = null;
 try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
 function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
 function flash(sel, html){
-  const el = $(sel); el.innerHTML = html;
-  clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+  for (const el of document.querySelectorAll(sel)) {
+    el.innerHTML = html;
+    clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+  }
 }
 const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
@@ -1487,14 +1507,15 @@ function renderColl(){
       </div>
     </li>`).join('');
 }
-$('#bSammeln').addEventListener('click', () => {
+const sammeln = () => {
   const e = sammlungEintrag(formData(), R);
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
   if (gleich) e.name += ` (${gleich + 1})`;
   coll.push(e); aktiv = e.id; storeColl(); renderColl();
-  flash('#sammelMsg', `«${esc(e.name)}» gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
-});
-$('#sammelMsg').addEventListener('click', ev => {
+  flash('.js-sammelmsg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+};
+for (const b of document.querySelectorAll('.js-sammeln')) b.addEventListener('click', sammeln);
+for (const m of document.querySelectorAll('.js-sammelmsg')) m.addEventListener('click', ev => {
   const id = ev.target.dataset.go;
   if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
 });
