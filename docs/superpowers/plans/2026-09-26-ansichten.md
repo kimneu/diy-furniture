@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Der Konfigurator bekommt vier Orte (Entwerfen · Einkaufen · Bauen · Sammlung) mit Hash-Navigation, einen Entwurf pro Möbeltyp, eine abhakbare Einkaufsliste, «Rückgängig» beim Laden und Zufall, eine Sammlung als Variantenliste und die Möbelwahl «Was baust du?» im Kopf.
+**Goal:** Der Konfigurator bekommt vier Orte (Entwerfen · Einkaufen · Bauen · Sammlung) mit Hash-Navigation, auf dem Desktop drei Spalten ohne Scrollen der Seite, einen Entwurf pro Möbeltyp, eine abhakbare Einkaufsliste, «Rückgängig» beim Laden und Zufall, eine Sammlung als Variantenliste und die Möbelwahl «Was baust du?» im Kopf.
 
 **Architecture:** Logik ohne DOM kommt in `konfig.js` (Entwürfe, Gesamtkosten, Vergleich, Sortierung, Ort aus Hash) und in die neue Datei `einkauf.js` (Einkaufsliste, Text, Haken). Beide werden mit `node --test` getestet. `index.html` verdrahtet nur: Speicher, Panels, Router, Leiste, Dialog. DOM-Schritte werden im Browser geprüft (kein DOM-Testsetup im Repo).
 
@@ -17,6 +17,7 @@
 - Lokal prüfen: `python3 -m http.server 8000` → http://localhost:8000/, nach JS-Änderungen **Ctrl+Shift+R**. Handy-Ansicht über DevTools mit ≤ 920 px Breite.
 - Texte auf Deutsch (Schweiz): «ss» statt «ß», Anführungszeichen «…».
 - Schmal = `matchMedia('(max-width: 920px)')` (gleich wie heute `narrow`).
+- Desktop ohne Scrollen = `@media (min-width:1200px) and (min-height:640px)`. Kleinstes Ziel: Browserfenster 1280 × 700 (13″-MacBook).
 - Hashes der Orte, wörtlich: `#entwerfen`, `#einkaufen`, `#bauen`, `#sammlung`.
 - localStorage-Schlüssel: bestehend `sideboard-werkbank-v2` (nur noch lesen zur Migration), `…-sammlung` (unverändert). Neu: `…-entwuerfe`, `…-aktiv`, `…-haken`, `…-bau`, `…-sort`. `…-tab` entfällt.
 - Jeder Zugriff auf localStorage in `try { … } catch (e) {}` (Muster im Bestand).
@@ -24,11 +25,11 @@
 
 ## Review Focus
 
-1. **Bestehender Nutzer mit altem Speicher** (nur `sideboard-werkbank-v2`, z. B. ein Reduit): Er soll ohne Auswahl-Dialog direkt in seinem Reduit landen. Getestet in Task 1 (`entwuerfeLaden` migriert), im Browser in Task 8 Schritt «alter Speicher».
+1. **Bestehender Nutzer mit altem Speicher** (nur `sideboard-werkbank-v2`, z. B. ein Reduit): Er soll ohne Auswahl-Dialog direkt in seinem Reduit landen. Getestet in Task 1 (`entwuerfeLaden` migriert), im Browser in Task 9 Schritt «alter Speicher».
 2. **Typwechsel mit Brett-Material:** Reduit auf go/on Fichte → Sideboard → zurück zum Reduit. go/on Fichte muss wieder da sein, und es darf kein Hinweis «Material gesetzt» erscheinen. Getestet in Task 1 (`entwurfSetzen` hält beide Typen getrennt) und im Browser in Task 1.
 3. **Einkaufsliste bei gleichem Inhalt:** Nach einer Änderung, die eine Zeile nicht betrifft (z. B. Frontfarbe), müssen deren Haken bleiben. Geänderte Zeilen (andere Menge) werden frei. Getestet in Task 5 (`hakenFiltern`, ids aus dem Zeileninhalt).
 4. **Rückgängig nach dem Laden einer Variante des anderen Typs:** Beide Entwürfe müssen wieder genau wie vorher sein. Getestet im Browser in Task 3 (Schritt «anderer Typ»).
-5. **Zurück-Taste auf dem Handy:** Einkaufen → Bauen → Zurück → Einkaufen → Zurück → Entwerfen. Ein offener Auswahl-Dialog schliesst mit Zurück, ohne den Ort zu wechseln. Getestet in Task 7 (`ortAusHash`) und im Browser in Task 7 und Task 8.
+5. **Zurück-Taste auf dem Handy:** Einkaufen → Bauen → Zurück → Einkaufen → Zurück → Entwerfen. Ein offener Auswahl-Dialog schliesst mit Zurück, ohne den Ort zu wechseln. Getestet in Task 7 (`ortAusHash`) und im Browser in Task 7 und Task 9.
 
 ---
 
@@ -178,7 +179,7 @@ fillMaterials();
 restore(null);
 DEFAULTS = formData();
 try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'), stored()); } catch (e) { entwuerfe = entwuerfeLaden(null, stored()); }
-const erstBesuch = !entwuerfe;   // Task 8 öffnet dann «Was baust du?»
+const erstBesuch = !entwuerfe;   // Task 9 öffnet dann «Was baust du?»
 restore(entwuerfe && entwuerfe[entwuerfe.kind]);
 syncMaterials();
 syncVisibility();
@@ -1089,7 +1090,158 @@ git commit -m "feat: Orte Entwerfen · Einkaufen · Bauen · Sammlung mit Hash u
 
 ---
 
-### Task 8: Möbelwahl «Was baust du?» im Kopf, erster Besuch
+### Task 8: Desktop in drei Spalten ohne Scrollen der Seite
+
+**Files:**
+- Modify: `index.html` (Kopf-Markup `.hacts`, `#warns` im `.cfgwrap`, `.foot`, CSS «Kopf», «Raster», `@media (max-width:640px)`, `renderWarns`)
+
+**Interfaces:**
+- Consumes: Markup aus Task 4 (`.hacts` mit `#variante`, `.js-msg`), Task 6 (`#p-einkaufen`, `#p-bauen`, `#b-teile`), Task 7 (`.sammlung`, `body[data-ort]`).
+- Produces: `#warnBox` mit `#warnHead` (Knopf) und `#warns` (Liste), Klasse `.open` auf `#warnBox`; Container `ergebnis` auf `.output`.
+
+Vergleichsvorschau der Entscheidung: https://claude.ai/artifact/4aZnksPp6RhHshFvsaG5Ub (Layout «3 Spalten»). Sie zeigt das Ziel, ist aber ein Nachbau. Massgebend sind die Werte unten.
+
+- [ ] **Step 1: Warnungen als Streifen (Markup + JS)**
+
+`<div class="warns" id="warns" aria-live="polite"></div>` ersetzen durch:
+
+```html
+    <div class="warnbox" id="warnBox" hidden>
+      <button type="button" class="warnhead" id="warnHead" aria-expanded="false" aria-controls="warns"></button>
+      <div class="warns" id="warns" aria-live="polite"></div>
+    </div>
+```
+
+`renderWarns` am Ende ergänzen:
+
+```js
+  const n = R.warn.length;
+  $('#warnBox').hidden = !n;
+  $('#warnHead').textContent = `${n} Warnung${n === 1 ? '' : 'en'}`;
+```
+
+Nach `renderWarns` einfügen:
+
+```js
+$('#warnHead').addEventListener('click', () => {
+  const open = $('#warnBox').classList.toggle('open');
+  $('#warnHead').setAttribute('aria-expanded', String(open));
+});
+```
+
+CSS: In `.layout{…}` und `.warns{grid-area:warns;…}` (Raster) wird `grid-area:warns` von `.warns` auf `.warnbox` verschoben: `.warnbox{grid-area:warns;min-width:0}` und bei `.warns` `grid-area` entfernen. Den Knopf ausserhalb des neuen Modus verstecken: `.warnhead{display:none}`. Auf dem Handy und schmalen Desktops bleibt die Liste damit wie heute immer offen.
+
+- [ ] **Step 2: Hinweis unter dem Kopf statt in der Kopfzeile**
+
+Damit der einzeilige Kopf nicht springt, liegen Meldungen im Kopf über dem Inhalt. Die bestehenden Regeln `.hacts .copied{…}` ersetzen durch:
+
+```css
+.top{position:relative}
+.hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
+.hacts .copied:empty{display:none}
+```
+
+- [ ] **Step 3: Container-Query für Teiletabelle und Plattenplan**
+
+`.output{grid-area:output;min-width:0}` → `.output{grid-area:output;min-width:0;container:ergebnis / inline-size}`.
+
+Im Block `@media (max-width:640px){…}` alle Regeln, die mit `#cutTable` beginnen, und `.sheetlist{grid-template-columns:minmax(0,1fr)}` **herausnehmen** und als eigenen Block direkt danach einsetzen:
+
+```css
+/* Teiletabelle als Karten, sobald die Ergebnisspalte schmal ist (Handy und dritte Spalte am Desktop) */
+@container ergebnis (max-width:600px){
+  #cutTable thead{display:none}
+  #cutTable,#cutTable tbody,#cutTable tfoot{display:block}
+  #cutTable tr{display:grid;grid-template-columns:22px minmax(0,1fr) auto;column-gap:10px;row-gap:2px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  #cutTable tbody:last-of-type tr:last-child{border-bottom:0}
+  #cutTable td{padding:0;border:0}
+  #cutTable td.pos{grid-row:1 / span 2;width:auto}
+  #cutTable td.dim{grid-column:2}
+  #cutTable td.th::after{content:" mm"}
+  #cutTable td.th,#cutTable td.dim{color:var(--muted)}
+  #cutTable td.note{grid-column:2 / -1;min-width:0}
+  #cutTable td.note.empty{display:none}
+  #cutTable tbody.grp tr{display:block;padding:0}
+  #cutTable tbody.grp th{display:block}
+  #cutTable tr.hl{background:var(--accent-soft)}
+  #cutTable tfoot tr{display:block}
+  .sheetlist{grid-template-columns:minmax(0,1fr)}
+}
+```
+
+(Die Regeln sind wörtlich die bisherigen. Nur der Auslöser wechselt von der Fensterbreite zur Spaltenbreite. Auf dem Handy ist die Spalte unter 600 px, dort bleibt alles gleich.)
+
+- [ ] **Step 4: Hinweis «ohne Gewähr» in die Teile**
+
+`<p class="foot">…</p>` aus dem Ende von `.output` herausnehmen und ans Ende von `<div class="bau" id="b-teile">` setzen (er betrifft den Zuschnitt der Türen). So hängt im Ergebnis-Panel nichts unter dem scrollenden Bereich.
+
+- [ ] **Step 5: Das Raster**
+
+Nach dem Block `@media (max-width:920px){…}` des Rasters (bei «/* Raster */», vor «/* Steuerung */») einfügen:
+
+```css
+/* Desktop ohne Scrollen der Seite: Kopf in einer Zeile, darunter drei Spalten in voller Höhe */
+@media (min-width:1200px) and (min-height:640px){
+  html,body{height:100%}
+  body{overflow:hidden}
+  .app{height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding-block:8px 14px}
+  .top{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind sum acts";gap:0 28px;padding-block:2px 10px}
+  .brand p{display:none}
+  .brand svg{width:30px;height:30px}
+  .brand h1{font-size:21px}
+  .summary .price dd{min-height:0}
+  .hacts{width:auto;display:flex;align-items:center;gap:12px;justify-items:initial}
+  .layout{grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"controls viewer output" "controls warns output";gap:10px 18px;margin-top:12px;min-height:0;align-items:stretch}
+  .controls{position:static;max-height:none;min-height:0}
+  .viewer{min-height:0;display:flex;flex-direction:column}
+  .stage-wrap{flex:1;min-height:0}
+  #stage{aspect-ratio:auto;height:100%;min-height:0;max-height:none}
+  .warnhead{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:9px;width:100%;padding:6px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:9px;font-size:13.5px;cursor:pointer}
+  .warnhead::before{content:"!";display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--warn);color:var(--warn-bg);font-weight:700;font-size:12px}
+  .warnhead::after{content:"▾";margin-left:auto;color:var(--warn)}
+  .warnbox.open .warnhead::after{content:"▴"}
+  .warnhead:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .warnbox:not(.open) .warns{display:none}
+  .warns{margin-top:6px;max-height:33vh;overflow:auto}
+  .output{display:flex;flex-direction:column;min-height:0}
+  .tabs{margin-top:0;flex:none}
+  .panel{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
+  .sammlung{min-height:0;display:flex;flex-direction:column;margin-top:12px}
+  .sammlung #collList{flex:1;min-height:0;overflow:auto;align-content:start}
+}
+```
+
+Zu den einzelnen Regeln:
+- `.layout` bekommt vom `.app`-Raster die Resthöhe (`minmax(0,1fr)`), die Spalten strecken sich (`align-items:stretch`). `.cfgwrap` ist auf dem Desktop `display:contents`, darum landen `.viewer`, `.warnbox` und `.controls` direkt im Raster.
+- `#stage` füllt seine Spalte. three.js passt sich über den bestehenden `ResizeObserver` in `initThree` an (`renderer.setSize` mit der Grösse des Elements).
+- Die `.hacts`-Regel überschreibt das bisherige `display:grid`. `justify-items:initial` ist nötig, weil `.hacts` sonst `justify-items:end` behält.
+
+- [ ] **Step 6: Tests**
+
+Run: `node --test` → alle PASS (keine Logik geändert).
+
+- [ ] **Step 7: Im Browser prüfen**
+
+DevTools → Geräte-Symbolleiste → «Responsive», nacheinander **1280 × 700**, **1470 × 830**, **1512 × 860**, **1728 × 990**:
+1. Die Seite hat keine Scrollleiste. Mausrad über dem Formular scrollt nur das Formular, über der Einkaufsliste nur die Liste.
+2. Kopf in einer Zeile, etwa 60 px hoch. «In Sammlung» antippen → die Meldung erscheint unter dem Kopf, nichts verschiebt sich.
+3. 3D füllt die mittlere Spalte. Beim Umschalten Sideboard ↔ Reduit richtet sich die Kamera neu aus. Kein verzerrtes Bild nach einer Grössenänderung des Fensters.
+4. Reduit mit Warnungen: Streifen «2 Warnungen ▾» unter der 3D-Vorschau. Aufklappen → die Liste scrollt in sich, die 3D-Vorschau wird kleiner, die Seite scrollt nicht.
+5. Reiter Bauen → Teile: Bei 1280 erscheinen die Zeilen als Karten (Spalte < 600 px), bei 1728 als Tabelle.
+6. `#sammlung`: volle Höhe, nur die Liste scrollt, «Zum Entwurf» ist sichtbar.
+7. 1100 × 800: Das Layout ist wie vor diesem Task (zwei Spalten, die Seite scrollt), die Warnungen sind offen ohne Streifen-Knopf.
+8. 390 × 844 (Handy): unverändert gegenüber Task 7, die Teiletabelle erscheint als Karten.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add index.html
+git commit -m "feat: Desktop in drei Spalten ohne Scrollen der Seite"
+```
+
+---
+
+### Task 9: Möbelwahl «Was baust du?» im Kopf, erster Besuch
 
 **Files:**
 - Modify: `index.html` (Kopf `#kindBar` ~Z. 394, CSS Kopf, `onInput`, Start)
@@ -1226,7 +1378,7 @@ git commit -m "feat: Möbelwahl «Was baust du?» im Kopf, beim ersten Besuch al
 
 ---
 
-### Task 9: Doku und Durchgang durch alle Randfälle
+### Task 10: Doku und Durchgang durch alle Randfälle
 
 **Files:**
 - Modify: `docs/WEITERARBEIT.md` (Tabelle «Aufbau», Speicher)
@@ -1253,7 +1405,7 @@ Neuer Abschnitt:
 
 - [ ] **Step 2: Randfälle der Spec durchgehen**
 
-Jede Zeile der Tabelle «Randfälle» in der Spec einmal am Handy (390 px) und am Desktop durchspielen und das Ergebnis ins Commit schreiben. Bekannte Stellen: Task 1 Step 6, Task 3 Step 4, Task 4 Step 7, Task 6 Step 9, Task 7 Step 9, Task 8 Step 5. Neu hier:
+Jede Zeile der Tabelle «Randfälle» in der Spec einmal am Handy (390 px) und am Desktop durchspielen und das Ergebnis ins Commit schreiben. Bekannte Stellen: Task 1 Step 6, Task 3 Step 4, Task 4 Step 7, Task 6 Step 9, Task 7 Step 9, Task 8 Step 7, Task 9 Step 5. Neu hier:
 - **Im Baumarkt ohne Netz:** DevTools → Network → Offline → neu laden. three.js lädt nicht (erwartet). Einkaufen muss aber funktionieren, Haken setzen muss gehen. Für fehlendes WebGL gibt es schon den Hinweis `.nogl` (in `initThree`, Text «Die 3D-Vorschau braucht WebGL …»). Ob `initThree` auch ohne `window.THREE` sauber zurückkehrt, in der Konsole prüfen. Bricht das Script ab, den Anfang von `initThree` mit `if (!window.THREE) { $('#stage').innerHTML = '<div class="nogl">Die 3D-Vorschau braucht eine Internetverbindung. Einkaufsliste und Bauplan funktionieren trotzdem.</div>'; return; }` absichern.
 
 - [ ] **Step 3: Tests + Commit**

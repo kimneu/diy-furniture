@@ -32,6 +32,7 @@ Wie im Prompt `docs/prompts/ansichten-flow.md` beschrieben, dazu:
 | Varianten vergleichen | **Die Liste reicht** (Masse, Material, Kosten), **sortierbar nach Preis**. Vergleichen heisst laden, anschauen, zurück. Keine Ansicht nebeneinander. |
 | Möbelwahl | **Auswahl im Kopf, ohne Pflicht-Schritt.** Beim ersten Besuch ist «Was baust du?» der Leerzustand von Entwerfen. Später öffnet «Sideboard ▾» im Kopf dieselbe Auswahl. Wer wiederkommt, landet direkt im letzten Entwurf. |
 | Orte | **Variante E, vier Orte:** Entwerfen · Einkaufen · Bauen · Sammlung. Auf dem Handy als Leiste unten. Auf dem Desktop bleiben Einkaufen und Bauen live als Reiter neben dem Entwurf, nur die Sammlung ist eine eigene Ansicht. |
+| Desktop-Raster | **Drei Spalten ohne Scrollen der Seite:** Formular \| 3D \| Einkaufen/Bauen, jede Spalte volle Fensterhöhe und in sich scrollend. Auf einem MacBook (ab 1280 × 700 Browserfenster) passt alles in den Bildschirm. Verglichen mit «gestapelt» (3D über der Liste) in der Vorschau https://claude.ai/artifact/4aZnksPp6RhHshFvsaG5Ub. |
 | Zuschnitt | **Je nach Material.** Zuschnitt-Platten bestelle ich bei Jumbo als Zuschnitt, ihre Zuschnittliste und der Plattenplan gehören zu **Einkaufen**. Ganze Bretter (`MATS[mat].boards`) länge ich selbst ab: Einkaufen zeigt Anzahl × Format, der Ablängplan gehört zu **Bauen**. |
 
 ### Verworfene Varianten
@@ -102,8 +103,19 @@ Sammlung
 
 ### Desktop
 
-- Links das Formular, rechts 3D, Warnungen und die Reiter **Einkaufen | Bauen**, live wie heute. Die Sammlung ist eine eigene Ansicht und wird über den Kopf erreicht.
+- Drei Spalten: **Formular | 3D mit Warnungen | Reiter Einkaufen / Bauen**, live wie heute. Die Sammlung ist eine eigene Ansicht und wird über den Kopf erreicht.
 - `#einkaufen` und `#bauen` öffnen auf dem Desktop Entwerfen mit dem passenden Reiter.
+
+### Desktop ohne Scrollen der Seite
+
+Ab **1200 px Breite und 640 px Höhe** füllt die App genau das Fenster:
+
+- **Kopf in einer Zeile** (Marke, Möbelwahl, Masse, Teile, Platten, Total, Variante und Sammeln), etwa 60 px hoch. Meldungen («gesammelt», «Rückgängig») erscheinen als Hinweis unter dem Kopf und verschieben nichts.
+- **Formular**, **3D** und **Ergebnis** haben je die volle Resthöhe. Formular und Ergebnis-Panel scrollen in sich, die 3D-Vorschau füllt ihre Spalte.
+- **Warnungen** stehen unter der 3D-Vorschau als Streifen «n Warnungen ▾». Ausgeklappt zeigen sie die Liste mit eigener Scrollleiste (höchstens ein Drittel der Höhe).
+- **Teiletabelle und Plattenplan** stellen sich nach der Breite ihrer Spalte um (Container-Query, unter 600 px wie heute auf dem Handy).
+- **Sammlung** füllt die Höhe, nur die Liste scrollt.
+- Schmaler als 1200 px oder niedriger als 640 px: Das Layout scrollt wie heute. Das betrifft keinen MacBook-Bildschirm in der Standardauflösung.
 
 ## Randfälle (Walk the flow)
 
