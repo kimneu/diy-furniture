@@ -946,11 +946,9 @@ function renderSummary(R){
     item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
     item('Teile', parts) +
     item(boards ? 'Bretter' : 'Platten', `<span title="${sheets}">${sheets}</span>`, 'wide') +
-    (boards ? item('Holz ganze Bretter ca.', `<b>${chf(woodWhole)}</b>`, 'price')
-            : item('Holz Zuschnitt ca.', `<b>${chf(wood)}</b><small>ganze Platten ${chf(woodWhole)}</small>`, 'price')) +
-    (reduit ? item('Kaufteile ca.', `<b>${chf(R.buyCost)}</b>`, 'price') : '');
-  $('#mPrice').textContent = chf(wood);
-  $('#mMeta').textContent = reduit ? `+ ${chf(R.buyCost)} Kaufteile · ${woodName}` : `${woodName} · ${parts} Teile`;
+    item('Total ca.', `<b>${chf(kostenGesamt(R))}</b><small>${woodName} ${chf(wood)}${reduit ? ` · Kaufteile ${chf(R.buyCost)}` : ''}${boards ? '' : ` · ganze Platten ${chf(woodWhole)}`}</small>`, 'price');
+  $('#mPrice').textContent = chf(kostenGesamt(R));
+  $('#mMeta').textContent = reduit ? `${woodName} ${chf(wood)} · Kaufteile ${chf(R.buyCost)}` : `${woodName} · ${parts} Teile`;
   const why = reduit
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;

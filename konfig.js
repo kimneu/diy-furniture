@@ -122,11 +122,14 @@ function entwurfSetzen(e, data){
 }
 
 /* ---------- Sammlung ---------- */
+// Was das Möbel kostet: Holz im Zuschnitt bzw. ganze Bretter, Latten und Kaufteile (Reduit).
+function kostenGesamt(R){
+  return sheetCosts(R.groups).cut + (R.solidCost || 0) + (R.buyCost || 0);
+}
 // Ein Eintrag merkt sich die Formularwerte und eine Kurzbeschreibung mit den Kosten beim Speichern.
 function sammlungEintrag(d, R, now = new Date()){
   const reduit = d.kind === 'reduit';
-  const { cut } = sheetCosts(R.groups);
-  const kosten = Math.round(cut + (R.solidCost || 0) + (R.buyCost || 0));
+  const kosten = Math.round(kostenGesamt(R));
   const masse = reduit ? `${R.W} × ${R.D} × ${R.H}` : `${R.W} × ${R.H} × ${R.Dtot}`;
   const typ = reduit ? { I:'Reduit hinten', L:'Reduit L-Form', U:'Reduit U-Form' }[R.shape] : 'Sideboard';
   return {
@@ -138,4 +141,4 @@ function sammlungEintrag(d, R, now = new Date()){
   };
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, HARMLOS, entwuerfeLaden, entwurfSetzen };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen };

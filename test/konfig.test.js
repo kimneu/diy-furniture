@@ -75,6 +75,14 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   assert.ok(r.info.kosten > 0);
 });
 
+test('kostenGesamt = Holz im Zuschnitt + Latten + Kaufteile, gleich wie in der Sammlung', () => {
+  const R = K.computeData({ ...FORM, kind:'reduit' });
+  const { cut } = sheetCosts(R.groups);
+  assert.strictEqual(K.kostenGesamt(R), cut + R.solidCost + R.buyCost);
+  assert.ok(R.buyCost > 0);
+  assert.strictEqual(K.sammlungEintrag(FORM, K.computeData(FORM)).info.kosten, Math.round(K.kostenGesamt(K.computeData(FORM))));
+});
+
 test('Entwürfe: alter Einzelentwurf landet unter seinem Typ', () => {
   const e = K.entwuerfeLaden(null, { ...FORM, kind:'reduit', rw:'1800' });
   assert.strictEqual(e.kind, 'reduit');
