@@ -62,6 +62,8 @@ button,input,select{font:inherit;color:inherit}
 .kindbar label{padding-block:8px;font-size:14px;font-weight:600}
 .hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
 .hacts .copied{text-align:right;font-size:12.5px}
+.variante{margin:0;font-size:12.5px;color:var(--muted);text-align:right}
+.variante b{color:var(--ink);font-weight:600}
 .summary div{display:flex;flex-direction:column}
 .summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -181,6 +183,7 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .acts .btn{flex:1}
 .acts .copied{flex-basis:100%}
 .linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.collsort{width:200px}
 .coll{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .coll li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
 .coll li.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
@@ -393,7 +396,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </div>
     <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
     <dl class="summary" id="summary"></dl>
-    <div class="hacts"><button type="button" class="btn js-sammeln">In Sammlung</button><span class="copied js-msg" aria-live="polite"></span></div>
+    <div class="hacts"><p class="variante" id="variante" hidden></p><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -762,7 +765,12 @@ figure.sheet svg{width:100%;height:auto;display:block}
       </div>
 
       <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
-        <div class="toolbar"><p id="collSum"></p><span class="copied" id="collMsg" aria-live="polite"></span></div>
+        <div class="toolbar">
+          <p id="collSum"></p>
+          <div class="seg collsort" role="radiogroup" aria-label="Sortieren" id="collSort"><input type="radio" name="collsort" id="cs-datum" value="datum" checked><label for="cs-datum">Neueste</label><input type="radio" name="collsort" id="cs-preis" value="preis"><label for="cs-preis">Preis</label></div>
+          <span class="copied" id="collMsg" aria-live="polite"></span>
+        </div>
+        <div class="acts" id="collLeer" hidden><button type="button" class="btn js-sammeln">Aktuellen Entwurf sammeln</button><button type="button" class="btn ghost" data-go="entwerfen" id="bZumEntwurf">Zum Entwurf</button></div>
         <ul class="coll" id="collList"></ul>
       </div>
 
@@ -770,7 +778,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </section>
   </div>
 </div>
-<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
+<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -930,6 +938,7 @@ function render(){
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
+  renderVariante();
 }
 function renderSummary(R){
   const main = R.groups[0], back = R.groups[1];
@@ -1489,7 +1498,7 @@ function applyData(data, { undo = false } = {}){
 function rueckgaengig(){
   if (!vorher) return;
   const v = vorher; vorher = null;
-  entwuerfe = v.entwuerfe; aktiv = v.aktiv;
+  entwuerfe = v.entwuerfe; aktiv = v.aktiv; storeAktiv();
   applyData(entwuerfe[entwuerfe.kind]);
   renderColl();
   flash('.js-msg', 'Wiederhergestellt.');
@@ -1512,28 +1521,62 @@ function flash(sel, html){
 }
 const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
+const SORT = STORE + '-sort', AKTIV = STORE + '-aktiv';
+let sortNach = 'datum';
+try { sortNach = localStorage.getItem(SORT) || 'datum'; aktiv = localStorage.getItem(AKTIV); } catch (e) {}
+$('#cs-' + sortNach).checked = true;
+$('#collSort').addEventListener('change', ev => {
+  sortNach = ev.target.value; placePill(ev.currentTarget, true);
+  try { localStorage.setItem(SORT, sortNach); } catch (e) {}
+  renderColl();
+});
+function storeAktiv(){ try { aktiv ? localStorage.setItem(AKTIV, aktiv) : localStorage.removeItem(AKTIV); } catch (e) {} }
+
 function renderColl(){
   $('#cnt-coll').textContent = coll.length || '';
-  const sum = coll.reduce((a, e) => a + e.info.kosten, 0);
   $('#collSum').textContent = coll.length
-    ? `${coll.length} Möbel · zusammen ca. ${chf5(sum)} (Holz im Zuschnitt und Kaufteile, Preise beim Speichern)`
-    : 'Noch nichts gesammelt. «In Sammlung» merkt sich die aktuelle Konfiguration – so stellst du mehrere Möbel zusammen und vergleichst sie.';
-  $('#collList').innerHTML = coll.map(e => `
+    ? `${coll.length} Varianten · Kosten beim Speichern (Holz und Kaufteile)`
+    : 'Noch keine Varianten. Sammle den aktuellen Entwurf, um ihn später mit anderen zu vergleichen.';
+  $('#collSort').hidden = coll.length < 2;
+  $('#collLeer').hidden = !!coll.length;
+  $('#collList').innerHTML = sortiere(coll, sortNach).map(e => `
     <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
       <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
       <div class="meta">${esc(e.info.typ)} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
       <div class="do">
         <button type="button" class="btn ghost" data-act="laden">Laden</button>
-        <button type="button" class="btn ghost" data-act="update" title="Mit der aktuellen Konfiguration überschreiben">Überschreiben</button>
+        <button type="button" class="btn ghost" data-act="update" title="Mit dem aktuellen Entwurf überschreiben">Überschreiben</button>
         <button type="button" class="btn ghost" data-act="weg">Entfernen</button>
       </div>
     </li>`).join('');
+  renderVariante();
 }
+// Zeigt die geladene Variante und ob der Entwurf davon abweicht; passt die Sammeln-Knöpfe an.
+function renderVariante(){
+  const e = coll.find(x => x.id === aktiv);
+  const passt = e && e.data.kind === formData().kind;
+  const anders = passt && geaendert(formData(), e.data);
+  $('#variante').hidden = !passt;
+  if (passt) $('#variante').innerHTML = `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}`;
+  for (const b of document.querySelectorAll('.js-sammeln')) {
+    if (b.closest('#collLeer')) continue;
+    b.disabled = passt && !anders;
+    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : b.closest('.mbar') ? 'Sammeln' : 'In Sammlung';
+  }
+  for (const b of document.querySelectorAll('.js-ueberschreiben')) b.hidden = !anders;
+}
+for (const b of document.querySelectorAll('.js-ueberschreiben')) b.addEventListener('click', () => {
+  const i = coll.findIndex(x => x.id === aktiv);
+  if (i < 0) return;
+  coll[i] = { ...sammlungEintrag(formData(), R), id:coll[i].id, name:coll[i].name };
+  storeColl(); renderColl();
+  flash('.js-msg', `«${esc(coll[i].name)}» überschrieben.`);
+});
 const sammeln = () => {
   const e = sammlungEintrag(formData(), R);
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
   if (gleich) e.name += ` (${gleich + 1})`;
-  coll.push(e); aktiv = e.id; storeColl(); renderColl();
+  coll.push(e); aktiv = e.id; storeAktiv(); storeColl(); renderColl();
   flash('.js-msg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
 };
 for (const b of document.querySelectorAll('.js-sammeln')) b.addEventListener('click', sammeln);
@@ -1551,16 +1594,16 @@ $('#collList').addEventListener('click', ev => {
   if (!act) return;
   const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
   if (act === 'laden') {
-    applyData(e.data, { undo:true }); aktiv = e.id;
+    applyData(e.data, { undo:true }); aktiv = e.id; storeAktiv();
     flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`);
   }
   if (act === 'update') {
-    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id;
+    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id; storeAktiv();
     flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
   }
   if (act === 'weg') {
     entfernt = { e, i }; coll.splice(i, 1);
-    if (aktiv === e.id) aktiv = null;
+    if (aktiv === e.id) { aktiv = null; storeAktiv(); }
     flash('#collMsg', `«${esc(e.name)}» entfernt. <button type="button" class="linkbtn" id="bUndo">Rückgängig</button>`);
   }
   storeColl(); renderColl();

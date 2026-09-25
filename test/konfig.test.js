@@ -104,3 +104,16 @@ test('Entwürfe: Setzen ersetzt nur den Entwurf des eigenen Typs', () => {
   assert.strictEqual(e.reduit.mat, 'gon_fichte');
   assert.strictEqual(e.sideboard.mat, 'eiche');
 });
+
+test('geaendert: gleiche Werte (auch Zahl vs. Text) sind nicht geändert, katalog zählt nicht', () => {
+  assert.strictEqual(K.geaendert({ ...FORM, katalog:{ price:1 } }, { ...FORM, w:1200, katalog:{ price:2 } }), false);
+  assert.strictEqual(K.geaendert(FORM, { ...FORM, w:'1300' }), true);
+  assert.strictEqual(K.geaendert(FORM, { ...FORM, neu:'x' }), true);
+});
+
+test('sortiere: Datum = neueste zuerst, Preis = günstigste zuerst, Original bleibt', () => {
+  const c = [{ id:'a', info:{ kosten:300 } }, { id:'b', info:{ kosten:100 } }, { id:'c', info:{ kosten:200 } }];
+  assert.deepStrictEqual(K.sortiere(c, 'datum').map(e => e.id), ['c', 'b', 'a']);
+  assert.deepStrictEqual(K.sortiere(c, 'preis').map(e => e.id), ['b', 'c', 'a']);
+  assert.deepStrictEqual(c.map(e => e.id), ['a', 'b', 'c']);
+});

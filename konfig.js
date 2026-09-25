@@ -140,5 +140,17 @@ function sammlungEintrag(d, R, now = new Date()){
     info: { typ, masse, material:`${R.matShort} ${R.t} mm`, kosten }
   };
 }
+// Weicht der Entwurf von der geladenen Variante ab? Katalogwerte zählen nicht, Zahlen und Texte gelten als gleich.
+function geaendert(a, b){
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  keys.delete('katalog');
+  for (const k of keys) if (String(a[k]) !== String(b[k])) return true;
+  return false;
+}
+// Sammlung in Anzeige-Reihenfolge: neueste zuerst (die Liste ist nach Speicherzeit geordnet) oder günstigste zuerst.
+function sortiere(coll, nach){
+  const c = [...coll].reverse();
+  return nach === 'preis' ? c.sort((x, y) => x.info.kosten - y.info.kosten) : c;
+}
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen, geaendert, sortiere };
