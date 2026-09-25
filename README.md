@@ -26,6 +26,7 @@ Files:
 - `shared.js` – material catalogs, panel packing, joint hardware
 - `sideboard.js` – sideboard calculation
 - `reduit.js` – reduit calculation (layout, support systems, prices)
+- `konfig.js` – form values ↔ calculation, the «Zufall» button (random configuration without warnings) and the «Sammlung» (saved configurations in localStorage)
 
 Notes for continuing work (open prices, ideas): `docs/WEITERARBEIT.md`.
 

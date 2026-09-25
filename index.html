@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Martylko</title>
 <meta name="description" content="Konfigurator für DIY-Möbel – Sideboard und Reduit-Regale: Masse eingeben, Materialliste, Plattenplan, Beschläge und Bauablauf erhalten.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,6 +17,7 @@
   --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --ease-out:cubic-bezier(.23,1,.32,1);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -57,6 +59,9 @@ button,input,select{font:inherit;color:inherit}
 .summary div{display:flex;flex-direction:column}
 .summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.summary .wide dd{white-space:normal}
+.summary .price dd b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1;color:var(--accent)}
+.summary .price dd small{display:block;font-family:var(--f-body)}
 .summary small{color:var(--muted);font-size:12px}
 .lvl{display:inline-flex;gap:3px;vertical-align:middle;margin-right:6px}
 .lvlhead{margin:0;display:flex;align-items:center;gap:4px;font-size:15px}
@@ -65,13 +70,16 @@ button,input,select{font:inherit;color:inherit}
 .lvl[data-l="1"] i:nth-child(-n+1),.lvl[data-l="2"] i:nth-child(-n+2),.lvl[data-l="3"] i:nth-child(-n+3){background:var(--accent)}
 
 /* Raster */
-.layout{display:grid;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"controls viewer" "controls output";gap:20px 24px;margin-top:20px;align-items:start}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"controls viewer" "controls warns" "controls output";gap:0 24px;margin-top:20px;align-items:start}
+.cfgwrap{display:contents}
+.warns{grid-area:warns;min-width:0}
 .controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin}
 .viewer{grid-area:viewer;min-width:0}
 .output{grid-area:output;min-width:0}
 @media (max-width:920px){
-  .layout{grid-template-columns:minmax(0,1fr);grid-template-areas:"viewer" "controls" "output"}
-  .controls{position:static;max-height:none;overflow:visible}
+  .layout{display:block}
+  .cfgwrap{display:block}
+  .controls{position:static;max-height:none;overflow:visible;margin-top:14px}
 }
 
 /* Steuerung */
@@ -107,7 +115,10 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .card{position:relative;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--raise)}
 .card input{position:absolute;opacity:0;pointer-events:none}
 .card b{font-size:14px;font-weight:600}
-.card span{grid-column:1 / -1;font-size:12.5px;color:var(--muted);line-height:1.4}
+.card .desc{grid-column:1 / -1;font-size:12.5px;color:var(--muted);line-height:1.4}
+.card:has(svg){grid-template-columns:20px 1fr auto;align-items:center}
+.card > svg{color:var(--accent)}
+.card:not(:has(input:checked)) .desc{display:none}
 .card:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .card:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
@@ -129,7 +140,13 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .vbar > div{display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto}
 .vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
 .vbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.vbtn:hover{border-color:var(--accent)}
+@media (hover:hover) and (pointer:fine){
+  .vbtn:hover{border-color:var(--accent)}
+  .card:hover:not(:has(input:checked)){border-color:var(--line-strong)}
+  .seg label:hover{color:var(--accent)}
+  .seg input:checked + label:hover{color:var(--on-accent)}
+  .tab:hover{color:var(--ink)}
+}
 .dimtag{position:absolute;right:14px;bottom:12px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);background:color-mix(in srgb,var(--raise) 80%,transparent);padding:4px 9px;border-radius:6px;pointer-events:none}
 .pick{position:absolute;left:14px;bottom:12px;font-size:13px;background:var(--raise);border:1px solid var(--line-strong);padding:6px 10px;border-radius:8px;box-shadow:var(--shadow);max-width:calc(100% - 28px)}
 .pick b{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
@@ -152,6 +169,20 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);padding:7px 14px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent)}
 .copied{font-size:13px;color:var(--muted)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.acts .btn{flex:1}
+.acts .copied{flex-basis:100%}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.coll{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.coll li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.coll li.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.coll input{font:inherit;font-weight:600;font-size:15px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin-left:-7px;width:100%}
+.coll input:hover{border-color:var(--line)}
+.coll input:focus{border-color:var(--accent);outline:none;background:var(--raise)}
+.coll .meta{grid-column:1;font-size:13px;color:var(--muted)}
+.coll .meta b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.coll .do{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:560px){.coll li{grid-template-columns:minmax(0,1fr)}.coll .do{grid-column:1;grid-row:auto;justify-content:flex-start}}
 .copybox{width:100%;min-height:140px;font-family:var(--f-mono);font-size:12px;margin-top:10px;background:var(--raise);border:1px solid var(--line-strong);border-radius:8px;padding:8px}
 
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
@@ -206,7 +237,115 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .steps p{margin:3px 0 0;color:var(--ink);font-size:14px;line-height:1.55}
 .steps p.tip{color:var(--muted);font-size:13px}
 .foot{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:90ch}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* Bewegung: gleitende Auswahl, Druck-Feedback */
+.seg{position:relative;isolation:isolate}
+.seg label,.card,.btn,.vbtn,.tab,.gh{-webkit-tap-highlight-color:transparent}
+.seg label{position:relative;transition:color 150ms ease}
+.seg.pill::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:0;width:var(--w);transform:translateX(var(--x));background:var(--accent);transition:transform 220ms var(--ease-out),width 220ms var(--ease-out)}
+.seg.pill.still::before{transition:none}
+.seg.pill input:checked + label{background:transparent}
+.seg.pill input:checked + label,.seg.pill input:checked + label + input + label{border-left-color:transparent}
+.card{transition:border-color 150ms ease,background-color 150ms ease,box-shadow 150ms ease,transform 160ms var(--ease-out)}
+.btn,.vbtn{transition:transform 160ms var(--ease-out),background-color 150ms ease,border-color 150ms ease,color 150ms ease}
+.btn:active,.vbtn:active{transform:scale(.97)}
+.card:active{transform:scale(.99)}
+.tabs{position:relative}
+.tab{transition:color 150ms ease}
+.tabs.ind .tab[aria-selected="true"]{border-bottom-color:transparent}
+.tabind{position:absolute;left:0;bottom:0;height:2px;width:var(--w,0);transform:translateX(var(--x,0));background:var(--accent);transition:transform 220ms var(--ease-out),width 220ms var(--ease-out);pointer-events:none}
+.tabs:not(.ind) .tabind{display:none}
+.warn{transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
+@starting-style{.warn{opacity:0;transform:translateY(-4px)}}
+.controls.ready :is(.group,.field,.dim,.check,.cards,.row2,.desc){transition:opacity 200ms var(--ease-out)}
+@starting-style{.controls.ready :is(.group,.field,.dim,.check,.cards,.row2,.desc){opacity:0}}
+.btn .swap{display:grid}
+.btn .swap > span{grid-area:1 / 1;transition:opacity 180ms ease,filter 180ms ease}
+.btn .swap > span:last-child,.btn.done .swap > span:first-child{opacity:0;filter:blur(2px)}
+.btn.done .swap > span:last-child{opacity:1;filter:none}
+
+/* Gruppen einklappen (nur schmal) */
+.gh{all:unset;display:flex;align-items:center;justify-content:space-between;width:100%;cursor:default}
+.gh:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gh svg{display:none;transition:transform 200ms var(--ease-out)}
+.vbtn svg{flex:none}
+.vbtn{display:inline-flex;align-items:center;gap:6px}
+.hint-touch{display:none}
+.mbar{display:none}
+.chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.chips li{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.chips b{color:var(--ink);font-weight:500}
+.lbl-note{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+
+@media (hover:none),(pointer:coarse){
+  .hint-fine{display:none}
+  .hint-touch{display:inline}
+  .seg label{padding-block:11px}
+  .vbtn{min-height:40px}
+  select,.btn{min-height:44px}
+  .num input{padding-block:10px}
+  .tab{min-height:44px}
+  input[type=range]{height:30px}
+  .check{min-height:32px}
+  .check input{width:22px;height:22px}
+  .card{padding-block:12px}
+}
+
+@media (max-width:920px){
+  .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
+  #stage{aspect-ratio:auto;height:38svh;min-height:220px;max-height:none}
+  .stage-wrap{border-radius:12px}
+  .vbar{top:auto;bottom:8px;left:8px;right:8px}
+  .vbtn{width:40px;height:40px;padding:0;justify-content:center}
+  .vbtn .t{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .dimtag{top:8px;bottom:auto;right:8px}
+  .pick{top:8px;bottom:auto;left:8px;max-width:calc(100% - 16px)}
+  .pick:not([hidden]) ~ .dimtag{display:none}
+  .gh{cursor:pointer;min-height:44px}
+  .gh svg{display:block}
+  .group.collapsed{gap:0}
+  .group.collapsed > :not(h2){display:none}
+  .group.collapsed .gh svg{transform:rotate(-90deg)}
+  .mbar{display:flex;position:fixed;z-index:10;left:0;right:0;bottom:0;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
+  .mbar span{font-size:12.5px;color:var(--muted)}
+}
+@media (max-width:640px){
+  .top{gap:12px;padding-bottom:12px}
+  .brand svg{width:34px;height:34px}
+  .brand h1{font-size:22px}
+  .brand p{font-size:13px}
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;width:100%}
+  .summary .wide{grid-column:1 / -1}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-bottom:0}
+  .tab{border:1px solid var(--line);border-radius:8px;background:var(--raise);margin:0;white-space:normal;text-align:left;padding:8px 12px}
+  .tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+  .tabs.ind .tab[aria-selected="true"]{border-color:var(--accent)}
+  .tabind{display:none}
+  .toolbar{align-items:flex-start}
+  #cutTable thead{display:none}
+  #cutTable,#cutTable tbody,#cutTable tfoot{display:block}
+  #cutTable tr{display:grid;grid-template-columns:22px minmax(0,1fr) auto;column-gap:10px;row-gap:2px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  #cutTable tbody:last-of-type tr:last-child{border-bottom:0}
+  #cutTable td{padding:0;border:0}
+  #cutTable td.pos{grid-row:1 / span 2;width:auto}
+  #cutTable td.dim{grid-column:2}
+  #cutTable td.th::after{content:" mm"}
+  #cutTable td.th,#cutTable td.dim{color:var(--muted)}
+  #cutTable td.note{grid-column:2 / -1;min-width:0}
+  #cutTable td.note.empty{display:none}
+  #cutTable tbody.grp tr{display:block;padding:0}
+  #cutTable tbody.grp th{display:block}
+  #cutTable tr.hl{background:var(--accent-soft)}
+  #cutTable tfoot tr{display:block}
+  .sheetlist{grid-template-columns:minmax(0,1fr)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .seg::before,.tabind{transition:none!important}
+  :active{transform:none!important}
+}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -236,9 +375,32 @@ figure.sheet svg{width:100%;height:auto;display:block}
   </header>
 
   <div class="layout">
+    <div class="cfgwrap">
+    <section class="viewer" aria-label="3D-Vorschau">
+      <div class="stage-wrap">
+        <div id="stage"></div>
+        <div class="vbar">
+          <div>
+            <button type="button" class="vbtn" id="bDoors" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V4h9v16"/><path d="M13 4l6 2v15l-6-1"/><path d="M16 12v1"/></svg><span class="t">Türen öffnen</span></button>
+            <button type="button" class="vbtn" id="bExplode" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg><span class="t">Explosionsansicht</span></button>
+            <button type="button" class="vbtn" id="bWall" aria-pressed="false" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1" stroke-dasharray="3 3"/></svg><span class="t">Vorderwand aus</span></button>
+          </div>
+          <div><button type="button" class="vbtn" id="bReset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="t">Ansicht zurücksetzen</span></button></div>
+        </div>
+        <div class="pick" id="pick" hidden></div>
+        <div class="dimtag" id="dimTag"></div>
+      </div>
+    </section>
+    <div class="warns" id="warns" aria-live="polite"></div>
+
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
         <div class="seg" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit"><label for="kind-reduit">Reduit</label></div>
+        <div class="acts">
+          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall</button>
+          <button type="button" class="btn" id="bSammeln">In Sammlung</button>
+          <span class="copied" id="sammelMsg" aria-live="polite"></span>
+        </div>
       </section>
       <section class="group" data-kind="sideboard">
         <h2>Masse</h2>
@@ -313,11 +475,11 @@ figure.sheet svg{width:100%;height:auto;display:block}
           <div class="seg" role="radiogroup" aria-labelledby="lbl-build"><input type="radio" name="build" id="build-built" value="built" checked><label for="build-built">eingebaut</label><input type="radio" name="build" id="build-free" value="free"><label for="build-free">selbststehend</label></div>
         </div>
         <div class="cards" role="radiogroup" aria-label="Einbau-Art" id="row-sys">
-          <label class="card"><input type="radio" name="sys" value="battens" checked><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
-          <label class="card"><input type="radio" name="sys" value="rails"><b>Wandschienen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Senkrechte Schienen mit einhängbaren Konsolen. Höhen jederzeit verstellbar, teurer.</span></label>
-          <label class="card"><input type="radio" name="sys" value="brackets"><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
-          <label class="card"><input type="radio" name="sys" value="cheeks"><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
-          <label class="card"><input type="radio" name="sys" value="posts"><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Kanthölzer vorne, Latten als Auflage – das klassische Kellerregal. Trägt am meisten.</span></label>
+          <label class="card"><input type="radio" name="sys" value="battens" checked><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/></svg><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
+          <label class="card"><input type="radio" name="sys" value="rails"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 3v18M17 3v18"/><path d="M4 9h16M4 15h16"/></svg><b>Wandschienen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Schienen mit einhängbaren Konsolen. Höhen jederzeit verstellbar, teurer.</span></label>
+          <label class="card"><input type="radio" name="sys" value="brackets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10l4 4M4 16l4 4"/></svg><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
+          <label class="card"><input type="radio" name="sys" value="cheeks"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="4" height="18" rx=".5"/><rect x="17" y="3" width="4" height="18" rx=".5"/><path d="M7 9h10M7 15h10"/></svg><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
+          <label class="card"><input type="radio" name="sys" value="posts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Kanthölzer vorne, Latten als Auflage – das klassische Kellerregal. Trägt am meisten.</span></label>
         </div>
       </section>
 
@@ -384,7 +546,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
           </div>
         </div>
         <div class="field">
-          <label for="mat">Plattenmaterial</label>
+          <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
           <select id="mat" name="mat"></select>
         </div>
         <div class="row2">
@@ -465,10 +627,10 @@ figure.sheet svg{width:100%;height:auto;display:block}
       <section class="group" id="grp-joint">
         <h2>Verbindung</h2>
         <div class="cards" role="radiogroup" aria-label="Verbindung">
-          <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
-          <label class="card"><input type="radio" name="joint" value="screws"><b>Verschraubt</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span>Von aussen durch die Platte geschraubt. Am einfachsten – Schraubenköpfe bleiben sichtbar.</span></label>
-          <label class="card"><input type="radio" name="joint" value="dowels"><b>Holzdübel</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Dübel und Leim, komplett unsichtbar. Genaues Anzeichnen nötig – eine Dübellehre hilft.</span></label>
-          <label class="card"><input type="radio" name="joint" value="cam"><b>Exzenter</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span>Zerlegbar wie ein Fertigmöbel. Präzise Bohrungen mit Forstnerbohrer Ø 15 mm.</span></label>
+          <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
+          <label class="card"><input type="radio" name="joint" value="screws"><b>Verschraubt</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Von aussen durch die Platte geschraubt. Am einfachsten – Schraubenköpfe bleiben sichtbar.</span></label>
+          <label class="card"><input type="radio" name="joint" value="dowels"><b>Holzdübel</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Dübel und Leim, komplett unsichtbar. Genaues Anzeichnen nötig – eine Dübellehre hilft.</span></label>
+          <label class="card"><input type="radio" name="joint" value="cam"><b>Exzenter</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Zerlegbar wie ein Fertigmöbel. Präzise Bohrungen mit Forstnerbohrer Ø 15 mm.</span></label>
         </div>
       </section>
 
@@ -539,23 +701,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <div class="levelbox" id="levelBox" aria-live="polite"></div>
       </section>
     </form>
-
-    <section class="viewer" aria-label="3D-Vorschau">
-      <div class="stage-wrap">
-        <div id="stage"></div>
-        <div class="vbar">
-          <div>
-            <button type="button" class="vbtn" id="bDoors" aria-pressed="false">Türen öffnen</button>
-            <button type="button" class="vbtn" id="bExplode" aria-pressed="false">Explosionsansicht</button>
-            <button type="button" class="vbtn" id="bWall" aria-pressed="false" hidden>Vorderwand aus</button>
-          </div>
-          <div><button type="button" class="vbtn" id="bReset">Ansicht zurücksetzen</button></div>
-        </div>
-        <div class="pick" id="pick" hidden></div>
-        <div class="dimtag" id="dimTag"></div>
-      </div>
-      <div class="warns" id="warns" aria-live="polite"></div>
-    </section>
+    </div>
 
     <section class="output">
       <div class="tabs" role="tablist" aria-label="Ergebnis">
@@ -563,12 +709,14 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
         <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
         <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
+        <button class="tab" role="tab" id="tab-coll" aria-controls="p-coll" aria-selected="false">Sammlung<span class="count" id="cnt-coll"></span></button>
+        <span class="tabind" aria-hidden="true"></span>
       </div>
 
       <div class="panel" role="tabpanel" id="p-cut" aria-labelledby="tab-cut">
         <div class="toolbar">
-          <p>Länge = Faserrichtung. Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</p>
-          <div><button type="button" class="btn" id="bCopy">Liste kopieren</button> <span class="copied" id="copied" aria-live="polite"></span></div>
+          <p>Länge = Faserrichtung. <span class="hint-fine">Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</span><span class="hint-touch">Tipp auf eine Zeile, um das Teil in 3D und im Plattenplan hervorzuheben.</span></p>
+          <div><button type="button" class="btn" id="bCopy"><span class="swap"><span>Liste kopieren</span><span aria-hidden="true">✓ Kopiert</span></span></button> <span class="copied" id="copied" aria-live="polite"></span></div>
         </div>
         <div class="tablewrap"><table id="cutTable"></table></div>
         <textarea class="copybox" id="copyBox" readonly hidden aria-label="Materialliste als Text"></textarea>
@@ -594,10 +742,16 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <ol class="steps" id="steps"></ol>
       </div>
 
+      <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
+        <div class="toolbar"><p id="collSum"></p><span class="copied" id="collMsg" aria-live="polite"></span></div>
+        <ul class="coll" id="collList"></ul>
+      </div>
+
       <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
     </section>
   </div>
 </div>
+<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span></div><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -605,6 +759,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 <script src="shared.js"></script>
 <script src="sideboard.js"></script>
 <script src="reduit.js"></script>
+<script src="konfig.js"></script>
 <script>
 (() => {
 'use strict';
@@ -621,7 +776,7 @@ const MAT_LABEL = { mdf:'MDF (zum Lackieren)' };
 function fillMaterials(kind){
   $('#mat').innerHTML = Object.entries(MATS).filter(([, M]) => !M.boards || !kind || kind === 'reduit')
     .sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef))
-    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name} · ${M.boards ? `ganze Bretter ab CHF ${M.price.toFixed(2)}` : `CHF ${matPrice(M, M.tDef)}`}/m²</option>`).join('');
+    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name}${M.boards ? ' · ganze Bretter' : ''}</option>`).join('');
 }
 // Preis und Plattenformat des Katalogs ins Formular.
 function applyCatalog(mat){
@@ -666,8 +821,9 @@ function syncVisibility(){
   $('#grain').disabled = !MATS[mat].grain;
   $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
   $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' || mat === 'dekorspan' ? 'Weiss' : mat === 'schaltafel' ? 'Gelb' : 'Holz';
-  $('#matNote').textContent = (matMsg ? matMsg + ' ' : '') + MATS[mat].note;
   const BM = MATS[mat].boards;
+  const priceNote = BM ? `ganze Bretter ab CHF ${MATS[mat].price.toFixed(2)}/m²` : `CHF ${matPrice(MATS[mat], Number(f.get('t')))}/m² bei ${f.get('t')} mm`;
+  $('#matNote').textContent = `${matMsg ? matMsg + ' ' : ''}${priceNote} · ${MATS[mat].note}`;
   $('#row-sheet').hidden = $('#row-price').hidden = $('#row-grain').hidden = !!BM;
   $('#row-boards').hidden = !BM;
   if (BM) $('#boardList').innerHTML = BM.map(f => `<li>${f.L} × ${f.B} mm · CHF ${f.price.toFixed(2)}</li>`).join('');
@@ -693,34 +849,21 @@ function syncVisibility(){
   $('#row-nicheR-dims').hidden = !f.get('nicheR');
   $('#grp-niche').hidden = !hasL && !hasR;
 }
-function readCfg(){
-  const f = new FormData(form);
-  const n = k => Number(f.get(k));
-  return {
-    W:n('w'), H:n('h'), D:n('d'), room:f.get('room'), mat:f.get('mat'), t:n('t'), back:f.get('back'), top:f.get('top'),
-    sections:n('sections'), shelves:n('shelves'), base:f.get('base'), baseH:n('baseH'), legShape:f.get('legShape'), taper:n('taper'), legColor:f.get('legColor'), joint:f.get('joint'),
-    front:f.get('front'), doorsPer:f.get('doorsPer'), slideN:f.get('slideN'), handle:f.get('handle'), color:f.get('color'),
-    sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:f.get('grain') === 'on', price:n('price'),
-    kind:f.get('kind'),
-    rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorIn:f.get('doorIn') === 'on', hinge:f.get('hinge'), wall:f.get('wall'),
-    shape:f.get('shape'), corner:f.get('corner'), build:f.get('build'), sys:f.get('sys'),
-    dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
-    nicheL:f.get('nicheL') === 'on', nicheLW:n('nicheLW'), nicheLH:n('nicheLH'),
-    nicheR:f.get('nicheR') === 'on', nicheRW:n('nicheRW'), nicheRH:n('nicheRH')
-  };
+function readCfg(){ return cfgFromData(formData()); }
+// Formularwerte als name → Wert (Radio: gewählter Wert, Checkbox: true/false).
+function formData(){
+  const data = {};
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+    else if (el.type === 'checkbox') data[el.name] = el.checked;
+    else data[el.name] = el.value;
+  }
+  data.katalog = catalogValues(data.mat, data.t);
+  return data;
 }
 function save(){
-  try {
-    const data = {};
-    for (const el of form.elements) {
-      if (!el.name) continue;
-      if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
-      else if (el.type === 'checkbox') data[el.name] = el.checked;
-      else data[el.name] = el.value;
-    }
-    data.katalog = catalogValues(data.mat, data.t);
-    localStorage.setItem(STORE, JSON.stringify(data));
-  } catch (e) {}
+  try { localStorage.setItem(STORE, JSON.stringify(formData())); } catch (e) {}
 }
 // Preis und Plattenformat aus dem Katalog. Gespeichert wird, was der Katalog beim Speichern sagte:
 // nur von Hand geänderte Werte überleben so ein Preis-Update in preise.js.
@@ -728,9 +871,12 @@ function catalogValues(mat, t){
   const M = MATS[mat];
   return { price:matPrice(M, Number(t)), sheetL:M.sheet[0], sheetB:M.sheet[1] };
 }
-function restore(){
-  let data = null;
-  try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+function stored(){
+  try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; }
+}
+// Setzt das Formular auf data (ohne data: Standardwerte des Materials). Ohne katalog gelten Preis und Format aus dem Katalog.
+function restore(data = stored()){
+  fillMaterials();   // alle Materialien; syncMaterials() filtert danach nach Möbeltyp
   const mat = data && MATS[data.mat] ? data.mat : 'birke';
   $('#mat').value = mat;
   fillThickness(mat, data && data.t);
@@ -744,7 +890,7 @@ function restore(){
     if (k in cat && (!data.katalog || Number(v) === data.katalog[k])) continue;
     const els = form.elements[k];
     if (!els) continue;
-    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === v; }
+    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === String(v); }
     else if (els.type === 'checkbox') els.checked = !!v;
     else els.value = v;
   }
@@ -769,38 +915,34 @@ function renderSummary(R){
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
   const chf = v => `CHF ${Math.round(v / 5) * 5}`;
-  if (R.kind === 'reduit') {
-    $('#summary').innerHTML = `
-    <div><dt>Raum</dt><dd>${R.W} × ${R.D} × ${R.H} <small>mm</small></dd></div>
-    <div><dt>Teile</dt><dd>${parts}</dd></div>
-    ${main.boards
-      ? `<div><dt>Bretter</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Holz ganze Bretter ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>`
-      : `<div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Holz Zuschnitt ca.</dt><dd>${chf(cost + R.solidCost)}</dd></div>
-    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>`}
-    <div><dt>Kaufteile ca.</dt><dd>${chf(R.buyCost)}</dd></div>
-    `;
-    const why = R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`;
-    $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
-    $('#cnt-cut').textContent = parts;
-    $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
-    return;
-  }
-  $('#summary').innerHTML = `
-    <div><dt>Aussenmass</dt><dd>${R.W} × ${R.H} × ${R.Dtot} <small>mm</small></dd></div>
-    <div><dt>Teile</dt><dd>${parts}</dd></div>
-    <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
-    <div><dt>Holz Zuschnitt ca.</dt><dd>${chf(cost)}</dd></div>
-    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole)}</dd></div>
-    `;
-  const why = `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
+  const item = (dt, dd, cls) => `<div${cls ? ` class="${cls}"` : ''}><dt>${dt}</dt><dd>${dd}</dd></div>`;
+  const reduit = R.kind === 'reduit';
+  const wood = cost + (reduit ? R.solidCost : 0), woodWhole = whole + (reduit ? R.solidCost : 0);
+  const sheets = `${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}`;
+  const boards = !!main.boards, woodName = boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt';
+  $('#summary').innerHTML =
+    item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
+    item('Teile', parts) +
+    item(boards ? 'Bretter' : 'Platten', sheets, 'wide') +
+    (boards ? item('Holz ganze Bretter ca.', `<b>${chf(woodWhole)}</b>`, 'price')
+            : item('Holz Zuschnitt ca.', `<b>${chf(wood)}</b><small>ganze Platten ${chf(woodWhole)}</small>`, 'price')) +
+    (reduit ? item('Kaufteile ca.', `<b>${chf(R.buyCost)}</b>`, 'price') : '');
+  $('#mPrice').textContent = reduit ? `${chf(wood)} + ${chf(R.buyCost)}` : chf(wood);
+  $('#mMeta').textContent = reduit ? `${woodName} + Kaufteile · ${parts} Teile` : `${woodName} · ${parts} Teile`;
+  const why = reduit
+    ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
+    : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
   $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
   $('#cnt-cut').textContent = parts;
   $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
 }
 function renderWarns(R){
-  $('#warns').innerHTML = R.warn.map(w => `<div class="warn">${w}</div>`).join('');
+  const box = $('#warns'), old = new Map([...box.children].map(el => [el.innerHTML, el]));
+  const next = R.warn.map(w => {
+    const probe = document.createElement('div'); probe.className = 'warn'; probe.innerHTML = w;
+    return old.get(probe.innerHTML) || probe;
+  });
+  box.replaceChildren(...next);
 }
 function renderCut(R){
   const groups = [...new Set(R.rows.map(r => r.group))];
@@ -814,7 +956,7 @@ function renderCut(R){
     html += `<tbody class="grp"><tr><th colspan="6">${g}<span>${n} Teile${lm}</span></th></tr></tbody><tbody>`;
     for (const r of rows) {
       if (!solid) area += r.qty * r.L * r.B / 1e6;
-      html += `<tr data-key="${encodeURIComponent(r.key)}"><td class="pos">${r.pos}</td><td>${r.name}</td><td class="n">${r.qty}×</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.t}</td><td class="note">${r.note || '–'}</td></tr>`;
+      html += `<tr data-key="${encodeURIComponent(r.key)}"><td class="pos">${r.pos}</td><td>${r.name}</td><td class="n">${r.qty}×</td><td class="n dim">${r.L} × ${r.B}</td><td class="n th">${r.t}</td><td class="note${r.note ? '' : ' empty'}">${r.note || '–'}</td></tr>`;
     }
     html += `</tbody>`;
   }
@@ -825,16 +967,17 @@ function renderSheets(R){
   let html = '';
   for (const g of R.groups) {
     const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
-    let meta;
+    let chips;
     if (g.boards) {
       const per = new Map();
       for (const s of g.sheets) { const k = `${s.L} × ${s.B}`; const e = per.get(k) || { n:0, price:s.price }; e.n++; per.set(k, e); }
-      meta = [...per].map(([k, e]) => `${e.n} × ${k} mm à CHF ${e.price.toFixed(2)}`).join(' · ') + ` · total CHF ${Math.round(g.sheets.reduce((a, s) => a + s.price, 0))} · Rest ${waste} % · nur ablängen`;
+      chips = [...per].map(([k, e]) => `<li>${e.n} × ${k} mm à CHF ${e.price.toFixed(2)}</li>`).join('')
+        + `<li>total <b>CHF ${Math.round(g.sheets.reduce((a, s) => a + s.price, 0))}</b></li><li>Rest ${waste} %</li><li>nur ablängen</li>`;
     } else {
       const [SL, SB] = g.sheet;
-      meta = `Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · Zuschnitt ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)} · ganze Platten ${g.sheets.length} × ${(SL*SB/1e6).toFixed(2)} m² = CHF ${Math.round(g.sheets.length*SL*SB/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}`;
+      chips = `<li>Platte ${SL} × ${SB} mm</li><li>${g.sheets.length} Stück</li><li>Rest ${waste} %</li><li>Zuschnitt ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = <b>CHF ${Math.round(g.partArea/1e6*g.price)}</b></li><li>ganze Platten ${g.sheets.length} × ${(SL*SB/1e6).toFixed(2)} m² = <b>CHF ${Math.round(g.sheets.length*SL*SB/1e6*g.price)}</b></li><li>${g.rotate ? 'drehen erlaubt' : 'Maserung längs'}</li>`;
     }
-    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">${meta}</p><div class="sheetlist">`;
+    html += `<div class="sheetgrp"><h3>${g.label}</h3><ul class="chips">${chips}</ul><div class="sheetlist">`;
     g.sheets.forEach((sh, i) => {
       const [SL, SB] = g.boards ? [sh.L, sh.B] : g.sheet;
       html += `<figure class="sheet"><figcaption><span>${g.boards ? `Brett ${i + 1} · ${sh.L} × ${sh.B}` : `Platte ${i + 1}`}</span><span>${sh.parts.length} Teile${g.boards ? ` · CHF ${sh.price.toFixed(2)}` : ''}</span></figcaption>
@@ -885,8 +1028,9 @@ function highlight(key){
 function keyFromEl(el){ const h = el.closest('[data-key]'); return h ? decodeURIComponent(h.dataset.key) : null; }
 for (const sel of ['#cutTable', '#sheets']) {
   const el = $(sel);
-  el.addEventListener('pointerover', e => highlight(keyFromEl(e.target)));
-  el.addEventListener('pointerleave', () => highlight(null));
+  el.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') highlight(keyFromEl(e.target)); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') highlight(null); });
+  el.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') return; const k = keyFromEl(e.target); highlight(k === hlKey ? null : k); });
 }
 
 /* ---------- 3D ---------- */
@@ -1193,7 +1337,7 @@ form.addEventListener('submit', e => e.preventDefault());
 $('#bDoors').addEventListener('click', e => {
   three.openT = three.openT ? 0 : 1;
   e.currentTarget.setAttribute('aria-pressed', String(!!three.openT));
-  e.currentTarget.textContent = three.openT ? 'Türen schliessen' : 'Türen öffnen';
+  e.currentTarget.querySelector('.t').textContent = three.openT ? 'Türen schliessen' : 'Türen öffnen';
 });
 $('#bExplode').addEventListener('click', e => {
   three.exT = three.exT ? 0 : 1;
@@ -1202,7 +1346,7 @@ $('#bExplode').addEventListener('click', e => {
 $('#bWall').addEventListener('click', e => {
   three.hideFront = !three.hideFront;
   e.currentTarget.setAttribute('aria-pressed', String(three.hideFront));
-  e.currentTarget.textContent = three.hideFront ? 'Vorderwand ein' : 'Vorderwand aus';
+  e.currentTarget.querySelector('.t').textContent = three.hideFront ? 'Vorderwand ein' : 'Vorderwand aus';
   if (three.ok) for (const o of three.root.children) if (o.userData.front) o.visible = !three.hideFront;
 });
 $('#bReset').addEventListener('click', () => { three.userMoved = false; if (three.ok && R) fitCamera(R); });
@@ -1215,6 +1359,7 @@ function selectTab(id){
     t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
     $('#' + t.getAttribute('aria-controls')).hidden = !on;
   }
+  placeTabInd(true);
   try { localStorage.setItem(STORE + '-tab', id); } catch (e) {}
 }
 tabs.forEach((t, i) => {
@@ -1224,6 +1369,62 @@ tabs.forEach((t, i) => {
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
     selectTab(n.id); n.focus();
   });
+});
+
+function placeTabInd(anim){
+  const sel = tabs.find(t => t.getAttribute('aria-selected') === 'true'), ind = $('.tabind'), bar = $('.tabs');
+  if (!sel || !sel.offsetWidth) return;
+  if (!anim) ind.style.transition = 'none';
+  ind.style.setProperty('--x', sel.offsetLeft + 'px'); ind.style.setProperty('--w', sel.offsetWidth + 'px');
+  bar.classList.add('ind');
+  if (!anim) { ind.offsetWidth; ind.style.transition = ''; }
+}
+new ResizeObserver(() => placeTabInd(false)).observe($('.tabs'));
+
+// Auswahlfelder: Markierung gleitet zur neuen Option
+function placePill(seg, anim){
+  const lab = seg.querySelector('input:checked + label');
+  if (!lab || !seg.offsetWidth) return;
+  if (!anim) seg.classList.add('still');
+  seg.style.setProperty('--x', lab.offsetLeft + 'px'); seg.style.setProperty('--w', lab.offsetWidth + 'px');
+  seg.classList.add('pill');
+  if (!anim) { seg.offsetWidth; seg.classList.remove('still'); }
+}
+const segRO = new ResizeObserver(es => { for (const e of es) placePill(e.target, false); });
+for (const seg of form.querySelectorAll('.seg')) segRO.observe(seg);
+form.addEventListener('change', e => { const seg = e.target.closest('.seg'); if (seg) placePill(seg, true); });
+
+// Schmal: Gruppen einklappbar, nur die wichtigsten offen
+const narrow = matchMedia('(max-width: 920px)');
+const OPEN = ['Masse', 'Raum', 'Material', 'Niveau'];
+const chevron = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const heads = [...form.querySelectorAll('.group > h2')].map(h => {
+  const g = h.parentElement, b = document.createElement('button');
+  b.type = 'button'; b.className = 'gh'; b.innerHTML = `<span>${h.innerHTML}</span>${chevron}`;
+  h.replaceChildren(b);
+  b.addEventListener('click', () => {
+    if (!narrow.matches) return;
+    b.setAttribute('aria-expanded', String(!g.classList.toggle('collapsed')));
+  });
+  return { g, b, open: OPEN.includes(h.textContent.trim()) };
+});
+function applyNarrow(){
+  for (const { g, b, open } of heads) {
+    if (narrow.matches) { g.classList.toggle('collapsed', !open); b.tabIndex = 0; b.setAttribute('aria-expanded', String(open)); }
+    else { g.classList.remove('collapsed'); b.tabIndex = -1; b.removeAttribute('aria-expanded'); }
+  }
+}
+narrow.addEventListener('change', applyNarrow);
+applyNarrow();
+
+// Schmal: Leiste unten springt zum Ergebnis und zurück
+let atOutput = false;
+new IntersectionObserver(([e]) => {
+  atOutput = e.isIntersecting;
+  $('#bJump').textContent = atOutput ? 'Konfigurieren ↑' : 'Ergebnis ↓';
+}, { rootMargin: '0px 0px -40% 0px' }).observe($('.output'));
+$('#bJump').addEventListener('click', () => {
+  $(atOutput ? '.cfgwrap' : '.output').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 });
 
 // Kopieren
@@ -1239,8 +1440,88 @@ $('#bCopy').addEventListener('click', () => {
   const box = $('#copyBox'), msg = $('#copied');
   const fallback = () => { box.hidden = false; box.value = text; box.focus(); box.select(); msg.textContent = 'Text markiert – mit Ctrl+C kopieren.'; };
   try {
-    navigator.clipboard.writeText(text).then(() => { box.hidden = true; msg.textContent = 'Kopiert.'; setTimeout(() => { msg.textContent = ''; }, 2500); }, fallback);
+    navigator.clipboard.writeText(text).then(() => {
+      box.hidden = true; msg.textContent = '';
+      const b = $('#bCopy'); b.classList.add('done'); clearTimeout(b._t);
+      b._t = setTimeout(() => b.classList.remove('done'), 1800);
+    }, fallback);
   } catch (e) { fallback(); }
+});
+
+/* ---------- Zufall und Sammlung ---------- */
+// Formular komplett neu setzen (Laden, Zufall) und Kamera neu ausrichten.
+function applyData(data){
+  restore(data); syncMaterials(); syncVisibility();
+  three.userMoved = false;
+  render(); save();
+}
+$('#bZufall').addEventListener('click', () => {
+  applyData(zufall(formData()));
+  flash('#sammelMsg', '');
+});
+
+const COLL = STORE + '-sammlung';
+let coll = [], aktiv = null, entfernt = null;
+try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
+function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
+function flash(sel, html){
+  const el = $(sel); el.innerHTML = html;
+  clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+}
+const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
+const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
+function renderColl(){
+  $('#cnt-coll').textContent = coll.length || '';
+  const sum = coll.reduce((a, e) => a + e.info.kosten, 0);
+  $('#collSum').textContent = coll.length
+    ? `${coll.length} Möbel · zusammen ca. ${chf5(sum)} (Holz im Zuschnitt und Kaufteile, Preise beim Speichern)`
+    : 'Noch nichts gesammelt. «In Sammlung» merkt sich die aktuelle Konfiguration – so stellst du mehrere Möbel zusammen und vergleichst sie.';
+  $('#collList').innerHTML = coll.map(e => `
+    <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
+      <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
+      <div class="meta">${esc(e.info.typ)} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
+      <div class="do">
+        <button type="button" class="btn ghost" data-act="laden">Laden</button>
+        <button type="button" class="btn ghost" data-act="update" title="Mit der aktuellen Konfiguration überschreiben">Überschreiben</button>
+        <button type="button" class="btn ghost" data-act="weg">Entfernen</button>
+      </div>
+    </li>`).join('');
+}
+$('#bSammeln').addEventListener('click', () => {
+  const e = sammlungEintrag(formData(), R);
+  const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
+  if (gleich) e.name += ` (${gleich + 1})`;
+  coll.push(e); aktiv = e.id; storeColl(); renderColl();
+  flash('#sammelMsg', `«${esc(e.name)}» gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+});
+$('#sammelMsg').addEventListener('click', ev => {
+  const id = ev.target.dataset.go;
+  if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+});
+$('#collList').addEventListener('change', ev => {
+  const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
+  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); }
+});
+$('#collList').addEventListener('click', ev => {
+  const act = ev.target.dataset.act;
+  if (!act) return;
+  const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
+  if (act === 'laden') { aktiv = e.id; applyData(e.data); flash('#collMsg', `«${esc(e.name)}» geladen.`); }
+  if (act === 'update') {
+    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id;
+    flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
+  }
+  if (act === 'weg') {
+    entfernt = { e, i }; coll.splice(i, 1);
+    if (aktiv === e.id) aktiv = null;
+    flash('#collMsg', `«${esc(e.name)}» entfernt. <button type="button" class="linkbtn" id="bUndo">Rückgängig</button>`);
+  }
+  storeColl(); renderColl();
+});
+$('#collMsg').addEventListener('click', ev => {
+  if (ev.target.id !== 'bUndo' || !entfernt) return;
+  coll.splice(entfernt.i, 0, entfernt.e); entfernt = null;
+  storeColl(); renderColl(); flash('#collMsg', 'Wiederhergestellt.');
 });
 
 /* ---------- Start ---------- */
@@ -1251,5 +1532,7 @@ syncVisibility();
 try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
 render();
+renderColl();
+requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>
