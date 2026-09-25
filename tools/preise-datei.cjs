@@ -8,6 +8,7 @@ const HEAD = `/* Preise und Formate (Jumbo, CHF). Nachführen mit: cd tools && n
    Von Hand ändern geht auch – Form beibehalten (JSON, ein Eintrag pro Zeile), der Test prüft sie.
    platten:     prices = { Stärke: CHF/m² im Zuschnitt }, sheet = max. Zuschnitt [Länge = Maserung, Breite] in mm
    rueckwaende: price = CHF/m², sheet in mm
+   bretter:     ganze Bretter (nur ablängen): t = Stärke, formate = [{ L = Länge, B = Breite in mm, price = CHF pro Stück }]
    kaufteile:   price = CHF pro Stück (unit m: pro Meter), est = geschätzt, noch nicht nachgeprüft
    stand = Datum der letzten Kontrolle, quelle = Jumbo-Produkt */
 `;

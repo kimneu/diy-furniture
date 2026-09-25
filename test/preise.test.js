@@ -23,8 +23,19 @@ test('Einträge in preise.js sind vollständig', () => {
     assert.match(e.stand, /^\d{4}-\d{2}-\d{2}$/, `${g}.${k} stand`);
     assert.ok(e.quelle, `${g}.${k} quelle`);
     if (g === 'platten') assert.ok(Object.values(e.prices).every(p => p > 0), `${g}.${k} prices`);
-    if (g !== 'kaufteile') assert.ok(e.sheet.every(v => v > 0), `${g}.${k} sheet`);
+    if (g === 'platten' || g === 'rueckwaende') assert.ok(e.sheet.every(v => v > 0), `${g}.${k} sheet`);
+    if (g === 'bretter') {
+      assert.ok(e.t > 0, `${g}.${k} t`);
+      assert.ok(e.formate.length > 0, `${g}.${k} formate`);
+      for (const f of e.formate) assert.ok(f.L > 0 && f.B > 0 && f.price > 0, `${g}.${k} ${JSON.stringify(f)}`);
+      assert.strictEqual(new Set(e.formate.map(f => `${f.L}x${f.B}`)).size, e.formate.length, `${g}.${k} doppeltes Format`);
+    }
   }
+});
+
+test('Schaltafel ist ein ganzes Brett, keine Zuschnittplatte', () => {
+  assert.ok(!PREISE.platten.schaltafel);
+  assert.deepStrictEqual(PREISE.bretter.schaltafel.formate, [{ L:2000, B:500, price:29.5 }]);
 });
 
 test('Stärken und Standardpreis kommen aus preise.js', () => {
