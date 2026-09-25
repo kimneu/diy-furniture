@@ -18,13 +18,14 @@ const MATS = {
   mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, t:[16,19,22], tDef:19, sheet:[2800,2070], price:30,
             note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' },
   // Günstige, robuste Platten – gut für Reduit, Keller und Werkstatt. coated = fertige Beschichtung, nicht ölen.
-  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, t:[27], tDef:27, sheet:[2500,500], price:22,
+  // Preise: Jumbo (jumbo.ch), reguläre Preise, recherchiert 25.09.2026.
+  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, t:[27], tDef:27, sheet:[2500,500], price:32,   // Jumbo: Schalungstafel 3-S 27x2500x500 mm, CHF 39.95
             note:'Gelb beschichtete Dreischichtplatte vom Bau: sehr robust, wasserfest, günstig. Nur 50 cm breit – tiefere Teile passen nicht. Kanten mit Lack oder Öl schützen.' },
-  osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, t:[12,15,18,22], tDef:18, sheet:[2500,1250], price:14,
-            note:'Grobe Späne, rustikaler Werkstatt-Look. Sehr günstig und stabil. Kanten gut schleifen, ölen oder roh lassen.' },
-  dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, t:[19,27], tDef:19, sheet:[2500,1250], price:45,
+  osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, t:[12,15,18,22], tDef:18, sheet:[2770,2070], price:30,   // Jumbo: OSB-3 V100 PEFC 18 mm, CHF 29.95/m²
+            note:'Grobe Späne, rustikaler Werkstatt-Look. Stabil und robust. Kanten gut schleifen, ölen oder roh lassen.' },
+  dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, t:[19,27], tDef:19, sheet:[2525,675], price:70,   // Jumbo: Dreischichtplatte Fichte 19 mm 2525x675, CHF 119 (27 mm ca. CHF 93/m²)
             note:'Sieht aus wie Massivholz, verzieht sich aber kaum. Weich wie Fichte – Weissöl hält den hellen Ton.' },
-  dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, t:[16,19], tDef:19, sheet:[2800,2070], price:18,
+  dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, t:[16,19], tDef:19, sheet:[2800,2070], price:25,   // Jumbo: Oecoplan Span weiss PE 16 mm, CHF 24.95/m²
             note:'Fertige weisse Melaminoberfläche, günstig. Sichtbare Kanten mit Kantenband bügeln. Biegt sich unter Last stärker durch als Sperrholz.' }
 };
 const BACKS = {
