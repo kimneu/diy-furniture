@@ -4,39 +4,47 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, isFinite(v) ? v : a));
 const r0 = v => Math.round(v);
 
 /* ---------- Kataloge ---------- */
-// Birke, Eiche, Fichte Leimholz, Seekiefer, Sperrholz Fichte: Jumbo-Zuschnittpreise (CHF/m²), von Hand erfasst 25.09.2026.
-// Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite. Eiche-Format und MDF/Rückwände: noch alte Richtwerte.
-// Birke, Eiche, Fichte Leimholz, Seekiefer, Sperrholz Fichte: Jumbo-Zuschnittpreise (CHF/m²), von Hand erfasst 25.09.2026.
-// Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite. Eiche-Format sowie MDF und Rückwände: noch alte Richtwerte.
-const MATS = {
-  birke:  { name:'Multiplex Birke', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  t:[12,18,21], tDef:18, sheet:[1500,3000], price:99.95, prices:{ 12:69.95, 18:99.95, 21:149.9 },
-            note:'Sichtbare Schichtkanten sind der typisch skandinavische Look. Einfach ölen, Kanten nur schleifen.' },
-  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  t:[18,20,27], tDef:20, sheet:[2400,600],  price:129, prices:{ 18:109, 20:129, 27:149 },
-            note:'Massivholz arbeitet leicht mit der Luftfeuchtigkeit. Leimholz gibt es meist bis 600 mm, teils 1200 mm breit.' },
-  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  t:[18,21,27], tDef:18, sheet:[2500,1210], price:60, prices:{ 18:60, 21:80, 27:95 },
+// Preise, Stärken und Plattenformate stehen in preise.js (im Browser vorher geladen, in Node per require).
+// Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite.
+const PRICE_DATA = typeof PREISE !== 'undefined' ? PREISE : require('./preise.js');
+const MAT_INFO = {
+  birke:  { name:'Multiplex Birke Premium', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  tDef:18,
+            note:'Sichtbare Schichtkanten sind der typisch skandinavische Look. Fast fehlerfreie Sichtseite. Einfach ölen, Kanten nur schleifen.' },
+  birkesi: { name:'Multiplex Birke Standard', short:'Birke-Multiplex', color:'#E2D3B6', ply:true, grain:true, tDef:18,
+            note:'Gleicher Look wie Premium, aber einfachere Sichtseite mit kleinen Ästen und Ausbesserungen – rund ein Drittel günstiger.' },
+  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  tDef:18,
+            note:'Massivholz arbeitet leicht mit der Luftfeuchtigkeit. Qualität B/C: lebendige Oberfläche mit einzelnen Ästen.' },
+  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  tDef:18,
             note:'Günstig und leicht zu bearbeiten, aber weich. Weissöl verhindert das Nachdunkeln ins Gelbliche.' },
-  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, t:[12,15], tDef:15, sheet:[2500,1250], price:47.95, prices:{ 12:36.95, 15:47.95 },
+  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, tDef:15,
             note:'Lebhafte, rötliche Maserung und sichtbare Schichtkanten. Günstiger als Birke, Oberfläche etwas rauer – gut schleifen.' },
-  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, t:[12,15,18,21,24], tDef:18, sheet:[2500,1250], price:65, prices:{ 12:45, 15:53, 18:65, 21:73, 24:85 },
+  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, tDef:18,
             note:'Helles Nadelholz mit sichtbaren Schichtkanten. Weicher als Birke, Weissöl hält den hellen Ton.' },
-  mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, t:[16,19,22], tDef:19, sheet:[2800,2070], price:30,
+  mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, tDef:19,
             note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' },
   // Günstige, robuste Platten – gut für Reduit, Keller und Werkstatt. coated = fertige Beschichtung, nicht ölen.
-  // Preise: Jumbo (jumbo.ch), reguläre Preise, recherchiert 25.09.2026.
-  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, t:[27], tDef:27, sheet:[2500,500], price:32,   // Jumbo: Schalungstafel 3-S 27x2500x500 mm, CHF 39.95
+  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, tDef:27,
             note:'Die gelbe Platte von der Baustelle: sehr robust und wasserfest, die Oberfläche ist schon fertig. Gibt es nur 50 cm breit – tiefere Teile passen nicht darauf. Die Schnittkanten einmal lackieren oder ölen.' },
-  osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, t:[12,15,18,22], tDef:18, sheet:[2770,2070], price:30,   // Jumbo: OSB-3 V100 PEFC 18 mm, CHF 29.95/m²
+  osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, tDef:18,
             note:'Aus grossen, gepressten Holzspänen – sieht rustikal aus, wie in einer Werkstatt. Stabil und robust. Kanten gut schleifen, dann ölen oder roh lassen.' },
-  dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, t:[19,27], tDef:19, sheet:[2525,675], price:70,   // Jumbo: Dreischichtplatte Fichte 19 mm 2525x675, CHF 119 (27 mm ca. CHF 93/m²)
+  dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, tDef:19,
             note:'Drei verleimte Holzschichten: sieht aus wie Massivholz, verzieht sich aber kaum. Fichte ist weich und bekommt schnell Dellen – Weissöl hält den hellen Ton.' },
-  dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, t:[16,19], tDef:19, sheet:[2800,2070], price:25,   // Jumbo: Oecoplan Span weiss PE 16 mm, CHF 24.95/m²
+  dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, tDef:19,
             note:'Weiss beschichtet wie bei Fertigmöbeln – fertig, kein Streichen nötig. An den Schnittkanten sieht man die Spanplatte: mit weissem Kantenband überbügeln. Hängt als Tablar schneller durch als Sperrholz.' }
 };
-const BACKS = {
-  none: null,
-  hdf3: { name:'HDF weiss', t:3, sheet:[2800,2070], price:10, color:'#F0EFEA', ply:false },
-  ply6: { name:'Sperrholz Pappel', t:5, sheet:[2500,1250], price:24, color:'#E8D9B8', ply:true }
+const BACK_INFO = {
+  hdf3: { name:'MDF weiss beschichtet', t:3, color:'#F0EFEA', ply:false },
+  hf3:  { name:'Hartfaser roh', t:3, color:'#9C7A55', ply:false },
+  ply6: { name:'Sperrholz Pappel', t:5, color:'#E8D9B8', ply:true }
 };
+// Stärken = Stärken mit Preis; ohne Preis fällt ein Material weg. price = Preis der Standardstärke (für die Sortierung).
+const MATS = Object.fromEntries(Object.entries(MAT_INFO).filter(([k]) => PRICE_DATA.platten[k]).map(([k, M]) => {
+  const { prices, sheet } = PRICE_DATA.platten[k], t = Object.keys(prices).map(Number).sort((a, b) => a - b);
+  const tDef = t.includes(M.tDef) ? M.tDef : t[0];
+  return [k, { ...M, t, tDef, sheet, price:prices[tDef], prices }];
+}));
+const BACKS = { none:null, ...Object.fromEntries(Object.entries(BACK_INFO).filter(([k]) => PRICE_DATA.rueckwaende[k])
+  .map(([k, B]) => [k, { ...B, sheet:PRICE_DATA.rueckwaende[k].sheet, price:PRICE_DATA.rueckwaende[k].price }])) };
 const COLORS = { weiss:'#EEEDE7', salbei:'#A7B39E', taube:'#8E9FAB', anthrazit:'#3E4447' };
 const COLOR_NAMES = { weiss:'Kreideweiss', salbei:'Salbei', taube:'Taubenblau', anthrazit:'Anthrazit' };
 const JOINTS = {
@@ -135,4 +143,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts };

@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// Eingefrorene Preise: ein Preis-Update in preise.js soll den Snapshot nicht brechen.
+globalThis.PREISE = require('./fixtures/preise.json');
 Object.assign(globalThis, require('../shared.js'));
 const { computeSideboard } = require('../sideboard.js');
 const cfgs = require('./fixtures/sideboard-configs.json');

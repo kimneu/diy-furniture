@@ -204,7 +204,8 @@ function computeSideboard(c){
     if (c.mat === 'mdf') warn.push('Bad: Normales MDF quillt bei Feuchtigkeit auf. Kauf MDF MR (feuchtigkeitsbeständig, meist mit grünem Kern) und versiegle alle Kanten doppelt.');
     if (M.ply) warn.push(`Bad: Verlang beim Kauf wasserfest verleimtes ${M.name} (EN 314-2 Klasse 3 bzw. «AW 100»). Die Schichtkanten saugen stark – mehrfach lackieren.`);
     if (c.mat === 'fichte') warn.push('Bad: Fichte ist weich und nimmt schnell Wasser auf. Rundum gut versiegeln oder für Spritzwasserbereiche Eiche bzw. wasserfestes Multiplex wählen.');
-    if (c.back === 'hdf3') warn.push('Bad: Eine HDF-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
+    if (c.back === 'hdf3') warn.push('Bad: Eine dünne MDF-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
+    if (c.back === 'hf3') warn.push('Bad: Eine Hartfaser-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
     if (c.back === 'ply6') warn.push('Bad: Die Pappel-Rückwand beidseitig lackieren und hinten ein paar Millimeter Luft zur Wand lassen.');
     if (c.base === 'none') warn.push('Bad: Stell den Schrank auf Füsse oder montier ihn an der Wand – so steht er nie in einer Pfütze und du kannst darunter putzen.');
   }

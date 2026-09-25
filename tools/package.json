@@ -1,0 +1,9 @@
+{
+  "name": "diy-furniture-tools",
+  "private": true,
+  "type": "module",
+  "description": "Hilfsskripte, nicht Teil der Website",
+  "devDependencies": {
+    "patchright": "^1"
+  }
+}

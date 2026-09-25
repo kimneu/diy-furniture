@@ -1,0 +1,16 @@
+{
+  "birke":                { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/sperrholz/sperrholz-birke-sbb-premium-18mm/p/3469094" },
+  "birkesi":              { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/sperrholz/sperrholz-birke-sifi-18mm/p/7501051" },
+  "eiche":                { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/leimholzplatten/leimholzplatte-eiche-bc-18-mm/p/6904171" },
+  "fichte":               { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/leimholzplatten/leimholzplatte-fichte-b-18-mm/p/6722179" },
+  "fichte~Langformat":    { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/leimholzplatten/leimholzplatte-fichte-langformat-b-18-mm/p/6722180" },
+  "seekiefer":            { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/sperrholz/sperrholz-seekiefer-premium-15mm/p/3469860" },
+  "fichtesp":             { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/sperrholz/sperrholz-fichte-iiiii-18-mm/p/3469106" },
+  "mdf":                  { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/mdf-platten/oecoplan-mdf-19-mm/p/3463916" },
+  "osb":                  { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/osb-platten/osb-3-v100-pefc-18mm/p/6849102" },
+  "dreischicht":          { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/leimholzplatten/leimholzplatte-3-schicht-fichte-bc-19-mm/p/7290657" },
+  "dekorspan":            { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/spanplatten/oecoplan-span-weiss-pe-16-mm/p/3463351" },
+  "hdf3":                 { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/mdf-platten/oecoplan-mdf-lack-line-1-seitig-weiss-3-mm/p/3464426" },
+  "hf3":                  { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/hartfaserplatten/hartfaserplatte-roh-3-mm/p/3890986" },
+  "ply6":                 { "url": "https://www.jumbo.ch/de/bauen-renovieren/holz/holzzuschnitt/sperrholz/oecoplan-sperrholz-pappel-ab-5-mm/p/4706101", "t": [4, 5] }
+}
