@@ -74,3 +74,25 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   assert.strictEqual(r.info.typ, 'Reduit U-Form');
   assert.ok(r.info.kosten > 0);
 });
+
+test('Entwürfe: alter Einzelentwurf landet unter seinem Typ', () => {
+  const e = K.entwuerfeLaden(null, { ...FORM, kind:'reduit', rw:'1800' });
+  assert.strictEqual(e.kind, 'reduit');
+  assert.strictEqual(e.reduit.rw, '1800');
+  assert.strictEqual(e.sideboard, undefined);
+});
+
+test('Entwürfe: neuer Speicher hat Vorrang; ohne Entwurf null', () => {
+  const neu = { kind:'sideboard', sideboard:{ ...FORM } };
+  assert.strictEqual(K.entwuerfeLaden(neu, { ...FORM, kind:'reduit' }), neu);
+  assert.strictEqual(K.entwuerfeLaden(null, null), null);
+  assert.strictEqual(K.entwuerfeLaden({ kind:'reduit' }, null), null);
+});
+
+test('Entwürfe: Setzen ersetzt nur den Entwurf des eigenen Typs', () => {
+  let e = K.entwurfSetzen(null, { ...FORM, kind:'reduit', mat:'gon_fichte' });
+  e = K.entwurfSetzen(e, { ...FORM, kind:'sideboard', mat:'eiche' });
+  assert.strictEqual(e.kind, 'sideboard');
+  assert.strictEqual(e.reduit.mat, 'gon_fichte');
+  assert.strictEqual(e.sideboard.mat, 'eiche');
+});

@@ -108,6 +108,19 @@ function wuerfelReduit(base, rnd){
   };
 }
 
+/* ---------- Entwürfe ---------- */
+// Ein Entwurf pro Möbeltyp: { kind: aktueller Typ, sideboard: Formularwerte, reduit: Formularwerte }.
+// alt = der frühere Einzelentwurf (localStorage sideboard-werkbank-v2); er wird unter seinem Typ abgelegt.
+function entwuerfeLaden(neu, alt){
+  if (neu && neu.kind && neu[neu.kind]) return neu;
+  if (alt && typeof alt === 'object') { const kind = alt.kind || 'sideboard'; return { kind, [kind]: { ...alt, kind } }; }
+  return null;
+}
+function entwurfSetzen(e, data){
+  const kind = data.kind || 'sideboard';
+  return { ...(e || {}), kind, [kind]: data };
+}
+
 /* ---------- Sammlung ---------- */
 // Ein Eintrag merkt sich die Formularwerte und eine Kurzbeschreibung mit den Kosten beim Speichern.
 function sammlungEintrag(d, R, now = new Date()){
@@ -125,4 +138,4 @@ function sammlungEintrag(d, R, now = new Date()){
   };
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, HARMLOS };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, HARMLOS, entwuerfeLaden, entwurfSetzen };
