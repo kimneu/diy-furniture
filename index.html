@@ -95,6 +95,8 @@ button,input,select{font:inherit;color:inherit}
 input[type=range]{width:100%;accent-color:var(--accent);margin:0}
 select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-radius:7px;background:var(--raise)}
 .hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.boardlist{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 12px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.boardlist li{color:var(--ink)}
 .seg{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:var(--raise)}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label{flex:1;text-align:center;padding:6px 4px;cursor:pointer;font-size:13px;border-left:1px solid var(--line);user-select:none;white-space:nowrap}
@@ -514,19 +516,23 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
       <section class="group">
         <h2>Platten &amp; Preise</h2>
-        <div class="field">
+        <div class="field" id="row-sheet">
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
             <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
             <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="2100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
           </div>
         </div>
+        <div class="field" id="row-boards" hidden>
+          <span class="lbl">Formate (ganze Bretter, Stückpreis)</span>
+          <ul class="boardlist" id="boardList"></ul>
+        </div>
         <div class="row2">
           <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4"><span>mm</span></div></div>
-          <div class="field"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55"><span>CHF/m²</span></div></div>
+          <div class="field" id="row-price"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55"><span>CHF/m²</span></div></div>
         </div>
-        <label class="check" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
-        <p class="hint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
+        <label class="check" id="row-grain" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
+        <p class="hint" id="sheetHint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
       </section>
       <section class="group">
         <h2>Niveau</h2>
@@ -610,11 +616,27 @@ const HANDLES_SLIDING = [['shell','Griffmuschel rund'],['hole','Griffloch Ø 30 
 
 /* ---------- Formular ---------- */
 const STORE = 'sideboard-werkbank-v2';
-// Plattenmaterial nach Preis sortiert, mit m²-Preis in der Auswahl.
+// Plattenmaterial nach Preis sortiert, mit m²-Preis in der Auswahl. Ganze Bretter nur beim Reduit (kind leer = alle).
 const MAT_LABEL = { mdf:'MDF (zum Lackieren)' };
-function fillMaterials(){
-  $('#mat').innerHTML = Object.entries(MATS).sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef))
-    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name} · CHF ${matPrice(M, M.tDef)}/m²</option>`).join('');
+function fillMaterials(kind){
+  $('#mat').innerHTML = Object.entries(MATS).filter(([, M]) => !M.boards || !kind || kind === 'reduit')
+    .sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef))
+    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name} · ${M.boards ? `ganze Bretter ab CHF ${M.price.toFixed(2)}` : `CHF ${matPrice(M, M.tDef)}`}/m²</option>`).join('');
+}
+// Preis und Plattenformat des Katalogs ins Formular.
+function applyCatalog(mat){
+  const cat = catalogValues(mat, $('#t').value);
+  for (const k in cat) $('#' + k).value = cat[k];
+}
+// Nach einem Typwechsel: Liste neu füllen; ist das Material nicht mehr wählbar, das günstigste Plattenmaterial nehmen.
+let matMsg = '';
+function syncMaterials(){
+  const kind = new FormData(form).get('kind'), cur = $('#mat').value;
+  fillMaterials(kind);
+  if (MATS[cur] && (!MATS[cur].boards || kind === 'reduit')) { $('#mat').value = cur; return; }
+  const k = $('#mat').options[0].value;
+  $('#mat').value = k; fillThickness(k); applyCatalog(k);
+  if (MATS[cur]) matMsg = `Ganze Bretter gibt es nur beim Reduit – Material auf ${MATS[k].name} gesetzt.`;
 }
 function fillThickness(mat, keep){
   const sel = $('#t'), M = MATS[mat];
@@ -644,7 +666,14 @@ function syncVisibility(){
   $('#grain').disabled = !MATS[mat].grain;
   $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
   $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' || mat === 'dekorspan' ? 'Weiss' : mat === 'schaltafel' ? 'Gelb' : 'Holz';
-  $('#matNote').textContent = MATS[mat].note;
+  $('#matNote').textContent = (matMsg ? matMsg + ' ' : '') + MATS[mat].note;
+  const BM = MATS[mat].boards;
+  $('#row-sheet').hidden = $('#row-price').hidden = $('#row-grain').hidden = !!BM;
+  $('#row-boards').hidden = !BM;
+  if (BM) $('#boardList').innerHTML = BM.map(f => `<li>${f.L} × ${f.B} mm · CHF ${f.price.toFixed(2)}</li>`).join('');
+  $('#sheetHint').textContent = BM
+    ? `Ganze Bretter zum Stückpreis${MATS[mat].est ? ' (Preise geschätzt)' : ''}, nur abgelängt – die Regaltiefe richtet sich nach der Brettbreite.`
+    : 'Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.';
   // Möbeltyp
   const kind = f.get('kind'), reduit = kind === 'reduit', free = f.get('build') === 'free';
   for (const sec of form.querySelectorAll('[data-kind]')) sec.hidden = sec.dataset.kind !== kind;
@@ -708,7 +737,7 @@ function restore(){
   const front = data && data.front || 'hinged';
   fillHandles(front, data && data.handle);
   const cat = catalogValues(mat, $('#t').value);
-  for (const k in cat) $('#' + k).value = cat[k];
+  applyCatalog(mat);
   if (!data) return;
   for (const [k, v] of Object.entries(data)) {
     if (k === 't' || k === 'handle' || k === 'mat' || k === 'katalog') continue;
@@ -744,9 +773,12 @@ function renderSummary(R){
     $('#summary').innerHTML = `
     <div><dt>Raum</dt><dd>${R.W} × ${R.D} × ${R.H} <small>mm</small></dd></div>
     <div><dt>Teile</dt><dd>${parts}</dd></div>
-    <div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
+    ${main.boards
+      ? `<div><dt>Bretter</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
+    <div><dt>Holz ganze Bretter ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>`
+      : `<div><dt>Platten</dt><dd>${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}</dd></div>
     <div><dt>Holz Zuschnitt ca.</dt><dd>${chf(cost + R.solidCost)}</dd></div>
-    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>
+    <div><dt>Holz ganze Platten ca.</dt><dd>${chf(whole + R.solidCost)}</dd></div>`}
     <div><dt>Kaufteile ca.</dt><dd>${chf(R.buyCost)}</dd></div>
     `;
     const why = R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`;
@@ -792,11 +824,20 @@ function renderCut(R){
 function renderSheets(R){
   let html = '';
   for (const g of R.groups) {
-    const [SL, SB] = g.sheet;
     const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
-    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · Zuschnitt ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)} · ganze Platten ${g.sheets.length} × ${(SL*SB/1e6).toFixed(2)} m² = CHF ${Math.round(g.sheets.length*SL*SB/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}</p><div class="sheetlist">`;
+    let meta;
+    if (g.boards) {
+      const per = new Map();
+      for (const s of g.sheets) { const k = `${s.L} × ${s.B}`; const e = per.get(k) || { n:0, price:s.price }; e.n++; per.set(k, e); }
+      meta = [...per].map(([k, e]) => `${e.n} × ${k} mm à CHF ${e.price.toFixed(2)}`).join(' · ') + ` · total CHF ${Math.round(g.sheets.reduce((a, s) => a + s.price, 0))} · Rest ${waste} % · nur ablängen`;
+    } else {
+      const [SL, SB] = g.sheet;
+      meta = `Platte ${SL} × ${SB} mm · ${g.sheets.length} Stück · Rest ${waste} % · Zuschnitt ${(g.partArea/1e6).toFixed(2)} m² × CHF ${g.price} = CHF ${Math.round(g.partArea/1e6*g.price)} · ganze Platten ${g.sheets.length} × ${(SL*SB/1e6).toFixed(2)} m² = CHF ${Math.round(g.sheets.length*SL*SB/1e6*g.price)}${g.rotate ? ' · drehen erlaubt' : ' · Maserung längs'}`;
+    }
+    html += `<div class="sheetgrp"><h3>${g.label}</h3><p class="meta">${meta}</p><div class="sheetlist">`;
     g.sheets.forEach((sh, i) => {
-      html += `<figure class="sheet"><figcaption><span>Platte ${i + 1}</span><span>${sh.parts.length} Teile</span></figcaption>
+      const [SL, SB] = g.boards ? [sh.L, sh.B] : g.sheet;
+      html += `<figure class="sheet"><figcaption><span>${g.boards ? `Brett ${i + 1} · ${sh.L} × ${sh.B}` : `Platte ${i + 1}`}</span><span>${sh.parts.length} Teile${g.boards ? ` · CHF ${sh.price.toFixed(2)}` : ''}</span></figcaption>
         <svg viewBox="-12 -12 ${SL + 24} ${SB + 24}" role="img" aria-label="Plattenplan ${g.label}, Platte ${i + 1}">
         <rect x="0" y="0" width="${SL}" height="${SB}" class="sh-bg"></rect>`;
       for (const p of sh.parts) {
@@ -811,7 +852,7 @@ function renderSheets(R){
       }
       html += `</svg></figure>`;
     });
-    if (!g.sheets.length) html += `<p class="hint">Keine Teile auf diesem Format.</p>`;
+    if (!g.sheets.length) html += `<p class="hint">${g.boards ? 'Kein Teil passt auf diese Bretter.' : 'Keine Teile auf diesem Format.'}</p>`;
     html += `</div></div>`;
   }
   $('#sheets').innerHTML = html;
@@ -1126,9 +1167,8 @@ form.addEventListener('input', e => {
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
-    const M = MATS[el.value];
     fillThickness(el.value, $('#t').value);
-    $('#sheetL').value = M.sheet[0]; $('#sheetB').value = M.sheet[1]; $('#price').value = matPrice(M, Number($('#t').value));
+    applyCatalog(el.value);
   }
   if (el.name === 't') $('#price').value = matPrice(MATS[$('#mat').value], Number(el.value));
   if (el.name === 'front') fillHandles(el.value, $('#handle').value);
@@ -1136,6 +1176,8 @@ form.addEventListener('input', e => {
     const v = el.value === 'plinth' ? 80 : 160;
     $('#baseH').value = v; $('#baseH-r').value = v;
   }
+  if (el.name === 'mat') matMsg = '';
+  if (el.name === 'kind') syncMaterials();
   syncVisibility(); render(); save();
 });
 form.addEventListener('change', e => {
@@ -1203,6 +1245,7 @@ $('#bCopy').addEventListener('click', () => {
 /* ---------- Start ---------- */
 fillMaterials();
 restore();
+syncMaterials();
 syncVisibility();
 try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
