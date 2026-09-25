@@ -105,7 +105,7 @@ test('Spannweiten-Tabelle', () => {
 });
 
 test('Schienen: Anzahl aus Spannweite (1600 mm, 50 mm eingerückt, max 800 → 3 Schienen à 750 mm)', () => {
-  const Rr = run({ shape:'I', rw:1600, sys:'rails' });
+  const Rr = run({ shape:'I', rw:1600, rh:2000, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 3);
   assert.strictEqual(qtyOf(Rr, 'Konsole'), 3 * 5);
   assert.ok(Rr.warn.some(w => w.includes('Spannweite')));
@@ -175,4 +175,11 @@ test('Randfall: Tür breiter als Raum erlaubt wird mit Warnung verkleinert', () 
   const ok = cfg({ rw:1600, doorW:800 });
   assert.strictEqual(ok.cfg.doorW, 800);
   assert.ok(!ok.warn.some(w => w.includes('Türbreite')));
+});
+
+test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt', () => {
+  const Rr = run({ shape:'I', rw:1600, rh:2400, sys:'rails' });
+  assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 200'), 3);
+  assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 100'), 3);
+  assert.ok(Rr.warn.some(w => w.includes('zwei Stücke')));
 });

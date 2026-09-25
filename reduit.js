@@ -291,11 +291,12 @@ const SUPPORTS = {
       if (!on.length) continue;
       const y0 = Math.min(...on.map(p => p.y)) - 60, y1 = Math.max(...on.map(p => p.y)) + 40;
       const need = y1 - y0;
-      const rl = RAIL_LENS.find(l => l >= need) || RAIL_LENS[RAIL_LENS.length - 1];
-      if (need > rl) ctx.warn.push(`Die Wandschienen ${SIDE_NAME[seg.id]} bräuchten ${r0(need)} mm – längste Schiene ist ${rl} mm. Zwei Schienen übereinander setzen.`);
-      ctx.buy('rail' + rl, 1, 'senkrecht, auf Länge kürzen');
-      ctx.fix += Math.ceil(rl / 300) + 1;
-      ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y0 + Math.min(need, rl), v0:0, v1:12 }, 'v', 'y', null) });
+      // Schienenstücke: längste Jumbo-Schiene ist 200 cm, darüber zwei Stücke übereinander.
+      const parts = [];
+      for (let rest = need; rest > 0; ) { const l = RAIL_LENS.find(x => x >= rest) || RAIL_LENS[RAIL_LENS.length - 1]; parts.push(l); rest -= l; }
+      if (parts.length > 1) groupWarn(ctx, 'rails2', SIDE_NAME[seg.id], sides => `Die Wandschienen ${sides} brauchen ${r0(need)} mm – längste Schiene ist ${RAIL_LENS[RAIL_LENS.length - 1]} mm, darum je zwei Stücke bündig übereinander (eingeplant).`);
+      for (const l of parts) { ctx.buy('rail' + l, 1, 'senkrecht, auf Länge kürzen'); ctx.fix += Math.ceil(l / 300) + 1; }
+      ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y1, v0:0, v1:12 }, 'v', 'y', null) });
       for (const p of on) {
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 6, u1:u + 6, y0:p.y - 25, y1:p.y, v0:12, v1:12 + kl }, 'u', 'v', null, [0, 0, 120]) });
         konsolen++;
