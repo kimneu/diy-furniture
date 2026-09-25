@@ -38,12 +38,14 @@ Stand 25.09.2026, Stückpreise in CHF. «Best Price» steht auf der Produktseite
 |---|---|---|---|---|
 | `gon_fichte` | go/on Leimholzplatte Fichte | 18 | 1200 × 200 = 5.60 · 2000 × 200 = 10.20 · 1200 × 400 = 12.50 · 2000 × 400 = 20.50 | 23–26 |
 | `gon_3s` | go/on 3-Schicht Fichte C+/C | 19 | 1200 × 600 = 29.95 · 2500 × 600 = 59.90 | 40–42 |
-| `mood_fichte` | Mood Leimholzplatte Fichte A | 18 | 800 × 400 = 15.50 · 800 × 600 = 21.50 · 1200 × 200 = 10.95 · 1200 × 300 = 15.95 · 1200 × 400 = 21.95 · 1200 × 500 = 27.95 · 1200 × 600 = 32.95 · 2000 × 200 = 18.50 · 2000 × 300 = 27.95 · 2000 × 400 = 36.50 · 2000 × 500 = 43.95 · 2000 × 600 = 54.95 · 2500 × 300 = 33.95 · 2500 × 600 = 68.95 | 44–48 |
+| `mood_fichte` | Mood Leimholzplatte Fichte A | 18 | 800 × 300 = 11.50 · 800 × 400 = 15.50 · 800 × 600 = 21.50 · 1200 × 200 = 10.95 · 1200 × 300 = 15.95 · 1200 × 400 = 21.95 · 1200 × 500 = 27.95 · 1200 × 600 = 32.95 · 2000 × 200 = 18.50 · 2000 × 300 = 27.95 · 2000 × 400 = 36.50 · 2000 × 500 = 43.95 · 2000 × 600 = 54.95 · 2500 × 300 = 33.95 · 2500 × 400 = 44.95 · 2500 × 600 = 68.95 | 44–48 |
 | `regalbau` | Regalbauplatte weiss FSC | 16 | 1150 × 200 = 8.25 · 250 = 9.50 · 300 = 10.50 · 400 = 14.95 · 500 = 17.50 · 600 = 20.50 | 30–36 |
-| `moebel_weiss` | Oecoplan Möbelplatte weiss | offen¹ | 2600 × 250 = 22.95 · 300 = 25.95 · 400 = 31.95 · 500 = 37.50 · 600 = 47.50 | 29–35 |
+| `moebel_weiss` | Oecoplan Möbelplatte weiss | offen¹ ² | 2600 × 250 = 22.95 · 300 = 25.95 · 400 = 31.95 · 500 = 37.50 · 600 = 47.50 | 29–35 |
 | `schaltafel` | Schalungstafel 3-S | 27 | 2000 × 500 = 29.50 | 29.50 |
 
 ¹ Die Stärke steht nicht im Produktnamen. Sie wird beim ersten Skriptlauf von der Produktseite gelesen und vor der Umsetzung eingetragen. Solange sie fehlt, kommt das Produkt nicht in `preise.js`.
+
+² Jumbo führt die Möbelplatte unter «Wohn-Accessoires › Holzfotowand». Ist sie dünner als 16 mm, fällt sie weg.
 
 Die Schaltafel wechselt von `platten` zu `bretter`. Sie gibt es ohnehin nur als ganze Tafel.
 
@@ -88,13 +90,13 @@ Neue Gruppe neben `platten`, `rueckwaende` und `kaufteile`, ein Eintrag pro Prod
 **Stösse bei langen Tablaren:** Heute ist ein Tablar pro Wand und Höhe ein einziges Stück, nur beim System «Wangen» eines pro Feld. Ist es länger als das längste Brett seiner Breite (`Lmax`), wird es gestossen:
 
 1. Die Anzahl Stücke ist k = ⌈Länge / Lmax⌉, also so wenige wie möglich.
-2. Ideale Stossstellen liegen bei gleichmässiger Teilung. Jeder Stoss kommt auf die **nächstgelegene vorhandene Stütze**, bei der beide angrenzenden Stücke ≤ `Lmax` bleiben:
+2. Ideale Stossstellen liegen bei gleichmässiger Teilung. Jeder Stoss kommt **45 mm neben die nächstgelegene vorhandene Stütze**, bei der beide angrenzenden Stücke ≤ `Lmax` bleiben. Direkt über der Stütze hätte keines der beiden Stücke Auflage (Konsolen sind 12 mm breit), und die Stossleiste würde mit der Stütze kollidieren. So liegt das eine Stück auf der Stütze, und das andere hängt über die Stossleiste daran:
    - Schienen: die Schienenpositionen.
-   - Tablarwinkel: die Winkelpositionen. Die Winkel werden dafür pro Wand statt pro Tablar verteilt, damit sie auf allen Höhen gleich stehen.
+   - Tablarwinkel: die Winkelpositionen des Tablars (wie heute pro Tablar verteilt).
    - Pfostenrahmen: die Pfosten.
    - Wangen: kein Stoss nötig, die Felder sind kürzer als die Spannweite.
-3. Findet sich keine passende Stütze, kommt an der idealen Stelle eine zusätzliche dazu (Schiene, Winkelpaar oder Pfosten). Bei «Leisten» gibt es vorne keine Stütze. Dort kommt an jeden Stoss eine Stütze vorne (`addPost`, Kantholz 45 × 45) mit Winkeln, wie heute am freien Ende.
-4. Unter jeden Stoss kommt eine **Stossleiste** (Dachlatte 24 × 48, so lang wie das Tablar tief), an beide Stücke geschraubt, wie die Eckleiste.
+3. Findet sich keine passende Stütze, liegt der Stoss an der idealen Stelle, und 45 mm daneben kommt eine zusätzliche Stütze dazu (Schiene, Winkel oder Pfosten). Bei «Leisten» gibt es vorne keine Stütze. Dort kommt an jeden Stoss eine Stütze vorne (`addPost`, Kantholz 45 × 45) mit Winkeln, wie heute am freien Ende.
+4. Unter jeden Stoss kommt eine **Stossleiste** (Dachlatte 24 × 48, Tablartiefe − 80 mm, damit sie nicht an Wandleisten und Pfosten stösst), an beide Stücke geschraubt, wie die Eckleiste.
 5. Die Stücke heissen in der Materialliste weiter «Tablar» mit der Notiz «gestossen über Schiene/Winkel/Pfosten». Der Bauablauf bekommt einen Schritt «Stösse verbinden».
 
 Die Spannweitenwarnungen rechnen weiter mit dem Stützenabstand, nicht mit der Stücklänge.
@@ -143,7 +145,7 @@ In `node --test`. Die Packer-Tests arbeiten mit festen Formaten im Test, nicht m
 - `normReduit`: Die Tiefe rastet ein und gibt den Hinweis aus, auch zusammen mit der Durchgangsbegrenzung.
 - Brett-Material: Leisten werden zu Latten, keine 40er-Teile aus dem Hauptmaterial.
 - Stösse: 2400 mm Wand mit go/on (Lmax 2000) ergibt 2 Stücke, der Stoss liegt auf einer Schiene, jedes Stück ≤ 2000, und es gibt 1 Stossleiste pro Höhe. Mit Regalbauplatte (1150) ergibt es 3 Stücke.
-- Stösse bei «Leisten»: Pfosten an jeder Stossstelle. Bei «Tablarwinkel» stehen die Winkel auf allen Höhen an denselben Positionen.
+- Stösse bei «Leisten»: Pfosten an jeder Stossstelle. Bei «Tablarwinkel»: jedes Stück ist ≤ Lmax, und neben jedem Stoss sitzt ein Winkel.
 - Plattenmaterial (kein Brett): keine Stösse, Teile wie bisher (der bestehende Kombinationstest und der Snapshot bleiben gleich).
 - Alle Formen × Bauarten × Brett-Materialien liefern gültige Teile und endliche Kosten (Erweiterung des bestehenden Kombinationstests).
 - `preise.test.js`: Die `bretter`-Einträge haben `t`, mindestens ein Format, alle Preise > 0 sowie `stand` und `quelle`. Jedes Brett-Material in `MAT_INFO` hat einen Eintrag.
