@@ -19,8 +19,8 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Formular, Renderer, 3D (three.js r128) |
-| `preise.js` | **Nur Daten:** Preise, Stärken, Plattenformate, Stand und Quelle für Platten, Rückwände und Kaufteile (JSON in Script-Hülle, ohne Build ladbar) |
-| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
+| `preise.js` | **Nur Daten:** Preise, Stärken, Plattenformate, Stand und Quelle für Platten, Rückwände, ganze Bretter und Kaufteile (JSON in Script-Hülle, ohne Build ladbar) |
+| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
 | `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
 | `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
 | `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern) |
@@ -37,6 +37,8 @@ Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `te
 - Alle Preise und Formate stehen in `preise.js`, jeder Eintrag mit `stand` (Datum der letzten Kontrolle) und `quelle`. Der Code enthält keine Preise mehr.
 - Preise pro Stärke: `platten[k].prices = { Stärke: CHF/m² }`. Die angebotenen Stärken ergeben sich daraus; `MATS[k].price` = Preis der Standardstärke (für die Sortierung). Eine neue Stärke braucht zusätzlich einen `SPAN`-Wert in `reduit.js` (Test prüft das).
 - Gespeicherte Konfigurationen merken sich die Katalogwerte beim Speichern (`katalog`). Beim Laden gelten die aktuellen Katalogwerte, ausser Preis oder Format wurden von Hand geändert.
+- **Ganze Bretter:** `preise.js` → `bretter` (Stärke, Formate mit Stückpreis): go/on Leimholz Fichte 18, go/on 3-Schicht 19, Mood Fichte A 18, Regalbauplatte weiss 16, Möbelplatte weiss 18, Schaltafel 27. Nur ablängen, Teilbreite = Brettbreite (Toleranz 15 mm), nur beim Reduit. Die Regaltiefe rastet auf die Brettbreite ein; 40er-Leisten werden Dachlatten; lange Tablare werden 45 mm neben einer Stütze gestossen (Stossleiste darunter, bei «Leisten» ein Pfosten vorne). Packer `packBoards` in `shared.js`.
+- Bretter nachführen: `node jumbo-preise.mjs --schreiben gon_fichte mood_fichte regalbau moebel_weiss` (Schlüssel «material LxB» in `jumbo-quellen.json`; der «Best Price» steht nur auf der Produktseite, nicht in der Suchliste).
 - Rückwände: `hdf3` = Oecoplan MDF Lack Line 1-seitig weiss 3 mm (ersetzt «HDF weiss»), `hf3` = Hartfaserplatte roh 3 mm, `ply6` = Oecoplan Sperrholz Pappel A/B 5 mm.
 
 ### Preise nachführen: `tools/jumbo-preise.mjs`
@@ -60,7 +62,11 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 
 - [x] **Preise aus dem Code nehmen:** erledigt – `preise.js`, Skript mit `--schreiben`, Snapshot mit eingefrorenen Preisen.
 - [x] **Gespeicherte Konfiguration überschreibt neue Katalogpreise:** erledigt (siehe «Preise»). Nebenbei: beim ersten Besuch standen Preis 55 und Format 2500 × 1250 statt der Birke-Werte im Formular.
-- [ ] **Ganze Bretter/Platten in festen Formaten** (siehe Ideen): entschieden, dass der Konfigurator Bretter in mehreren Breiten richtig rechnen soll – aber nur mit sinnvollen Produkten (z. B. keine OSB-Platten mit Nut und Feder). Zuerst gemeinsam entwerfen.
+- [x] **Ganze Bretter in festen Formaten:** erledigt fürs Reduit (Spec `docs/superpowers/specs/2026-09-25-feste-formate-design.md`). Offen: Sideboard mit Brettern, Längsschnitte (`laengs:true` pro Produkt), Mood Eiche; go/on 3-Schicht hat noch keine Skript-Quelle (Suche findet sie nicht, URLs von Hand in `jumbo-quellen.json` eintragen).
+- [ ] **Stösse nach Brettpreis statt nach Stützen legen:** Heute kommt der Stoss neben die Stütze, die der gleichmässigen Teilung am nächsten liegt (`shelfJoints` in `reduit.js`). Das ergibt gültige Stücke, aber nicht immer die günstigsten Bretter. Beispiel: 2400 mm Wand, go/on, Wandschienen → Stücke 1242 + 1152 mm → Bretter 2000 + 1200 = CHF 33.00 pro Tablar. Mit dem Stoss so, dass beide Stücke ≤ 1200 bleiben, wären es 2 × 1200 = CHF 25.00 (bei 5 Tablaren CHF 40 weniger). Idee: alle gültigen Stossstellen (Stützen + 45 mm) durchprobieren und die mit den kleinsten Brettkosten wählen (`packBoards` pro Variante rechnen); bei Gleichstand die gleichmässigere. Wenn keine Stütze passt, eine Stütze an der günstigsten Stelle dazunehmen.
+- [ ] **Spannweitenwarnung bei «Leisten» mit Stosspfosten rechnen:** Bei ganzen Brettern kommt an jeden Stoss ein Pfosten vorne, die Warnung rechnet aber mit der ganzen Tablarlänge (`longest` in `SUPPORTS.battens`, `reduit.js`). Beispiel: 2400 mm Wand, go/on → «Tablare hinten (2394 mm) liegen vorne frei», tatsächlich frei sind je rund 1200 mm. Hier bleibt die Warnung trotzdem berechtigt (Richtwert go/on 18 mm: 600 mm). Kosten spart der Fix nur, wo die Felder zwischen Wand und Pfosten unter den Richtwert fallen: Dann entfällt eine Warnung, die sonst zu Wandschienen rät (Beispiel oben: Kaufteile CHF 415 statt 24). Idee: freie Feldlängen zwischen Wand, freien Enden und Stosspfosten messen und die längste melden; optional statt der Warnung zusätzliche Pfosten vorschlagen (wie beim Pfostenrahmen).
+- [ ] **Tiefe nach der Seitenbegrenzung besser verteilen:** Sind die Seitenregale zu tief für die Raumbreite, werden beide anteilig gekürzt und danach auf eine Brettbreite abgerundet (`normReduit`, `reduit.js`). Beispiel: go/on, U, Raumbreite 1000, Seiten 400/400 → 350/350 → 200/200, obwohl 400 + 200 in die erlaubten 700 mm passen würden. Das kostet kein Geld, sondern Stauraum (400/200 ist sogar etwas teurer, aber eine Seite doppelt so tief). Idee: bei Brett-Material die Kombination aus Brettbreiten suchen, die die erlaubte Summe möglichst ausschöpft und den gewünschten Tiefen am nächsten liegt; Hinweis nennt, welche Seite wie tief wird.
+- [ ] Notiz am Tablarstück lautet «am Stoss auf der Stossleiste» statt wie in der Spec «gestossen über Schiene/Winkel/Pfosten».
   - Sicher dabei: **go/on Leimholzbrett Fichte** 18 mm (200/400 × 1200/2000).
   - Vorschlag, noch offen: Regalbauplatte weiss 16 mm (1150 × 200…600, Kanten beschichtet), Mood Eiche 18 mm 2000 × 600 (Sideboard-Tiefe, ≈ 76 statt 109/m²), evtl. Mood Fichte A 18 mm. Schaltafel ist schon ein festes Format und gehört ins neue Modell. Nicht: OSB mini, Vielzweckplatte.
   - Reihenfolge: zuerst Preise in die Datendatei auslagern, dann die festen Formate dort mit erfassen.
@@ -70,8 +76,6 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 
 ## Ideen (noch nicht entschieden)
 
-- **Günstige ganze Platten** (Jumbo «Holzplatten», nach Preis sortiert, 25.09.2026, CHF/m² aus Stückpreis): Regalbauplatte weiss 16 mm 1150 × 200…600 ≈ 30–36 (Kanten schon beschichtet), Mood Leimholz Fichte A 18 mm 800…2500 × 200…600 ≈ 44–48 (Zuschnitt Fichte B: 59.95), Mood Eiche 18 mm 2000 × 600 ≈ 76 (Zuschnitt B/C: 109), Vielzweckplatte 1500 × 500 × 20 ≈ 22, OSB mini 1220 × 610 × 15 ≈ 11. Go/on-Fichtenbretter online ohne Preis.
-- **Leimholzbrett Fichte in Standardbreiten** als eigenes Material. Jumbo-Preise 18 mm: 2000 × 400 = 20.50, 1200 × 400 = 12.50, 2000 × 200 = 10.20, 1200 × 200 = 5.60 → ca. **CHF 26/m²** statt 60 im Zuschnitt. Für Reduit-Tablare mit 200/400 mm Tiefe viel günstiger. Der Konfigurator müsste Tablare aus ganzen Brettern rechnen (Länge ablängen, Breite = Brettbreite).
 - **Materialauswahl mit Filter** (Optik wählen, dann passende Platten; beim Sideboard die rustikalen ausblenden): besprochen, vorerst verworfen – die nach Preis sortierte Liste reicht.
 - **Maserung pro Bauteil wählbar**: verworfen; die Richtung wird automatisch festgelegt und in der Materialliste ausgewiesen.
 

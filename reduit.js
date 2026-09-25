@@ -17,6 +17,10 @@ function normReduit(c0){
   num('doorW', 600, 1200);
   if (c.doorW > c.rw - 100) { c.doorW = c.rw - 100; warn.push(`Türbreite auf ${c.doorW} mm verkleinert – neben der Tür braucht es mindestens 50 mm Wand pro Seite.`); }
   for (const k of ['dBack', 'dLeft', 'dRight']) num(k, 150, 600);
+  // Ganze Bretter (nur ablängen): Tiefe = Brettbreite. Jetzt aufrunden, nach den Begrenzungen unten abrunden.
+  const BM = MATS[c.mat] && MATS[c.mat].boards ? MATS[c.mat] : null;
+  const want = { dBack:c.dBack, dLeft:c.dLeft, dRight:c.dRight };
+  if (BM) for (const k of ['dBack', 'dLeft', 'dRight']) { const B = BM.widths.find(w => w >= c[k]); c[k] = B == null ? BM.widths[BM.widths.length - 1] : B; }
   num('nShelves', 1, 8); num('gapBottom', 0, 600); num('gapTop', 100, 800);
   for (const k of ['nicheLW', 'nicheRW']) num(k, 300, 1000);
   for (const k of ['nicheLH', 'nicheRH']) num(k, 600, 1800);
@@ -42,6 +46,16 @@ function normReduit(c0){
   if (c.dBack > c.rd - 300) { c.dBack = Math.max(150, c.rd - 300); warn.push(`Das hintere Regal ist zu tief für ${c.rd} mm Raumtiefe – auf ${c.dBack} mm begrenzt.`); }
   // Tablare brauchen Höhe
   if (c.rh - c.gapTop - c.gapBottom < 300) { c.gapTop = Math.max(100, c.rh - c.gapBottom - 300); warn.push(`Abstand zur Decke auf ${c.gapTop} mm reduziert, damit die Tablare Platz haben.`); }
+  if (BM) {
+    const moved = [];
+    for (const [k, side, on] of [['dBack', 'hinten', true], ['dLeft', 'links', hasL], ['dRight', 'rechts', hasR]]) {
+      // Passt keine Brettbreite in die Begrenzung, bleibt die begrenzte Tiefe (die Teile melden dann «passt auf kein Brett»).
+      const B = [...BM.widths].reverse().find(w => w <= c[k]);
+      if (B != null) c[k] = B;
+      if (on && B != null && c[k] !== want[k]) moved.push(`${side} ${c[k]} mm`);
+    }
+    if (moved.length) warn.push(`Tiefe ${joinDe(moved)} gesetzt (Brettbreite ${BM.name}: ${BM.widths.join(', ')} mm).`);
+  }
   if (!hasL) c.nicheL = false;
   if (!hasR) c.nicheR = false;
   return { cfg: c, warn };
@@ -120,7 +134,12 @@ const SPAN = {
   schaltafel:{ 27:1000 },
   osb:       { 12:450, 15:550, 18:650, 22:800 },
   dreischicht:{ 19:650, 27:950 },
-  dekorspan: { 16:400, 19:500 }
+  dekorspan: { 16:400, 19:500 },
+  gon_fichte:{ 18:600 },
+  gon_3s:    { 19:650 },
+  mood_fichte:{ 18:600 },
+  regalbau:  { 16:400 },
+  moebel_weiss:{ 18:470 }
 };
 function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
 
@@ -215,13 +234,14 @@ function moduleSplit(len, max, t){
 
 /* ---------- Bauarten (eingebaut) ---------- */
 function addShelf(ctx, seg, p, note){
+  if (p.ends.includes('joint')) note += ', am Stoss auf der Stossleiste';
   ctx.add('Tablar', p.b - p.a, seg.depth - 3, ctx.t, ctx.gMain, note, 'korpus',
     ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y, y1:p.y + ctx.t, v0:3, v1:seg.depth }, 'y', 'u', ctx.fin, [0, 0, 200]));
 }
 // Eckleiste unter dem Stoss zum hinteren Regal.
 function addCornerBatten(ctx, seg, p){
-  ctx.add('Eckleiste', seg.depth - 3, 40, ctx.t, ctx.gMain, 'unter dem Eckstoss, an beide Tablare geschraubt', 'korpus',
-    ctx.box(seg, { u0:p.a - 20, u1:p.a + 20, y0:p.y - ctx.t, y1:p.y, v0:3, v1:seg.depth }, 'y', 'v', ctx.fin, [0, -60, 0]));
+  addStrip(ctx, 'Eckleiste', seg.depth - 3, 'unter dem Eckstoss, an beide Tablare geschraubt',
+    ctx.box(seg, { u0:p.a - 20, u1:p.a + 20, y0:p.y - ctx.t, y1:p.y, v0:3, v1:seg.depth }, 'y', 'v', ctx.stripFin, [0, -60, 0]));
   ctx.buy('screw35', 4, 'Eckleisten');
 }
 // Kantholz vorne; at = linke Kante entlang u.
@@ -258,19 +278,75 @@ function extraWarn(ctx, seg, what){
   groupWarn(ctx, 'extra|' + what, SIDE_NAME[seg.id], p => `Spannweite ${p} ≥ ${ctx.max} mm – ${what} eingeplant.`);
 }
 
+// 40er-Leiste aus dem Plattenmaterial; bei ganzen Brettern (nur ablängen, keine Streifen) eine Dachlatte 24 × 48.
+function addStrip(ctx, name, L, note, box){
+  if (ctx.boards) ctx.add(name, L, 48, 24, ctx.gSolid, `${note}, aus Dachlatte 24 × 48`, 'solid', box, BUY.latte.price);
+  else ctx.add(name, L, 40, ctx.t, ctx.gMain, note, 'korpus', box);
+}
+
+/* ---------- Stösse (ganze Bretter) ---------- */
+// Stoss 45 mm neben einer Stütze: ein Stück liegt auf der Stütze, das andere hängt über die Stossleiste daran.
+const JOINT_OFF = 45;
+// Stossstellen für ein Tablar a..b: so wenige, möglichst gleich lange Stücke ≤ Lmax; jeder Stoss auf dem nächstgelegenen Kandidaten
+// (cands = Stütze + JOINT_OFF), bei dem der Rest noch in die übrigen Stücke passt. added = Stösse ohne Stütze (dort kommt eine dazu).
+function shelfJoints(a, b, Lmax, cands){
+  const len = b - a;
+  if (!(len > Lmax)) return { cuts:[], added:[] };
+  const k = Math.ceil(len / Lmax), cuts = [], added = [];
+  let prev = a;
+  for (let i = 1; i < k; i++) {
+    const ideal = a + len * i / k, rest = k - i;
+    const ok = cands.filter(u => u > prev && u - prev <= Lmax && b - u <= rest * Lmax);
+    if (ok.length) { prev = ok.reduce((x, y) => Math.abs(y - ideal) < Math.abs(x - ideal) ? y : x); cuts.push(prev); }
+    else { prev = r0(Math.min(ideal, prev + Lmax)); cuts.push(prev); added.push(prev); }
+  }
+  return { cuts, added };
+}
+// Tablar p in Stücke teilen (nur bei ganzen Brettern). supports = Stützen-Mitten entlang u. Legt die Stossleisten an;
+// v1 = vorderes Ende der Stossleiste (vor Pfosten und Querlatten zurück).
+function splitShelf(ctx, seg, p, supports, v1 = seg.depth - 50){
+  const { cuts, added } = shelfJoints(p.a, p.b, ctx.lmax(seg), supports.map(u => u + JOINT_OFF));
+  if (!cuts.length) return { pieces:[p], supports:[] };
+  const edges = [p.a, ...cuts, p.b];
+  const pieces = edges.slice(1).map((b, i) => ({ ...p, a:edges[i], b, ends:[i === 0 ? p.ends[0] : 'joint', i === cuts.length ? p.ends[1] : 'joint'] }));
+  for (const u of cuts) {
+    ctx.add('Stossleiste', v1 - 30, 48, 24, ctx.gSolid, 'unter dem Tablarstoss, an beide Stücke geschraubt', 'solid',
+      ctx.box(seg, { u0:u - 24, u1:u + 24, y0:p.y - 24, y1:p.y, v0:30, v1 }, 'y', 'v', SOLID_FIN, [0, -60, 0]), BUY.latte.price);
+    ctx.buy('screw35', 4, 'Stossleisten');
+  }
+  return { pieces, supports: added.map(u => u - JOINT_OFF) };
+}
+// Alle Tablare eines Segments teilen; gibt die Stücke und alle zusätzlichen Stützen (sortiert, eindeutig) zurück.
+function splitShelves(ctx, seg, shelves, supports, v1){
+  if (!ctx.boards) return { pieces:shelves, supports:[] };
+  const pieces = [], more = [];
+  for (const p of shelves) { const s = splitShelf(ctx, seg, p, supports, v1); pieces.push(...s.pieces); more.push(...s.supports); }
+  return { pieces, supports:[...new Set(more.map(r0))].sort((x, y) => x - y) };
+}
+
 const SUPPORTS = {
   battens(ctx, seg, shelves){
     const t = ctx.t;
+    const split = splitShelves(ctx, seg, shelves, []);
+    for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Leisten');
+    const jointPosts = new Map();
+    for (const q of split.pieces) if (q.ends[1] === 'joint') {
+      const u = r0(q.b - JOINT_OFF - 22), cur = jointPosts.get(u) || { h:0, n:0 };
+      jointPosts.set(u, { h: Math.max(cur.h, q.y + ctx.t), n: cur.n + 2 });
+    }
+    for (const [u, { h, n }] of jointPosts) {
+      addPost(ctx, seg, u, h, 'Stütze vorne unter dem Tablarstoss, Tablare mit Winkeln verschraubt');
+      ctx.buy('angle40', n, 'Tablare an die Stütze beim Stoss');
+    }
     for (const p of shelves) {
-      addShelf(ctx, seg, p, 'liegt auf Leisten');
-      ctx.add('Leiste', p.b - p.a, 40, t, ctx.gMain, 'Wandleiste, alle 40 cm an die Wand', 'korpus',
-        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 40, y1:p.y, v0:0, v1:t }, 'v', 'u', ctx.fin, [0, -40, 0]));
+      addStrip(ctx, 'Leiste', p.b - p.a, 'Wandleiste, alle 40 cm an die Wand',
+        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 40, y1:p.y, v0:0, v1:t }, 'v', 'u', ctx.stripFin, [0, -40, 0]));
       ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
       for (const e of [0, 1]) {
         if (p.ends[e] !== 'wall') continue;
         const u = e === 0 ? p.a - 3 : p.b + 3 - t;
-        ctx.add('Leiste', seg.depth - 20 - t, 40, t, ctx.gMain, 'Endleiste an der Stirnwand', 'korpus',
-          ctx.box(seg, { u0:u, u1:u + t, y0:p.y - 40, y1:p.y, v0:t, v1:seg.depth - 20 }, 'u', 'v', ctx.fin, [0, -40, 0]));
+        addStrip(ctx, 'Leiste', seg.depth - 20 - t, 'Endleiste an der Stirnwand',
+          ctx.box(seg, { u0:u, u1:u + t, y0:p.y - 40, y1:p.y, v0:t, v1:seg.depth - 20 }, 'u', 'v', ctx.stripFin, [0, -40, 0]));
         ctx.fix += 2;
       }
       if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
@@ -282,13 +358,16 @@ const SUPPORTS = {
 
   rails(ctx, seg, shelves){
     const n = pieces(seg.u1 - seg.u0 - 100, ctx.max) + 1;
-    const us = spread(seg.u0 + 50, seg.u1 - 50, n).map(r0);
+    let us = spread(seg.u0 + 50, seg.u1 - 50, n).map(r0);
+    const split = splitShelves(ctx, seg, shelves, us);
+    us = [...new Set([...us, ...split.supports])].sort((x, y) => x - y);
+    const list = split.pieces;
     const kl = [...KONSOLE_LENS].reverse().find(l => l <= seg.depth - 10) || KONSOLE_LENS[0];
     if (kl > seg.depth - 10) ctx.warn.push(`Die kürzeste Konsole (${kl} mm) steht bei ${seg.depth} mm tiefen Tablaren ${SIDE_NAME[seg.id]} vorne vor – Tablare tiefer machen oder Tablarwinkel wählen.`);
-    for (const p of shelves) addShelf(ctx, seg, p, 'liegt auf Konsolen, von unten verschraubt');
+    for (const p of list) addShelf(ctx, seg, p, 'liegt auf Konsolen, von unten verschraubt');
     let konsolen = 0;
     for (const u of us) {
-      const on = shelves.filter(p => u >= p.a + 20 && u <= p.b - 20);
+      const on = list.filter(p => u >= p.a + 20 && u <= p.b - 20);
       if (!on.length) continue;
       const y0 = Math.min(...on.map(p => p.y)) - 60, y1 = Math.max(...on.map(p => p.y)) + 40;
       const need = y1 - y0;
@@ -305,7 +384,7 @@ const SUPPORTS = {
     }
     ctx.buy('konsole' + kl, konsolen, 'eine pro Tablar und Schiene');
     ctx.buy('screw35', konsolen * 2, 'Tablare auf die Konsolen');
-    for (const p of shelves) if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
+    for (const p of list) if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     freeEndPosts(ctx, seg, shelves);
     if (n > 2) extraWarn(ctx, seg, 'zusätzliche Schienen');
   },
@@ -316,10 +395,12 @@ const SUPPORTS = {
     if (size < want) ctx.warn.push(`Für ${seg.depth} mm tiefe Tablare ${SIDE_NAME[seg.id]} sind Tablarwinkel knapp (grösster: ${size} mm). Wandschienen oder Pfostenrahmen tragen tiefe Tablare besser.`);
     let count = 0, extra = false;
     for (const p of shelves) {
-      addShelf(ctx, seg, p, 'liegt auf Tablarwinkeln');
       const n = pieces(p.b - p.a - 120, ctx.max) + 1;
       if (n > 2) extra = true;
-      for (const u of spread(p.a + 60, p.b - 60, n)) {
+      const base = spread(p.a + 60, p.b - 60, n).map(r0);
+      const split = splitShelves(ctx, seg, [p], base);
+      for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Tablarwinkeln');
+      for (const u of [...base, ...split.supports]) {
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 10, u1:u + 10, y0:p.y - size * 0.8, y1:p.y, v0:0, v1:4 }, 'v', 'y', null) });
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 10, u1:u + 10, y0:p.y - 4, y1:p.y, v0:4, v1:size }, 'y', 'v', null, [0, 0, 120]) });
         count++;
@@ -361,22 +442,6 @@ const SUPPORTS = {
 
   posts(ctx, seg, shelves){
     const top = Math.max(...ctx.levels) + ctx.t;
-    for (const p of shelves) {
-      addShelf(ctx, seg, p, 'liegt auf Latten, vorne auf der Querlatte');
-      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Wandlatte, alle 40 cm an die Wand', 'solid',
-        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:0, v1:24 }, 'v', 'u', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
-      ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
-      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Querlatte vorne, an die Pfosten geschraubt', 'solid',
-        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:seg.depth - 24, v1:seg.depth }, 'v', 'u', SOLID_FIN, [0, -40, 60]), BUY.latte.price);
-      for (const e of [0, 1]) {
-        if (p.ends[e] !== 'wall') continue;
-        const u = e === 0 ? p.a - 3 : p.b + 3 - 24;
-        ctx.add('Latte 24 × 48', seg.depth - 48, 48, 24, ctx.gSolid, 'Endlatte an der Stirnwand', 'solid',
-          ctx.box(seg, { u0:u, u1:u + 24, y0:p.y - 48, y1:p.y, v0:24, v1:seg.depth - 24 }, 'u', 'v', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
-        ctx.fix += 2;
-      }
-      if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
-    }
     // Stützpunkte entlang der Vorderkante: Wand-/Eck-Enden tragen über die Latten, freie Enden und die Nischenkante brauchen Pfosten.
     const edge = seg.niche ? (seg.niche.at === 'end' ? seg.u1 - seg.niche.w : seg.u0 + seg.niche.w) : null;
     const pts = [seg.u0, seg.u1];
@@ -391,6 +456,25 @@ const SUPPORTS = {
       if (isNiche) { if (q - p >= ctx.max) spanWarn(ctx, seg, q - p, `liegen über der Nische vorne frei – ab ca. ${ctx.max} mm biegen sie sich durch. Nische schmaler machen.`); continue; }
       const k = Math.floor((q - p) / ctx.max);
       for (let j = 1; j <= k; j++) posts.push(r0(p + (q - p) * j / (k + 1) - 22));
+    }
+    // Pfosten stehen hinter der Querlatte (v bis Tiefe − 24, 45 tief): Stossleiste davor enden lassen.
+    const split = splitShelves(ctx, seg, shelves, posts.map(u => u + 22), seg.depth - 24 - 45 - 5);
+    for (const s of split.supports) posts.push(r0(s - 22));
+    for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Latten, vorne auf der Querlatte');
+    for (const p of shelves) {
+      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Wandlatte, alle 40 cm an die Wand', 'solid',
+        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:0, v1:24 }, 'v', 'u', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
+      ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
+      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Querlatte vorne, an die Pfosten geschraubt', 'solid',
+        ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:seg.depth - 24, v1:seg.depth }, 'v', 'u', SOLID_FIN, [0, -40, 60]), BUY.latte.price);
+      for (const e of [0, 1]) {
+        if (p.ends[e] !== 'wall') continue;
+        const u = e === 0 ? p.a - 3 : p.b + 3 - 24;
+        ctx.add('Latte 24 × 48', seg.depth - 48, 48, 24, ctx.gSolid, 'Endlatte an der Stirnwand', 'solid',
+          ctx.box(seg, { u0:u, u1:u + 24, y0:p.y - 48, y1:p.y, v0:24, v1:seg.depth - 24 }, 'u', 'v', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
+        ctx.fix += 2;
+      }
+      if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     }
     const inner = seg.depth - 24;
     for (const u of posts) addPost(ctx, seg, u, top, 'Pfosten, vom Boden bis zum obersten Tablar', inner);
@@ -450,6 +534,7 @@ function computeReduit(c0){
   warn.push(...lay.warn);
   const W = c.rw, D = c.rd, H = c.rh;
   const M = MATS[c.mat] || MATS.birke, t = c.t;
+  const BM = M.boards ? M : null;
   const free = c.build === 'free';
   const Bk = free ? BACKS[c.back] : null, bt = Bk ? Bk.t : 0;
   const levels = shelfLevels(c.nShelves, c.gapBottom, c.gapTop, H);
@@ -461,8 +546,15 @@ function computeReduit(c0){
   const raw = [], boxes = [], extras = [], buys = new Map();
   const ctx = {
     c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.short, warn, extras,
+    boards:!!BM, bm:BM, stripFin: BM ? SOLID_FIN : fin,
+    lmax(seg){
+      if (!BM) return Infinity;
+      const B = boardWidthFor(BM.widths, seg.depth - 3);
+      return B == null ? Infinity : Math.max(...BM.boards.filter(f => f.B === B).map(f => f.L));
+    },
     fix:0, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
     add(name, L, B, th, group, note, kind, box, pm){
+      if (BM && kind === 'korpus') { const w = boardWidthFor(BM.widths, B); if (w != null) B = w; }   // ganzes Brett: Teilbreite = Brettbreite
       const key = [name, r0(L), r0(B), th, group, note].join('|');
       raw.push({ key, name, L:r0(L), B:r0(B), t:th, group, note, kind, pm });
       if (box) { box.key = key; boxes.push(box); }
@@ -496,9 +588,21 @@ function computeReduit(c0){
   for (const r of rows) for (let q = 0; q < r.qty; q++) { if (r.kind === 'back') backItems.push(r); else if (r.kind !== 'solid') mainItems.push(r); }
   const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100), kerf = clamp(c.kerf, 0, 8);
   const rotate = !(c.grain && M.grain);
-  groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate, ...pack(mainItems, sheetL, sheetB, kerf, 10, rotate) });
+  if (BM) {
+    const r = packBoards(mainItems, BM.boards, kerf);
+    groups.push({ label: gMain, boards:true, sheet: BM.sheet, price:null, rotate:false, ...r });
+    for (const u of r.unplaced) {
+      const B = boardWidthFor(BM.widths, u.B);
+      if (B == null) { warn.push(`Teil ${u.pos} (${u.name}, ${u.L} × ${u.B} mm) passt auf kein Brett – Breiten: ${BM.widths.join(', ')} mm.`); continue; }
+      const Lmax = Math.max(...BM.boards.filter(f => f.B === B).map(f => f.L));
+      const alt = Object.values(MATS).filter(X => X.boards && X !== BM && X.boards.some(f => f.B >= u.B && f.B <= u.B + BOARD_SLACK && f.L >= u.L)).map(X => X.name);
+      warn.push(`Teil ${u.pos} (${u.name}, ${u.L} mm) ist länger als das längste Brett (${Lmax} mm) – ${alt.length ? `ein Brett-Material mit längeren Brettern (${joinDe(alt)}) oder ` : ''}ein Plattenmaterial wählen.`);
+    }
+  } else {
+    groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate, ...pack(mainItems, sheetL, sheetB, kerf, 10, rotate) });
+  }
   if (Bk && backItems.length) groups.push({ label: gBack, sheet: Bk.sheet, price: Bk.price, rotate: true, ...pack(backItems, Bk.sheet[0], Bk.sheet[1], kerf, 10, true) });
-  for (const g of groups) for (const u of g.unplaced) warn.push(`Teil ${u.pos} (${u.name}, ${u.L} × ${u.B} mm) passt nicht auf die Platte ${g.sheet[0]} × ${g.sheet[1]} mm. Grösseres Plattenformat eintragen${g.rotate ? '' : ' oder Maserung freigeben'}.`);
+  for (const g of groups) if (!g.boards) for (const u of g.unplaced) warn.push(`Teil ${u.pos} (${u.name}, ${u.L} × ${u.B} mm) passt nicht auf die Platte ${g.sheet[0]} × ${g.sheet[1]} mm. Grösseres Plattenformat eintragen${g.rotate ? '' : ' oder Maserung freigeben'}.`);
 
   // Beschläge
   const hw = [];
@@ -515,6 +619,12 @@ function computeReduit(c0){
   if (drywall && ctx.fix) warn.push('Gipskarton trägt wenig: Leisten, Schienen und Winkel wenn möglich in die Ständer schrauben (meist alle 60 cm) und Hohlraumdübel verwenden. Für schwere Lasten besser selbststehend bauen.');
 
   const buyCost = hw.reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
+  // Ganze Bretter als erste Zeilen der Einkaufsliste (Kosten laufen über «Holz», nicht über Kaufteile).
+  if (BM) {
+    const per = new Map();
+    for (const s of groups[0].sheets) { const k = `${s.L}×${s.B}`; const e = per.get(k) || { n:0, s }; e.n++; per.set(k, e); }
+    hw.unshift(...[...per.values()].map(({ n, s }) => [n, `${BM.name} ${s.L} × ${s.B} × ${t} mm`, BM.est ? 'ganzes Brett, selbst ablängen · Preis geschätzt' : 'ganzes Brett, selbst ablängen', s.price]));
+  }
   const solidCost = rows.filter(r => r.kind === 'solid').reduce((a, r) => a + r.qty * r.L / 1000 * (r.pm || 0), 0);
 
   // Oberfläche
@@ -530,6 +640,7 @@ function computeReduit(c0){
 
   // Werkzeug
   const tools = new Set(['Akkuschrauber mit Bit-Set', 'Doppelmeter und Bleistift', 'Wasserwaage (mind. 60 cm)']);
+  if (BM) tools.add('Kappsäge oder Handkreissäge mit Führungsschiene zum Ablängen');
   if (!free || ctx.fix) {
     tools.add(drywall ? 'Bohrmaschine, Bohrer passend zu den Hohlraumdübeln' : 'Schlagbohrmaschine mit Steinbohrer Ø 6 mm');
     tools.add('Leitungssucher (Strom und Wasser in der Wand)');
@@ -541,7 +652,7 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
+  const steps = buildReduitSteps({ boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
 
   // Raumwände und Nischen für die 3D-Ansicht
   const WT = 100, doorH = Math.min(2000, H - 150);
@@ -568,10 +679,11 @@ function computeReduit(c0){
 
 /* ---------- Bauablauf ---------- */
 function buildReduitSteps(o){
-  const { c, free, Bk, drywall, hasSolid, hasFreeEnds, hasCorner } = o;
+  const { c, free, Bk, drywall, hasSolid, hasFreeEnds, hasCorner, hasJoints } = o;
   const st = [];
   st.push(['Raum ausmessen und Wände prüfen', `Breite und Tiefe auf drei Höhen messen – alte Wände sind selten gerade, rechne mit dem kleinsten Mass. Mit dem Leitungssucher Strom- und Wasserleitungen markieren.${drywall ? ' Bei Gipskarton die Ständer suchen (meist alle 60 cm) und anzeichnen.' : ''}`, 'Ein Foto mit Doppelmeter an jeder Wand hilft später beim Zuschnitt.']);
-  st.push(['Zuschnitt organisieren', `Kopier die Materialliste und lass die Platten im Baumarkt zuschneiden.${hasSolid ? ' Kanthölzer und Latten gibt es in Standardlängen – selbst mit der Säge ablängen.' : ''}`, 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
+  if (o.boards) st.push(['Bretter einkaufen und ablängen', `Die ganzen Bretter stehen in der Einkaufsliste (Beschläge & Kaufteile). Zuhause mit Kapp- oder Handkreissäge auf die Längen der Materialliste ablängen – die Breite bleibt, wie sie ist.${hasSolid ? ' Kanthölzer und Latten ebenso auf Länge sägen.' : ''}`, 'Zuerst die längsten Teile anzeichnen, dann die kurzen aus den Resten.']);
+  else st.push(['Zuschnitt organisieren', `Kopier die Materialliste und lass die Platten im Baumarkt zuschneiden.${hasSolid ? ' Kanthölzer und Latten gibt es in Standardlängen – selbst mit der Säge ablängen.' : ''}`, 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
   st.push(['Teile beschriften und schleifen', 'Positionsbuchstabe auf die Unterseite, Kanten mit Körnung 120 und 180 schleifen und leicht brechen.', null]);
   if (free) {
     st.push(['Module bauen', `Pro Modul Boden und Deckel zwischen die Seiten setzen und mit der gewählten Verbindung (${JOINTS[c.joint].name}) verbinden. Zuerst trocken zusammenstecken, jede Ecke mit dem Winkel prüfen.`, 'Zu zweit geht es deutlich einfacher.']);
@@ -591,6 +703,7 @@ function buildReduitSteps(o){
     if (hasFreeEnds) st.push(['Stützen an den freien Enden', 'Kanthölzer an die freien Tablar-Enden stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel an die Stütze schrauben.', null]);
     st.push(['Tablare auflegen', c.sys === 'cheeks' ? 'Bodenträger stecken und die Tablare auflegen.' : 'Tablare auflegen und von unten mit Schrauben 4 × 35 an Leisten, Konsolen oder Winkeln fixieren.', null]);
     if (hasCorner) st.push(['Eckstösse verbinden', 'Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben in jedes Tablar.', null]);
+    if (hasJoints) st.push(['Stösse verbinden', 'Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben 4 × 35 in beide Stücke schrauben.', 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
   }
   if (MATS[c.mat] && MATS[c.mat].coated) st.push(['Kanten schützen', c.mat === 'dekorspan' ? 'Sichtbare Kanten mit Kantenband bügeln, Überstand mit dem Cutter abnehmen.' : 'Schnittkanten mit Lack oder Öl streichen, damit sie keine Feuchtigkeit ziehen.', null]);
   else st.push([c.mat === 'mdf' ? 'Lackieren' : 'Oberfläche ölen', c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren – am besten vor der Montage.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal – am einfachsten vor der Montage.', null]);
@@ -599,5 +712,5 @@ function buildReduitSteps(o){
 
 if (typeof module !== 'undefined') module.exports = {
   REDUIT_DEFAULTS, normReduit, shelfLevels, layoutReduit, toWorld, boxOf,
-  SPAN, BUY, SYS, maxSpan, cheekPositions, moduleSplit, computeReduit
+  SPAN, BUY, SYS, maxSpan, cheekPositions, moduleSplit, computeReduit, shelfJoints
 };
