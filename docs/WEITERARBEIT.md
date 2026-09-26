@@ -23,13 +23,19 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
 | `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
 | `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
-| `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern) |
+| `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern), Entwürfe pro Typ (`entwuerfeLaden`, `entwurfSetzen`), `kostenGesamt`, `geaendert`, `sortiere`, `ortAusHash` |
+| `einkauf.js` | Einkaufsliste aus dem Ergebnis: Zuschnitt je Platte, ganze Bretter nach Format, Latten, Beschläge/Kaufteile, Oberfläche, Werkzeug; Haken hängen am Zeileninhalt (`hakenFiltern`) |
 | `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau (mit eingefrorenen Preisen `test/fixtures/preise.json`) |
 | `test/preise.test.js` | Form und Vollständigkeit von `preise.js` |
-| `test/reduit.test.js`, `test/shared.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise |
+| `test/reduit.test.js`, `test/shared.test.js`, `test/einkauf.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise; Einkaufsliste und Haken |
 | `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json`, `tools/preise-datei.cjs` | Jumbo-Preise lesen, mit `preise.js` vergleichen und nachführen (siehe «Preise nachführen») |
 
 Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet, und die Fixture neu schreiben (siehe Commit `b424766`).
+
+## Orte und Speicher
+
+- Orte: `#entwerfen`, `#einkaufen`, `#bauen`, `#sammlung`. Handy: je eine Ansicht mit Leiste unten. Desktop: Einkaufen/Bauen als Reiter neben dem Entwurf (Hash per `replaceState`), Sammlung als eigene Ansicht. Spec: `docs/superpowers/specs/2026-09-26-ansichten-design.md`.
+- localStorage: `sideboard-werkbank-v2-entwuerfe` (ein Entwurf pro Typ; `sideboard-werkbank-v2` wird nur noch beim ersten Laden übernommen), `-sammlung`, `-aktiv` (geladene Variante), `-haken` (pro Typ), `-bau` (Unterreiter), `-sort`.
 
 ## Preise
 
