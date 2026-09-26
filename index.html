@@ -1813,7 +1813,7 @@ for (const m of document.querySelectorAll('.js-msg')) m.addEventListener('click'
 });
 $('#collList').addEventListener('change', ev => {
   const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
-  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); }
+  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); if (e.id === aktiv) renderVariante(); }
 });
 $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
