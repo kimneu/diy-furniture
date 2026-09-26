@@ -1628,6 +1628,15 @@ function geheZu(ort){
 window.addEventListener('hashchange', () => zeigeOrt(ortAusHash(location.hash)));
 narrow.addEventListener('change', () => zeigeOrt(ortAusHash(location.hash)));
 document.addEventListener('click', ev => {
+  const warnGo = ev.target.closest('.js-warnhint [data-go]');
+  if (warnGo && !narrow.matches) {
+    // Auf dem Desktop ist Entwerfen schon sichtbar: nur die Warnungen aufklappen, Hash/History unverändert lassen.
+    const box = $('#warnBox');
+    box.classList.add('open');
+    $('#warnHead').setAttribute('aria-expanded', 'true');
+    box.scrollIntoView({ block:'nearest' });
+    return;
+  }
   const go = ev.target.closest('[data-go], .mnav button');
   if (!go) return;
   geheZu(go.dataset.go || go.dataset.ort);
