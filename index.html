@@ -58,8 +58,19 @@ button,input,select{font:inherit;color:inherit}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
 .summary{grid-area:sum;display:grid;grid-auto-flow:column;grid-template-columns:auto auto minmax(0,1fr);grid-auto-columns:auto;gap:6px 28px;margin:0;min-width:0}
-.kindbar{grid-area:kind;width:260px}
-.kindbar label{padding-block:8px;font-size:14px;font-weight:600}
+.kindpick{grid-area:kind;justify-self:end}
+#bKind{font-size:15px}
+.wahl{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:18px;width:min(460px,calc(100% - 32px));box-shadow:var(--shadow)}
+.wahl::backdrop{background:rgba(10,20,24,.35)}
+.wahl h2{font-size:20px;margin-bottom:12px}
+.wahllist{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
+.wahllist li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
+.wahlbtn{all:unset;display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raise);cursor:pointer}
+.wahlbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wahlbtn[aria-current]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wahlbtn small{color:var(--muted);font-size:12.5px}
+.wahlbtn .zuletzt{font-family:var(--f-mono);color:var(--ink)}
+@media (max-width:920px){.kindpick{justify-self:start}}
 .hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
 .top{position:relative}
 .hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
@@ -401,7 +412,6 @@ body[data-ort="sammlung"] .layout{display:none}
   .mbtns{display:flex;gap:8px;flex:none}
   .hacts{display:none}
   .top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "kind" "sum"}
-  .kindbar{width:auto}
 }
 @media (max-width:640px){
   .top{gap:12px;padding-bottom:12px}
@@ -467,7 +477,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
       </div>
     </div>
-    <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
+    <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
     <dl class="summary" id="summary"></dl>
     <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
@@ -862,6 +872,14 @@ body[data-ort="sammlung"] .layout{display:none}
     <ul class="coll" id="collList"></ul>
   </section>
 </div>
+<dialog class="wahl" id="wahl" aria-labelledby="h-wahl">
+  <h2 id="h-wahl">Was baust du?</h2>
+  <ul class="wahllist">
+    <li><button type="button" class="wahlbtn" data-kind="sideboard"><b>Sideboard</b><small>Korpus mit Fächern, Türen und Füssen fürs Wohnzimmer</small><small class="zuletzt" data-zuletzt="sideboard"></small></button><button type="button" class="linkbtn" data-zufall="sideboard">Zufall</button></li>
+    <li><button type="button" class="wahlbtn" data-kind="reduit"><b>Reduit</b><small>Regal in einem kleinen Raum, eingebaut oder selbststehend</small><small class="zuletzt" data-zuletzt="reduit"></small></button><button type="button" class="linkbtn" data-zufall="reduit">Zufall</button></li>
+  </ul>
+  <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
+</dialog>
 <div class="mbar" id="mbar">
   <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
   <nav class="mnav" aria-label="Orte">
@@ -1037,6 +1055,7 @@ function render(){
     w.hidden = !R.warn.length;
     w.innerHTML = `${R.warn.length} Warnung${R.warn.length === 1 ? '' : 'en'} · <button type="button" class="linkbtn" data-go="entwerfen">Zum Entwurf</button>`;
   }
+  $('#kindName').textContent = reduit ? 'Reduit' : 'Sideboard';
   $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
@@ -1477,8 +1496,6 @@ function build3D(R){
 /* ---------- Ereignisse ---------- */
 function onInput(e){
   const el = e.target;
-  // Typwechsel: der Entwurf des alten Typs ist schon gespeichert (save() bei jeder Eingabe).
-  if (el.name === 'kind') { wechsleTyp(el.value); return; }
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
@@ -1494,7 +1511,6 @@ function onInput(e){
   syncVisibility(); render(); save();
 }
 form.addEventListener('input', onInput);
-$('#kindBar').addEventListener('input', onInput);
 form.addEventListener('change', e => {
   const el = e.target;
   if (el.type === 'number' && el.value !== '') {
@@ -1564,7 +1580,6 @@ const segRO = new ResizeObserver(es => { for (const e of es) placePill(e.target,
 const pillOnChange = e => { const seg = e.target.closest('.seg'); if (seg) placePill(seg, true); };
 for (const seg of document.querySelectorAll('.seg')) segRO.observe(seg);
 form.addEventListener('change', pillOnChange);
-$('#kindBar').addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
@@ -1674,6 +1689,51 @@ function flash(sel, html){
     clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
   }
 }
+
+/* ---------- Möbelwahl ---------- */
+// Beim ersten Besuch ohne Schliessen. Sonst legt Öffnen einen History-Eintrag an, damit Zurück den Dialog schliesst.
+const wahl = $('#wahl');
+let wahlErst = false;
+function oeffneWahl({ erst = false } = {}){
+  wahlErst = erst;
+  const aktuell = formData().kind;
+  for (const b of wahl.querySelectorAll('[data-kind]')) b.toggleAttribute('aria-current', !erst && b.dataset.kind === aktuell);
+  for (const z of wahl.querySelectorAll('[data-zuletzt]')) {
+    const d = !erst && entwuerfe && entwuerfe[z.dataset.zuletzt];
+    if (!d) { z.textContent = ''; continue; }
+    const info = sammlungEintrag(d, computeData(d)).info;
+    z.textContent = `zuletzt: ${info.masse} mm · ca. CHF ${Math.round(info.kosten / 5) * 5}`;
+  }
+  $('#wahlZu').hidden = erst;
+  $('#wahlColl').hidden = !coll.length;
+  if (!erst) history.pushState({ wahl:true }, '', location.hash || '#entwerfen');
+  wahl.showModal();
+}
+function schliesseWahl(){
+  if (!wahl.open) return;
+  if (history.state && history.state.wahl) history.back();   // popstate schliesst
+  else wahl.close();
+}
+window.addEventListener('popstate', () => { if (wahl.open && !(history.state && history.state.wahl)) wahl.close(); });
+wahl.addEventListener('cancel', ev => { ev.preventDefault(); if (!wahlErst) schliesseWahl(); });
+$('#bKind').addEventListener('click', () => oeffneWahl());
+$('#wahlZu').addEventListener('click', schliesseWahl);
+wahl.addEventListener('click', ev => {
+  const k = ev.target.closest('[data-kind]'), z = ev.target.closest('[data-zufall]'), s = ev.target.closest('#wahlColl');
+  if (!k && !z && !s) return;
+  if (k) wechsleTyp(k.dataset.kind);
+  if (z) {
+    const basis = entwuerfe[z.dataset.zufall] || { ...DEFAULTS, kind:z.dataset.zufall };
+    applyData(zufall(basis), { undo: !wahlErst });
+    if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
+  }
+  if (wahlErst) { wahlErst = false; wahl.close(); if (s) geheZu('sammlung'); return; }
+  // history.back() läuft asynchron: erst nach dem Zurück-Schritt zur Sammlung, sonst überholt der neue Hash ihn.
+  if (s && history.state && history.state.wahl) addEventListener('popstate', () => geheZu('sammlung'), { once:true });
+  schliesseWahl();
+  if (s && !wahl.open) geheZu('sammlung');
+});
+
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
 const SORT = STORE + '-sort', AKTIV = STORE + '-aktiv';
 let sortNach = 'datum';
@@ -1782,6 +1842,7 @@ render();
 save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
 zeigeOrt(ortAusHash(location.hash));
+if (erstBesuch) oeffneWahl({ erst:true });
 requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>
