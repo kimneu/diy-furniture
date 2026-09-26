@@ -141,10 +141,18 @@ function sammlungEintrag(d, R, now = new Date()){
   };
 }
 // Weicht der Entwurf von der geladenen Variante ab? Katalogwerte zählen nicht, Zahlen und Texte gelten als gleich.
+// price/sheetL/sheetB gelten trotz unterschiedlichem Wert als gleich, solange beide Seiten (unverändert)
+// ihrem eigenen Katalog folgen – sonst würde ein Materialpreis-Update in preise.js «geändert» auslösen.
+const KATALOGFELDER = ['price', 'sheetL', 'sheetB'];
+function folgtKatalog(d, k){ return d.katalog && String(d[k]) === String(d.katalog[k]); }
 function geaendert(a, b){
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   keys.delete('katalog');
-  for (const k of keys) if (String(a[k]) !== String(b[k])) return true;
+  for (const k of keys) {
+    if (String(a[k]) === String(b[k])) continue;
+    if (KATALOGFELDER.includes(k) && folgtKatalog(a, k) && folgtKatalog(b, k)) continue;
+    return true;
+  }
   return false;
 }
 // Sammlung in Anzeige-Reihenfolge: neueste zuerst (die Liste ist nach Speicherzeit geordnet) oder günstigste zuerst.

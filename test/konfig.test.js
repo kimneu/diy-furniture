@@ -111,6 +111,14 @@ test('geaendert: gleiche Werte (auch Zahl vs. Text) sind nicht geändert, katalo
   assert.strictEqual(K.geaendert(FORM, { ...FORM, neu:'x' }), true);
 });
 
+test('geaendert: Katalogwerte (price/sheetL/sheetB), die auf beiden Seiten dem eigenen Katalog folgen, gelten als gleich', () => {
+  const a = { ...FORM, price:'60', sheetL:'2500', sheetB:'1250', katalog:{ price:60, sheetL:2500, sheetB:1250 } };
+  const b = { ...FORM, price:'55', sheetL:'2500', sheetB:'1250', katalog:{ price:55, sheetL:2500, sheetB:1250 } };
+  assert.strictEqual(K.geaendert(a, b), false);
+  const bManuell = { ...b, price:'99' }; // b.price weicht von b.katalog.price ab: von Hand gesetzt
+  assert.strictEqual(K.geaendert(a, bManuell), true);
+});
+
 test('sortiere: Datum = neueste zuerst, Preis = günstigste zuerst, Original bleibt', () => {
   const c = [{ id:'a', info:{ kosten:300 } }, { id:'b', info:{ kosten:100 } }, { id:'c', info:{ kosten:200 } }];
   assert.deepStrictEqual(K.sortiere(c, 'datum').map(e => e.id), ['c', 'b', 'a']);
