@@ -75,6 +75,65 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   assert.ok(r.info.kosten > 0);
 });
 
+test('kostenGesamt = Holz im Zuschnitt + Latten + Kaufteile, gleich wie in der Sammlung', () => {
+  const R = K.computeData({ ...FORM, kind:'reduit' });
+  const { cut } = sheetCosts(R.groups);
+  assert.strictEqual(K.kostenGesamt(R), cut + R.solidCost + R.buyCost);
+  assert.ok(R.buyCost > 0);
+  assert.strictEqual(K.sammlungEintrag(FORM, K.computeData(FORM)).info.kosten, Math.round(K.kostenGesamt(K.computeData(FORM))));
+});
+
+test('Entwürfe: alter Einzelentwurf landet unter seinem Typ', () => {
+  const e = K.entwuerfeLaden(null, { ...FORM, kind:'reduit', rw:'1800' });
+  assert.strictEqual(e.kind, 'reduit');
+  assert.strictEqual(e.reduit.rw, '1800');
+  assert.strictEqual(e.sideboard, undefined);
+});
+
+test('Entwürfe: neuer Speicher hat Vorrang; ohne Entwurf null', () => {
+  const neu = { kind:'sideboard', sideboard:{ ...FORM } };
+  assert.strictEqual(K.entwuerfeLaden(neu, { ...FORM, kind:'reduit' }), neu);
+  assert.strictEqual(K.entwuerfeLaden(null, null), null);
+  assert.strictEqual(K.entwuerfeLaden({ kind:'reduit' }, null), null);
+});
+
+test('Entwürfe: Setzen ersetzt nur den Entwurf des eigenen Typs', () => {
+  let e = K.entwurfSetzen(null, { ...FORM, kind:'reduit', mat:'gon_fichte' });
+  e = K.entwurfSetzen(e, { ...FORM, kind:'sideboard', mat:'eiche' });
+  assert.strictEqual(e.kind, 'sideboard');
+  assert.strictEqual(e.reduit.mat, 'gon_fichte');
+  assert.strictEqual(e.sideboard.mat, 'eiche');
+});
+
+test('geaendert: gleiche Werte (auch Zahl vs. Text) sind nicht geändert, katalog zählt nicht', () => {
+  assert.strictEqual(K.geaendert({ ...FORM, katalog:{ price:1 } }, { ...FORM, w:1200, katalog:{ price:2 } }), false);
+  assert.strictEqual(K.geaendert(FORM, { ...FORM, w:'1300' }), true);
+  assert.strictEqual(K.geaendert(FORM, { ...FORM, neu:'x' }), true);
+});
+
+test('geaendert: Katalogwerte (price/sheetL/sheetB), die auf beiden Seiten dem eigenen Katalog folgen, gelten als gleich', () => {
+  const a = { ...FORM, price:'60', sheetL:'2500', sheetB:'1250', katalog:{ price:60, sheetL:2500, sheetB:1250 } };
+  const b = { ...FORM, price:'55', sheetL:'2500', sheetB:'1250', katalog:{ price:55, sheetL:2500, sheetB:1250 } };
+  assert.strictEqual(K.geaendert(a, b), false);
+  const bManuell = { ...b, price:'99' }; // b.price weicht von b.katalog.price ab: von Hand gesetzt
+  assert.strictEqual(K.geaendert(a, bManuell), true);
+});
+
+test('sortiere: Datum = neueste zuerst, Preis = günstigste zuerst, Original bleibt', () => {
+  const c = [{ id:'a', info:{ kosten:300 } }, { id:'b', info:{ kosten:100 } }, { id:'c', info:{ kosten:200 } }];
+  assert.deepStrictEqual(K.sortiere(c, 'datum').map(e => e.id), ['c', 'b', 'a']);
+  assert.deepStrictEqual(K.sortiere(c, 'preis').map(e => e.id), ['b', 'c', 'a']);
+  assert.deepStrictEqual(c.map(e => e.id), ['a', 'b', 'c']);
+});
+
+test('ortAusHash: bekannte Orte, sonst Entwerfen', () => {
+  assert.strictEqual(K.ortAusHash('#einkaufen'), 'einkaufen');
+  assert.strictEqual(K.ortAusHash('#sammlung'), 'sammlung');
+  assert.strictEqual(K.ortAusHash('bauen'), 'bauen');
+  assert.strictEqual(K.ortAusHash(''), 'entwerfen');
+  assert.strictEqual(K.ortAusHash('#tab-cut'), 'entwerfen');
+});
+
 test('snapBreite rastet auf die nächste Brettbreite, bei Gleichstand die breitere', () => {
   assert.strictEqual(K.snapBreite([200, 400], 335), 400);
   assert.strictEqual(K.snapBreite([200, 400], 290), 200);

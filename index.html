@@ -42,7 +42,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
 }
 *{box-sizing:border-box}
-body{background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
 .app{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:14px 56px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
 button,input,select{font:inherit;color:inherit}
@@ -58,10 +58,25 @@ button,input,select{font:inherit;color:inherit}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
 .summary{grid-area:sum;display:grid;grid-auto-flow:column;grid-template-columns:auto auto minmax(0,1fr);grid-auto-columns:auto;gap:6px 28px;margin:0;min-width:0}
-.kindbar{grid-area:kind;width:260px}
-.kindbar label{padding-block:8px;font-size:14px;font-weight:600}
+.kindpick{grid-area:kind;justify-self:end}
+#bKind{font-size:15px}
+.wahl{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:18px;width:min(460px,calc(100% - 32px));box-shadow:var(--shadow)}
+.wahl::backdrop{background:rgba(10,20,24,.35)}
+.wahl h2{font-size:20px;margin-bottom:12px}
+.wahllist{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
+.wahllist li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
+.wahlbtn{all:unset;display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raise);cursor:pointer}
+.wahlbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wahlbtn[aria-current]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wahlbtn small{color:var(--muted);font-size:12.5px}
+.wahlbtn .zuletzt{font-family:var(--f-mono);color:var(--ink)}
+@media (max-width:920px){.kindpick{justify-self:start}}
 .hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
-.hacts .copied{text-align:right;font-size:12.5px}
+.top{position:relative}
+.hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
+.hacts .copied:empty{display:none}
+.variante{margin:0;font-size:12.5px;color:var(--muted);text-align:right}
+.variante b{color:var(--ink);font-weight:600}
 .summary div{display:flex;flex-direction:column}
 .summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -80,14 +95,47 @@ button,input,select{font:inherit;color:inherit}
 /* Raster */
 .layout{display:grid;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"controls viewer" "controls warns" "controls output";gap:0 24px;margin-top:20px;align-items:start}
 .cfgwrap{display:contents}
-.warns{grid-area:warns;min-width:0}
+.warnbox{grid-area:warns;min-width:0}
+.warnhead{display:none}
 .controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin}
 .viewer{grid-area:viewer;min-width:0}
-.output{grid-area:output;min-width:0}
+.output{grid-area:output;min-width:0;container:ergebnis / inline-size}
 @media (max-width:920px){
   .layout{display:block}
   .cfgwrap{display:block}
   .controls{position:static;max-height:none;overflow:visible;margin-top:14px}
+}
+/* Desktop ohne Scrollen der Seite: Kopf in einer Zeile, darunter drei Spalten in voller Höhe */
+@media (min-width:1200px) and (min-height:640px){
+  html,body{height:100%}
+  body{overflow:hidden}
+  .app{max-width:none;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding-block:8px 14px}
+  .top{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind sum acts";gap:0 28px;padding-block:2px 10px}
+  .brand p{display:none}
+  .brand svg{width:30px;height:30px}
+  .brand h1{font-size:21px}
+  .summary{gap:6px 20px;grid-template-columns:auto auto minmax(100px,1fr) auto}
+  .summary dt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .summary .price dd{min-height:0;max-width:210px}
+  .summary .price dd small{overflow:hidden;text-overflow:ellipsis}
+  .hacts{width:auto;display:flex;align-items:center;gap:12px;justify-items:initial}
+  .layout{grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"controls viewer output" "controls warns output";gap:10px 18px;margin-top:12px;min-height:0;align-items:stretch}
+  .controls{position:static;max-height:none;min-height:0}
+  .viewer{min-height:0;display:flex;flex-direction:column}
+  .stage-wrap{flex:1;min-height:0}
+  #stage{aspect-ratio:auto;height:100%;min-height:0;max-height:none}
+  .warnhead{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:9px;width:100%;padding:6px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:9px;font-size:13.5px;cursor:pointer}
+  .warnhead::before{content:"!";display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--warn);color:var(--warn-bg);font-weight:700;font-size:12px}
+  .warnhead::after{content:"▾";margin-left:auto;color:var(--warn)}
+  .warnbox.open .warnhead::after{content:"▴"}
+  .warnhead:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .warnbox:not(.open) .warns{display:none}
+  .warns{margin-top:6px;max-height:33vh;overflow:auto}
+  .output{display:flex;flex-direction:column;min-height:0}
+  .tabs{margin-top:0;flex:none}
+  .panel{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
+  .sammlung{min-height:0;display:flex;flex-direction:column;margin-top:12px}
+  .sammlung #collList{flex:1;min-height:0;overflow:auto;align-content:start}
 }
 
 /* Steuerung */
@@ -181,6 +229,7 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .acts .btn{flex:1}
 .acts .copied{flex-basis:100%}
 .linkbtn{border:0;background:none;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.collsort{width:200px}
 .coll{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .coll li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
 .coll li.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
@@ -230,12 +279,23 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .box h3{font-size:15px;font-weight:600;margin-bottom:8px}
-.items{list-style:none;margin:0;padding:0;display:grid}
-.items li{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
-.items li:last-child{border-bottom:0}
-.items .q{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--accent);font-weight:500}
-.items small{display:block;color:var(--muted);font-size:12.5px}
-.tools{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
+
+/* Einkaufen */
+.warnhint{margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:9px;font-size:13.5px}
+.kauf{display:grid;gap:14px}
+.kauf section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kauf h3{font-size:15px;font-weight:600}
+.kauf .info{margin:2px 0 6px;font-size:13px;color:var(--muted);font-family:var(--f-mono)}
+.kauf ul{list-style:none;margin:0;padding:0;display:grid}
+.kauf li{border-bottom:1px dashed var(--line)}
+.kauf li:last-child{border-bottom:0}
+.kauf label{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:8px 0;cursor:pointer;font-size:14px}
+.kauf input{accent-color:var(--accent);width:20px;height:20px;margin:1px 0 0}
+.kauf small{display:block;color:var(--muted);font-size:12.5px}
+.kauf input:checked + span{color:var(--muted);text-decoration:line-through}
+.pplan{margin-top:18px}
+.pplan summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:15px;padding-block:8px}
+.bausub{max-width:420px;margin-bottom:14px}
 
 /* Bauablauf */
 .steps{list-style:none;margin:0;padding:0;counter-reset:st;display:grid;gap:12px;max-width:78ch}
@@ -292,6 +352,19 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .vbtn{display:inline-flex;align-items:center;gap:6px}
 .hint-touch{display:none}
 .mbar{display:none}
+
+/* Orte */
+body:not([data-ort="sammlung"]) .sammlung{display:none}
+body[data-ort="sammlung"] .layout{display:none}
+.sammlung{margin-top:20px}
+.sammlung h2{font-size:20px}
+@media (max-width:920px){
+  body[data-ort="einkaufen"] .cfgwrap,body[data-ort="bauen"] .cfgwrap{display:none}
+  body[data-ort="entwerfen"] .output{display:none}
+  .output .tabs{display:none}
+  body:not([data-ort="entwerfen"]) .top .summary{display:none}
+}
+
 .chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
 .chips li{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
 .chips b{color:var(--ink);font-weight:500}
@@ -312,7 +385,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 }
 
 @media (max-width:920px){
-  .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(140px + env(safe-area-inset-bottom))}
   .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
   #stage{aspect-ratio:auto;height:38svh;min-height:220px;max-height:none}
   .stage-wrap{border-radius:12px}
@@ -328,7 +401,12 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .group.collapsed{gap:0}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
-  .mbar{display:flex;position:fixed;z-index:10;left:0;right:0;bottom:0;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mprice{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mnav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .mnav button{all:unset;text-align:center;padding:8px 2px;min-height:28px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .mnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+  .mnav .count{font-family:var(--f-mono);font-weight:400;font-size:11px;margin-left:3px}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
   .mbar > div:first-child{min-width:0}
@@ -342,7 +420,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .mbtns{display:flex;gap:8px;flex:none}
   .hacts{display:none}
   .top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "kind" "sum"}
-  .kindbar{width:auto}
 }
 @media (max-width:640px){
   .top{gap:12px;padding-bottom:12px}
@@ -357,6 +434,9 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .tabs.ind .tab[aria-selected="true"]{border-color:var(--accent)}
   .tabind{display:none}
   .toolbar{align-items:flex-start}
+}
+/* Teiletabelle als Karten, sobald die Ergebnisspalte schmal ist (Handy und dritte Spalte am Desktop) */
+@container ergebnis (max-width:600px){
   #cutTable thead{display:none}
   #cutTable,#cutTable tbody,#cutTable tfoot{display:block}
   #cutTable tr{display:grid;grid-template-columns:22px minmax(0,1fr) auto;column-gap:10px;row-gap:2px;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -405,9 +485,9 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
       </div>
     </div>
-    <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
+    <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
     <dl class="summary" id="summary"></dl>
-    <div class="hacts"><button type="button" class="btn js-sammeln">In Sammlung</button><span class="copied js-sammelmsg" aria-live="polite"></span></div>
+    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -427,7 +507,10 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <div class="dimtag" id="dimTag"></div>
       </div>
     </section>
-    <div class="warns" id="warns" aria-live="polite"></div>
+    <div class="warnbox" id="warnBox" hidden>
+      <button type="button" class="warnhead" id="warnHead" aria-expanded="false" aria-controls="warns"></button>
+      <div class="warns" id="warns" aria-live="polite"></div>
+    </div>
 
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
@@ -743,53 +826,82 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
     <section class="output">
       <div class="tabs" role="tablist" aria-label="Ergebnis">
-        <button class="tab" role="tab" id="tab-cut" aria-controls="p-cut" aria-selected="true">Materialliste<span class="count" id="cnt-cut"></span></button>
-        <button class="tab" role="tab" id="tab-sheet" aria-controls="p-sheet" aria-selected="false">Plattenplan<span class="count" id="cnt-sheet"></span></button>
-        <button class="tab" role="tab" id="tab-hw" aria-controls="p-hw" aria-selected="false">Beschläge &amp; Werkzeug</button>
-        <button class="tab" role="tab" id="tab-steps" aria-controls="p-steps" aria-selected="false">Bauablauf</button>
-        <button class="tab" role="tab" id="tab-coll" aria-controls="p-coll" aria-selected="false">Sammlung<span class="count" id="cnt-coll"></span></button>
+        <button class="tab" role="tab" id="tab-einkaufen" aria-controls="p-einkaufen" aria-selected="true">Einkaufen<span class="count" id="cnt-kauf"></span></button>
+        <button class="tab" role="tab" id="tab-bauen" aria-controls="p-bauen" aria-selected="false">Bauen</button>
         <span class="tabind" aria-hidden="true"></span>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-cut" aria-labelledby="tab-cut">
+      <div class="panel" role="tabpanel" id="p-einkaufen" aria-labelledby="tab-einkaufen">
+        <p class="warnhint js-warnhint" hidden></p>
         <div class="toolbar">
-          <p>Länge = Faserrichtung. <span class="hint-fine">Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</span><span class="hint-touch">Tipp auf eine Zeile, um das Teil in 3D und im Plattenplan hervorzuheben.</span></p>
-          <div><button type="button" class="btn" id="bCopy"><span class="swap"><span>Liste kopieren</span><span aria-hidden="true">✓ Kopiert</span></span></button> <span class="copied" id="copied" aria-live="polite"></span></div>
+          <p id="kaufKopf"></p>
+          <div class="acts">
+            <button type="button" class="btn" id="bTeilen"><span class="swap"><span>Liste teilen</span><span aria-hidden="true">✓ Kopiert</span></span></button>
+            <button type="button" class="btn ghost" id="bHakenWeg" hidden>Haken zurücksetzen</button>
+            <span class="copied" id="copied" aria-live="polite"></span>
+          </div>
         </div>
-        <div class="tablewrap"><table id="cutTable"></table></div>
-        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Materialliste als Text"></textarea>
+        <textarea class="copybox" id="copyBox" readonly hidden aria-label="Einkaufsliste als Text"></textarea>
+        <div class="kauf" id="kaufListe"></div>
+        <details class="pplan" id="pplan">
+          <summary>Plattenplan für den Zuschnitt</summary>
+          <div class="toolbar">
+            <p>Vorschlag mit durchgehenden Schnitten, wie sie eine Plattensäge macht. Der Zuschnittservice optimiert oft noch selbst.</p>
+            <div class="legend"><span><i style="background:var(--part)"></i>Korpus</span><span><i style="background:var(--part-front)"></i>Front</span><span><i style="background:var(--part-back)"></i>Rückwand</span><span><i style="background:repeating-linear-gradient(45deg,var(--waste) 0 2px,transparent 2px 6px)"></i>Rest</span></div>
+          </div>
+          <div class="sheets" id="sheets"></div>
+        </details>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-sheet" aria-labelledby="tab-sheet" hidden>
-        <div class="toolbar">
-          <p>Vorschlag mit durchgehenden Schnitten, wie sie eine Plattensäge macht. Der Zuschnittservice optimiert oft noch selbst.</p>
-          <div class="legend"><span><i style="background:var(--part)"></i>Korpus</span><span><i style="background:var(--part-front)"></i>Front</span><span><i style="background:var(--part-back)"></i>Rückwand</span><span><i style="background:repeating-linear-gradient(45deg,var(--waste) 0 2px,transparent 2px 6px)"></i>Rest</span></div>
+      <div class="panel" role="tabpanel" id="p-bauen" aria-labelledby="tab-bauen" hidden>
+        <p class="warnhint js-warnhint" hidden></p>
+        <div class="seg bausub" role="radiogroup" aria-label="Bauen">
+          <input type="radio" name="bau" id="bau-teile" value="teile" checked><label for="bau-teile">Teile</label>
+          <input type="radio" name="bau" id="bau-ablaengen" value="ablaengen"><label for="bau-ablaengen" id="lbl-ablaengen">Ablängplan</label>
+          <input type="radio" name="bau" id="bau-ablauf" value="ablauf"><label for="bau-ablauf">Bauablauf</label>
         </div>
-        <div class="sheets" id="sheets"></div>
-      </div>
-
-      <div class="panel" role="tabpanel" id="p-hw" aria-labelledby="tab-hw" hidden>
-        <div class="cols">
-          <div class="box"><h3>Beschläge &amp; Kleinteile</h3><ul class="items" id="hwList"></ul></div>
-          <div class="box"><h3>Werkzeug</h3><ul class="tools" id="toolList"></ul>
-            <h3 style="margin-top:16px">Oberfläche</h3><ul class="items" id="finishList"></ul></div>
+        <div class="bau" id="b-teile">
+          <div class="toolbar"><p>Länge = Faserrichtung. Teile mit der Position beschriften. <span class="hint-fine">Fahr mit der Maus über eine Zeile, um das Teil in der 3D-Ansicht zu sehen.</span><span class="hint-touch">Tipp auf eine Zeile, um das Teil in 3D hervorzuheben.</span></p></div>
+          <div class="tablewrap"><table id="cutTable"></table></div>
+          <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
         </div>
+        <div class="bau" id="b-ablaengen" hidden>
+          <div class="toolbar"><p>Ganze Bretter nur ablängen. Jedes Teil ist so breit wie sein Brett.</p></div>
+          <div class="sheets" id="ablaengen"></div>
+        </div>
+        <div class="bau" id="b-ablauf" hidden><ol class="steps" id="steps"></ol></div>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-steps" aria-labelledby="tab-steps" hidden>
-        <ol class="steps" id="steps"></ol>
-      </div>
-
-      <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
-        <div class="toolbar"><p id="collSum"></p><span class="copied" id="collMsg" aria-live="polite"></span></div>
-        <ul class="coll" id="collList"></ul>
-      </div>
-
-      <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
     </section>
   </div>
+  <section class="sammlung" id="ortSammlung" aria-labelledby="h-sammlung">
+    <div class="toolbar"><h2 id="h-sammlung">Sammlung<span class="count" id="cnt-coll"></span></h2><button type="button" class="btn ghost" data-go="entwerfen">Zum Entwurf</button></div>
+    <div class="toolbar">
+      <p id="collSum"></p>
+      <div class="seg collsort" role="radiogroup" aria-label="Sortieren" id="collSort"><input type="radio" name="collsort" id="cs-datum" value="datum" checked><label for="cs-datum">Neueste</label><input type="radio" name="collsort" id="cs-preis" value="preis"><label for="cs-preis">Preis</label></div>
+      <span class="copied" id="collMsg" aria-live="polite"></span>
+    </div>
+    <div class="acts" id="collLeer" hidden><button type="button" class="btn js-sammeln">Aktuellen Entwurf sammeln</button><button type="button" class="btn ghost" data-go="entwerfen">Zum Entwurf</button></div>
+    <ul class="coll" id="collList"></ul>
+  </section>
 </div>
-<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-sammelmsg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
+<dialog class="wahl" id="wahl" aria-labelledby="h-wahl">
+  <h2 id="h-wahl">Was baust du?</h2>
+  <ul class="wahllist">
+    <li><button type="button" class="wahlbtn" data-kind="sideboard"><b>Sideboard</b><small>Korpus mit Fächern, Türen und Füssen fürs Wohnzimmer</small><small class="zuletzt" data-zuletzt="sideboard"></small></button><button type="button" class="linkbtn" data-zufall="sideboard">Zufall</button></li>
+    <li><button type="button" class="wahlbtn" data-kind="reduit"><b>Reduit</b><small>Regal in einem kleinen Raum, eingebaut oder selbststehend</small><small class="zuletzt" data-zuletzt="reduit"></small></button><button type="button" class="linkbtn" data-zufall="reduit">Zufall</button></li>
+  </ul>
+  <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
+</dialog>
+<div class="mbar" id="mbar">
+  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
+  <nav class="mnav" aria-label="Orte">
+    <button type="button" data-ort="entwerfen">Entwerfen</button>
+    <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
+    <button type="button" data-ort="bauen">Bauen</button>
+    <button type="button" data-ort="sammlung">Sammlung <span class="js-anzahl"></span></button>
+  </nav>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -798,17 +910,22 @@ figure.sheet svg{width:100%;height:auto;display:block}
 <script src="sideboard.js"></script>
 <script src="reduit.js"></script>
 <script src="konfig.js"></script>
+<script src="einkauf.js"></script>
 <script>
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
 const form = $('#cfg');
+const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
 
 const HANDLES_HINGED = [['hole','Griffloch Ø 30 mm'],['knob','Holzknopf'],['push','Ohne Griff (Push-to-open)']];
 const HANDLES_SLIDING = [['shell','Griffmuschel rund'],['hole','Griffloch Ø 30 mm']];
 
 /* ---------- Formular ---------- */
 const STORE = 'sideboard-werkbank-v2';
+const ENTW = STORE + '-entwuerfe';
+let entwuerfe = null;   // { kind, sideboard, reduit } – siehe entwuerfeLaden in konfig.js
+let DEFAULTS = null;    // Formularwerte beim Laden der Seite, Start für einen Typ ohne Entwurf
 // Plattenmaterial nach Preis sortiert, mit m²-Preis in der Auswahl. Ganze Bretter nur beim Reduit (kind leer = alle).
 const MAT_LABEL = { mdf:'MDF (zum Lackieren)' };
 function fillMaterials(kind){
@@ -822,14 +939,12 @@ function applyCatalog(mat){
   for (const k in cat) $('#' + k).value = cat[k];
 }
 // Nach einem Typwechsel: Liste neu füllen; ist das Material nicht mehr wählbar, das günstigste Plattenmaterial nehmen.
-let matMsg = '';
 function syncMaterials(){
   const kind = new FormData(form).get('kind'), cur = $('#mat').value;
   fillMaterials(kind);
   if (MATS[cur] && (!MATS[cur].boards || kind === 'reduit')) { $('#mat').value = cur; return; }
   const k = $('#mat').options[0].value;
   $('#mat').value = k; fillThickness(k); applyCatalog(k);
-  if (MATS[cur]) matMsg = `Ganze Bretter gibt es nur beim Reduit – Material auf ${MATS[k].name} gesetzt.`;
 }
 function fillThickness(mat, keep){
   const sel = $('#t'), M = MATS[mat];
@@ -861,7 +976,7 @@ function syncVisibility(){
   $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' || mat === 'dekorspan' ? 'Weiss' : mat === 'schaltafel' ? 'Gelb' : 'Holz';
   const BM = MATS[mat].boards;
   const priceNote = BM ? `ganze Bretter ab CHF ${MATS[mat].price.toFixed(2)}/m²` : `CHF ${matPrice(MATS[mat], Number(f.get('t')))}/m² bei ${f.get('t')} mm`;
-  $('#matNote').textContent = `${matMsg ? matMsg + ' ' : ''}${priceNote} · ${MATS[mat].note}`;
+  $('#matNote').textContent = `${priceNote} · ${MATS[mat].note}`;
   $('#row-sheet').hidden = $('#row-price').hidden = $('#row-grain').hidden = !!BM;
   $('#row-boards').hidden = !BM;
   if (BM) $('#boardList').innerHTML = BM.map(f => `<li>${f.L} × ${f.B} mm · CHF ${f.price.toFixed(2)}</li>`).join('');
@@ -924,7 +1039,8 @@ function formData(){
   return data;
 }
 function save(){
-  try { localStorage.setItem(STORE, JSON.stringify(formData())); } catch (e) {}
+  entwuerfe = entwurfSetzen(entwuerfe, formData());
+  try { localStorage.setItem(ENTW, JSON.stringify(entwuerfe)); } catch (e) {}
 }
 // Preis und Plattenformat aus dem Katalog. Gespeichert wird, was der Katalog beim Speichern sagte:
 // nur von Hand geänderte Werte überleben so ein Preis-Update in preise.js.
@@ -932,11 +1048,12 @@ function catalogValues(mat, t){
   const M = MATS[mat];
   return { price:matPrice(M, Number(t)), sheetL:M.sheet[0], sheetB:M.sheet[1] };
 }
+// Früherer Einzelentwurf, nur noch zum Übernehmen in ENTW.
 function stored(){
   try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; }
 }
 // Setzt das Formular auf data (ohne data: Standardwerte des Materials). Ohne katalog gelten Preis und Format aus dem Katalog.
-function restore(data = stored()){
+function restore(data){
   fillMaterials();   // alle Materialien; syncMaterials() filtert danach nach Möbeltyp
   const mat = data && MATS[data.mat] ? data.mat : 'birke';
   $('#mat').value = mat;
@@ -964,11 +1081,22 @@ function render(){
   const c = readCfg();
   const reduit = c.kind === 'reduit';
   R = reduit ? computeReduit(c) : computeSideboard(c);
-  renderSummary(R); renderWarns(R); renderCut(R); renderSheets(R); renderHw(R); renderSteps(R);
+  renderSummary(R); renderWarns(R); renderCut(R); renderSteps(R); renderKauf(R);
+  const zu = R.groups.filter(g => !g.boards), br = R.groups.filter(g => g.boards);
+  renderSheets(zu, $('#sheets')); renderSheets(br, $('#ablaengen'));
+  $('#pplan').hidden = !zu.length;
+  $('#bau-ablaengen').hidden = $('#lbl-ablaengen').hidden = !br.length;
+  if (!br.length && $('#bau-ablaengen').checked) { $('#bau-teile').checked = true; zeigeBau(); }
+  for (const w of document.querySelectorAll('.js-warnhint')) {
+    w.hidden = !R.warn.length;
+    w.innerHTML = `${R.warn.length} Warnung${R.warn.length === 1 ? '' : 'en'} · <button type="button" class="linkbtn" data-go="entwerfen">Zum Entwurf</button>`;
+  }
+  $('#kindName').textContent = reduit ? 'Reduit' : 'Sideboard';
   $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
+  renderVariante();
   syncLocks();
 }
 function renderSummary(R){
@@ -986,17 +1114,13 @@ function renderSummary(R){
     item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
     item('Teile', parts) +
     item(boards ? 'Bretter' : 'Platten', `<span title="${sheets}">${sheets}</span>`, 'wide') +
-    (boards ? item('Holz ganze Bretter ca.', `<b>${chf(woodWhole)}</b>`, 'price')
-            : item('Holz Zuschnitt ca.', `<b>${chf(wood)}</b><small>ganze Platten ${chf(woodWhole)}</small>`, 'price')) +
-    (reduit ? item('Kaufteile ca.', `<b>${chf(R.buyCost)}</b>`, 'price') : '');
-  $('#mPrice').textContent = chf(wood);
-  $('#mMeta').textContent = reduit ? `+ ${chf(R.buyCost)} Kaufteile · ${woodName}` : `${woodName} · ${parts} Teile`;
+    item('Total ca.', `<b>${chf(kostenGesamt(R))}</b><small>${woodName} ${chf(wood)}${reduit ? ` · Kaufteile ${chf(R.buyCost)}` : ''}${boards ? '' : ` · ganze Platten ${chf(woodWhole)}`}</small>`, 'price');
+  $('#mPrice').textContent = chf(kostenGesamt(R));
+  $('#mMeta').textContent = reduit ? `${woodName} ${chf(wood)} · Kaufteile ${chf(R.buyCost)}` : `${woodName} · ${parts} Teile`;
   const why = reduit
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
   $('#levelBox').innerHTML = `<p class="lvlhead"><span class="lvl" data-l="${R.level}"><i></i><i></i><i></i></span><b>${lvlText}</b></p><p class="hint">${why}</p>`;
-  $('#cnt-cut').textContent = parts;
-  $('#cnt-sheet').textContent = R.groups.reduce((a, g) => a + g.sheets.length, 0);
 }
 function renderWarns(R){
   const box = $('#warns'), old = new Map([...box.children].map(el => [el.innerHTML, el]));
@@ -1005,7 +1129,14 @@ function renderWarns(R){
     return old.get(probe.innerHTML) || probe;
   });
   box.replaceChildren(...next);
+  const n = R.warn.length;
+  $('#warnBox').hidden = !n;
+  $('#warnHead').textContent = `${n} Warnung${n === 1 ? '' : 'en'}`;
 }
+$('#warnHead').addEventListener('click', () => {
+  const open = $('#warnBox').classList.toggle('open');
+  $('#warnHead').setAttribute('aria-expanded', String(open));
+});
 function renderCut(R){
   const groups = [...new Set(R.rows.map(r => r.group))];
   let html = `<thead><tr><th>Pos</th><th>Bauteil</th><th>Anz.</th><th>${R.M.grain ? 'Länge (Maserung) × Breite' : 'Länge × Breite'}</th><th>Stärke</th><th>Hinweis</th></tr></thead>`;
@@ -1025,9 +1156,9 @@ function renderCut(R){
   html += `<tfoot><tr><td colspan="6">Plattenfläche total ${area.toFixed(2)} m² · alle Masse in mm</td></tr></tfoot>`;
   $('#cutTable').innerHTML = html;
 }
-function renderSheets(R){
+function renderSheets(groups, el){
   let html = '';
-  for (const g of R.groups) {
+  for (const g of groups) {
     const waste = g.total ? Math.round((1 - g.used / g.total) * 100) : 0;
     let chips;
     if (g.boards) {
@@ -1060,17 +1191,52 @@ function renderSheets(R){
     if (!g.sheets.length) html += `<p class="hint">${g.boards ? 'Kein Teil passt auf diese Bretter.' : 'Keine Teile auf diesem Format.'}</p>`;
     html += `</div></div>`;
   }
-  $('#sheets').innerHTML = html;
-}
-function renderHw(R){
-  const chf = (q, p) => p ? ` · ≈ CHF ${Math.round(q * p)}` : '';
-  $('#hwList').innerHTML = R.hw.map(([q, n, s, p]) => `<li><span class="q">${q}×</span><span>${n}${s || p ? `<small>${s || ''}${chf(q, p)}</small>` : ''}</span></li>`).join('');
-  $('#toolList').innerHTML = R.tools.map(t => `<li>${t}</li>`).join('');
-  $('#finishList').innerHTML = R.finish.map(([q, n, s]) => `<li><span class="q">${q}</span><span>${n}${s ? `<small>${s}</small>` : ''}</span></li>`).join('');
+  el.innerHTML = html;
 }
 function renderSteps(R){
   $('#steps').innerHTML = R.steps.map(([h, p, tip]) => `<li><div><h3>${h}</h3><p>${p}</p>${tip ? `<p class="tip">Tipp: ${tip}</p>` : ''}</div></li>`).join('');
 }
+
+const HAKEN = STORE + '-haken';
+let haken = {};
+try { haken = JSON.parse(localStorage.getItem(HAKEN) || '{}'); } catch (e) {}
+let kaufListe = [];
+const typVon = R => R.kind === 'reduit' ? 'reduit' : 'sideboard';
+const kaufTitel = R => R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H} mm` : `Sideboard ${R.W} × ${R.H} × ${R.Dtot} mm`;
+function renderKauf(R){
+  kaufListe = einkaufsliste(R);
+  const kind = typVon(R);
+  // Der gespeicherte Haken-Satz bleibt unverändert; hakenFiltern gilt nur für Anzeige und Zählung
+  // (sonst löscht Tippen einer Masszahl, die kurz eine andere Zeilenliste rendert, dauerhaft Haken).
+  const an = new Set(hakenFiltern(haken[kind] || [], kaufListe));
+  const total = kaufListe.reduce((a, s) => a + s.zeilen.length, 0);
+  $('#kaufKopf').textContent = `${kaufTitel(R)} · ca. CHF ${Math.round(kostenGesamt(R) / 5) * 5}`;
+  $('#cnt-kauf').textContent = $('#mCntKauf').textContent = an.size ? `${an.size}/${total}` : '';
+  $('#bHakenWeg').hidden = !an.size;
+  $('#kaufListe').innerHTML = kaufListe.map(s => `<section><h3>${s.titel}</h3>${s.info ? `<p class="info">${s.info}</p>` : ''}<ul>${
+    s.zeilen.map(z => `<li><label><input type="checkbox" data-id="${esc(z.id)}"${an.has(z.id) ? ' checked' : ''}><span>${z.text}${z.sub ? `<small>${z.sub}</small>` : ''}</span></label></li>`).join('')
+  }</ul></section>`).join('');
+  try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
+}
+$('#kaufListe').addEventListener('change', ev => {
+  const id = ev.target.dataset.id, kind = typVon(R);
+  const s = new Set(haken[kind] || []);
+  ev.target.checked ? s.add(id) : s.delete(id);
+  haken[kind] = [...s];
+  try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
+  $('#bHakenWeg').hidden = !s.size;
+  $('#cnt-kauf').textContent = $('#mCntKauf').textContent = s.size ? `${s.size}/${kaufListe.reduce((a, x) => a + x.zeilen.length, 0)}` : '';
+});
+$('#bHakenWeg').addEventListener('click', () => { haken[typVon(R)] = []; renderKauf(R); });
+
+// Bauen: Unterreiter Teile | Ablängplan | Bauablauf
+function zeigeBau(){
+  const v = document.querySelector('input[name=bau]:checked').value;
+  for (const k of ['teile', 'ablaengen', 'ablauf']) $('#b-' + k).hidden = k !== v;
+  try { localStorage.setItem(STORE + '-bau', v); } catch (e) {}
+}
+$('.bausub').addEventListener('change', ev => { placePill(ev.currentTarget, true); zeigeBau(); });
+try { const b = localStorage.getItem(STORE + '-bau'); if (b && $('#bau-' + b)) $('#bau-' + b).checked = true; } catch (e) {}
 
 /* ---------- Hervorheben ---------- */
 let hlKey = null;
@@ -1088,7 +1254,7 @@ function highlight(key){
   }
 }
 function keyFromEl(el){ const h = el.closest('[data-key]'); return h ? decodeURIComponent(h.dataset.key) : null; }
-for (const sel of ['#cutTable', '#sheets']) {
+for (const sel of ['#cutTable', '#sheets', '#ablaengen']) {
   const el = $(sel);
   el.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') highlight(keyFromEl(e.target)); });
   el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') highlight(null); });
@@ -1384,14 +1550,10 @@ function onInput(e){
     const v = el.value === 'plinth' ? 80 : 160;
     $('#baseH').value = v; $('#baseH-r').value = v;
   }
-  // Der Hinweis nach einem Typwechsel gilt nur bis zur nächsten Eingabe.
-  matMsg = '';
-  if (el.name === 'kind') syncMaterials();
-  if (el.name === 'mat' || el.name === 'kind') syncDepths(true);
+  if (el.name === 'mat') syncDepths(true);
   syncVisibility(); render(); save();
 }
 form.addEventListener('input', onInput);
-$('#kindBar').addEventListener('input', onInput);
 form.addEventListener('change', e => {
   const el = e.target;
   if (el.type === 'number' && el.value !== '') {
@@ -1442,14 +1604,12 @@ function selectTab(id){
     $('#' + t.getAttribute('aria-controls')).hidden = !on;
   }
   placeTabInd(true);
-  try { localStorage.setItem(STORE + '-tab', id); } catch (e) {}
 }
 tabs.forEach((t, i) => {
-  t.addEventListener('click', () => selectTab(t.id));
   t.addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-    selectTab(n.id); n.focus();
+    n.click(); n.focus();
   });
 });
 
@@ -1472,11 +1632,11 @@ function placePill(seg, anim){
   seg.classList.add('pill');
   if (!anim) { seg.offsetWidth; seg.classList.remove('still'); }
 }
+function placePills(){ for (const seg of document.querySelectorAll('.seg')) placePill(seg, false); }
 const segRO = new ResizeObserver(es => { for (const e of es) placePill(e.target, false); });
 const pillOnChange = e => { const seg = e.target.closest('.seg'); if (seg) placePill(seg, true); };
 for (const seg of document.querySelectorAll('.seg')) segRO.observe(seg);
 form.addEventListener('change', pillOnChange);
-$('#kindBar').addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
@@ -1515,6 +1675,8 @@ for (const g of form.querySelectorAll('.group[data-lock]')) {
 }
 // Nur sichtbare Gruppen zählen: was man nicht sieht (anderer Möbeltyp, keine Nische möglich), wird gewürfelt.
 const activeLocks = () => [...form.querySelectorAll('.group[data-lock]')].filter(g => !g.hidden && locks.has(g.dataset.lock)).map(g => g.dataset.lock);
+// Zufall für einen anderen Typ (Möbelwahl): dessen Gruppen sind versteckt, darum nach Typ statt nach Sichtbarkeit.
+const locksFuer = kind => [...form.querySelectorAll('.group[data-lock]')].filter(g => (!g.dataset.kind || g.dataset.kind === kind) && locks.has(g.dataset.lock)).map(g => g.dataset.lock);
 function syncLocks(){
   for (const b of form.querySelectorAll('.lock')) {
     const on = locks.has(b.dataset.lock);
@@ -1532,106 +1694,230 @@ form.addEventListener('click', e => {
   syncLocks();
 });
 
-// Schmal: Leiste unten springt zum Ergebnis und zurück
-let atOutput = false;
-new IntersectionObserver(([e]) => {
-  atOutput = e.isIntersecting;
-  $('#bJump').textContent = atOutput ? 'Konfigurieren ↑' : 'Ergebnis ↓';
-}, { rootMargin: '0px 0px -40% 0px' }).observe($('.output'));
-$('#bJump').addEventListener('click', () => {
-  $(atOutput ? '.cfgwrap' : '.output').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+// Router
+// Orte: Entwerfen · Einkaufen · Bauen · Sammlung. Handy: jeder Ort eine Ansicht. Desktop: Einkaufen und Bauen
+// sind Reiter neben dem Entwurf, nur die Sammlung ist eine eigene Ansicht.
+function zeigeOrt(ort){
+  if (ort === 'einkaufen' || ort === 'bauen') selectTab('tab-' + ort);
+  const sicht = narrow.matches || ort === 'sammlung' ? ort : 'entwerfen';
+  const neu = document.body.dataset.ort !== sicht;
+  document.body.dataset.ort = sicht;
+  for (const b of document.querySelectorAll('.mnav button')) {
+    if (b.dataset.ort === ort) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  }
+  if (neu) { window.scrollTo(0, 0); placeTabInd(false); placePills(); }
+}
+// Ortswechsel legt einen History-Eintrag an (Zurück-Taste); hashchange ruft zeigeOrt.
+function geheZu(ort){
+  if (ortAusHash(location.hash) === ort && location.hash) zeigeOrt(ort);
+  else location.hash = ort;
+}
+window.addEventListener('hashchange', () => zeigeOrt(ortAusHash(location.hash)));
+narrow.addEventListener('change', () => zeigeOrt(ortAusHash(location.hash)));
+document.addEventListener('click', ev => {
+  const warnGo = ev.target.closest('.js-warnhint [data-go]');
+  if (warnGo && !narrow.matches) {
+    // Auf dem Desktop ist Entwerfen schon sichtbar: nur die Warnungen aufklappen, Hash/History unverändert lassen.
+    const box = $('#warnBox');
+    box.classList.add('open');
+    $('#warnHead').setAttribute('aria-expanded', 'true');
+    box.scrollIntoView({ block:'nearest' });
+    return;
+  }
+  const go = ev.target.closest('[data-go], .mnav button');
+  if (!go) return;
+  geheZu(go.dataset.go || go.dataset.ort);
+});
+// Desktop-Reiter: Ort im Hash nachführen, ohne History-Eintrag.
+for (const t of tabs) t.addEventListener('click', () => {
+  history.replaceState(null, '', '#' + t.id.replace('tab-', ''));
+  zeigeOrt(ortAusHash(location.hash));
 });
 
-// Kopieren
-// Maserung angeben nur bei Plattenteilen aus Material mit Maserung (nicht Rückwand, nicht Massivholz).
-const grainOf = r => R.M.grain && (r.kind === 'korpus' || r.kind === 'front');
-$('#bCopy').addEventListener('click', () => {
-  const lines = [`${R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H}` : `Sideboard ${R.W} × ${R.H} × ${R.D}`} mm – Materialliste (Länge = Faserrichtung, Masse in mm)`];
-  for (const g of [...new Set(R.rows.map(r => r.group))]) {
-    lines.push('', g);
-    for (const r of R.rows.filter(x => x.group === g)) lines.push(`${r.pos}  ${String(r.qty).padStart(2)} ×  ${String(r.L).padStart(4)} × ${String(r.B).padStart(4)}  ${r.name}${grainOf(r) ? ' – Maserung längs' : ''}${r.note ? ' (' + r.note + ')' : ''}`);
-  }
-  const text = lines.join('\n');
+// Kopieren wird Teilen
+$('#bTeilen').addEventListener('click', async () => {
+  const text = listeText(kaufListe, `${kaufTitel(R)} – Einkaufsliste (Masse in mm, Länge = Faserrichtung)`);
   const box = $('#copyBox'), msg = $('#copied');
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ title:kaufTitel(R), text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
   const fallback = () => { box.hidden = false; box.value = text; box.focus(); box.select(); msg.textContent = 'Text markiert – mit Ctrl+C kopieren.'; };
   try {
-    navigator.clipboard.writeText(text).then(() => {
-      box.hidden = true; msg.textContent = '';
-      const b = $('#bCopy'); b.classList.add('done'); clearTimeout(b._t);
-      b._t = setTimeout(() => b.classList.remove('done'), 1800);
-    }, fallback);
+    await navigator.clipboard.writeText(text);
+    box.hidden = true; msg.textContent = '';
+    const b = $('#bTeilen'); b.classList.add('done'); clearTimeout(b._t);
+    b._t = setTimeout(() => b.classList.remove('done'), 1800);
   } catch (e) { fallback(); }
 });
 
 /* ---------- Zufall und Sammlung ---------- */
-// Formular komplett neu setzen (Laden, Zufall) und Kamera neu ausrichten.
-function applyData(data){
-  restore(data); syncMaterials(); syncDepths(true); syncVisibility();
-  three.userMoved = false;
-  render(); save();
-}
-$('#bZufall').addEventListener('click', () => {
-  applyData(zufall(formData(), Math.random, 60, activeLocks()));
-  flash('.js-sammelmsg', '');
-});
-
 const COLL = STORE + '-sammlung';
 let coll = [], aktiv = null, entfernt = null;
 try { coll = JSON.parse(localStorage.getItem(COLL) || '[]'); } catch (e) {}
 function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } catch (e) {} }
+// Formular komplett neu setzen (Laden, Zufall, Typwechsel) und Kamera neu ausrichten.
+// undo: Zustand davor merken, damit «Rückgängig» ihn zurückholt (beide Entwürfe und die geladene Variante).
+let vorher = null;
+function applyData(data, { undo = false } = {}){
+  if (undo) vorher = { entwuerfe: JSON.parse(JSON.stringify(entwuerfe)), aktiv };
+  restore(data); syncMaterials(); syncDepths(true); syncVisibility();
+  three.userMoved = false;
+  render(); save(); placePills();
+}
+function rueckgaengig(){
+  if (!vorher) return;
+  const v = vorher; vorher = null;
+  entwuerfe = v.entwuerfe; aktiv = v.aktiv; storeAktiv();
+  applyData(entwuerfe[entwuerfe.kind]);
+  renderColl();
+  flash('.js-msg', 'Wiederhergestellt.');
+}
+// Wechselt zum Entwurf des Typs; ohne Entwurf mit den Startwerten der Seite.
+function wechsleTyp(kind){
+  applyData(entwuerfe && entwuerfe[kind] || { ...DEFAULTS, kind });
+}
+const undoBtn = '<button type="button" class="linkbtn" data-undo>Rückgängig</button>';
+$('#bZufall').addEventListener('click', () => {
+  applyData(zufall(formData(), Math.random, 60, activeLocks()), { undo:true });
+  flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
+});
+
 function flash(sel, html){
   for (const el of document.querySelectorAll(sel)) {
     el.innerHTML = html;
     clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
   }
 }
-const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[ch]);
+
+/* ---------- Möbelwahl ---------- */
+// Beim ersten Besuch ohne Schliessen. Sonst legt Öffnen einen History-Eintrag an, damit Zurück den Dialog schliesst.
+const wahl = $('#wahl');
+let wahlErst = false;
+let wahlToken = 0;
+function oeffneWahl({ erst = false } = {}){
+  wahlErst = erst;
+  const aktuell = formData().kind;
+  for (const b of wahl.querySelectorAll('[data-kind]')) b.toggleAttribute('aria-current', !erst && b.dataset.kind === aktuell);
+  for (const z of wahl.querySelectorAll('[data-zuletzt]')) {
+    const d = !erst && entwuerfe && entwuerfe[z.dataset.zuletzt];
+    if (!d) { z.textContent = ''; continue; }
+    const info = sammlungEintrag(d, computeData(d)).info;
+    z.textContent = `zuletzt: ${info.masse} mm · ca. CHF ${Math.round(info.kosten / 5) * 5}`;
+  }
+  $('#wahlZu').hidden = erst;
+  $('#wahlColl').hidden = !coll.length;
+  if (!erst) { wahlToken = Date.now(); history.pushState({ wahl:wahlToken }, '', location.hash || '#entwerfen'); }
+  wahl.showModal();
+}
+function schliesseWahl(){
+  if (!wahl.open) return;
+  if (history.state && history.state.wahl === wahlToken) history.back();   // popstate schliesst
+  else wahl.close();
+}
+// Jedes Verlassen unseres History-Eintrags (auch über einen älteren, ebenfalls markierten) schliesst den Dialog.
+window.addEventListener('popstate', () => { if (wahl.open && !(history.state && history.state.wahl === wahlToken)) wahl.close(); });
+wahl.addEventListener('cancel', ev => { ev.preventDefault(); if (!wahlErst) schliesseWahl(); });
+$('#bKind').addEventListener('click', () => oeffneWahl());
+$('#wahlZu').addEventListener('click', schliesseWahl);
+wahl.addEventListener('click', ev => {
+  const k = ev.target.closest('[data-kind]'), z = ev.target.closest('[data-zufall]'), s = ev.target.closest('#wahlColl');
+  if (!k && !z && !s) return;
+  if (k) wechsleTyp(k.dataset.kind);
+  if (z) {
+    const basis = entwuerfe[z.dataset.zufall] || { ...DEFAULTS, kind:z.dataset.zufall };
+    applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo: !wahlErst });
+    if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
+  }
+  if (wahlErst) { wahlErst = false; wahl.close(); if (s) geheZu('sammlung'); return; }
+  // history.back() läuft asynchron: erst nach dem Zurück-Schritt zur Sammlung, sonst überholt der neue Hash ihn.
+  if (s && history.state && history.state.wahl === wahlToken) addEventListener('popstate', () => geheZu('sammlung'), { once:true });
+  schliesseWahl();
+  if (s && !wahl.open) geheZu('sammlung');
+});
+
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
+const SORT = STORE + '-sort', AKTIV = STORE + '-aktiv';
+let sortNach = 'datum';
+try { sortNach = localStorage.getItem(SORT) || 'datum'; aktiv = localStorage.getItem(AKTIV); } catch (e) {}
+$('#cs-' + sortNach).checked = true;
+$('#collSort').addEventListener('change', ev => {
+  sortNach = ev.target.value; placePill(ev.currentTarget, true);
+  try { localStorage.setItem(SORT, sortNach); } catch (e) {}
+  renderColl();
+});
+function storeAktiv(){ try { aktiv ? localStorage.setItem(AKTIV, aktiv) : localStorage.removeItem(AKTIV); } catch (e) {} }
+
 function renderColl(){
-  $('#cnt-coll').textContent = coll.length || '';
-  const sum = coll.reduce((a, e) => a + e.info.kosten, 0);
+  for (const el of document.querySelectorAll('#cnt-coll, .js-anzahl')) el.textContent = coll.length ? `(${coll.length})` : '';
   $('#collSum').textContent = coll.length
-    ? `${coll.length} Möbel · zusammen ca. ${chf5(sum)} (Holz im Zuschnitt und Kaufteile, Preise beim Speichern)`
-    : 'Noch nichts gesammelt. «In Sammlung» merkt sich die aktuelle Konfiguration – so stellst du mehrere Möbel zusammen und vergleichst sie.';
-  $('#collList').innerHTML = coll.map(e => `
+    ? `${coll.length} Varianten · Kosten beim Speichern (Holz und Kaufteile)`
+    : 'Noch keine Varianten. Sammle den aktuellen Entwurf, um ihn später mit anderen zu vergleichen.';
+  $('#collSort').hidden = coll.length < 2;
+  $('#collLeer').hidden = !!coll.length;
+  $('#collList').innerHTML = sortiere(coll, sortNach).map(e => `
     <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
       <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
       <div class="meta">${esc(e.info.typ)} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
       <div class="do">
         <button type="button" class="btn ghost" data-act="laden">Laden</button>
-        <button type="button" class="btn ghost" data-act="update" title="Mit der aktuellen Konfiguration überschreiben">Überschreiben</button>
+        <button type="button" class="btn ghost" data-act="update" title="Mit dem aktuellen Entwurf überschreiben">Überschreiben</button>
         <button type="button" class="btn ghost" data-act="weg">Entfernen</button>
       </div>
     </li>`).join('');
+  renderVariante();
 }
+// Zeigt die geladene Variante und ob der Entwurf davon abweicht; passt die Sammeln-Knöpfe an.
+function renderVariante(){
+  const e = coll.find(x => x.id === aktiv);
+  const passt = e && e.data.kind === formData().kind;
+  const anders = passt && geaendert(formData(), e.data);
+  $('#variante').hidden = !passt;
+  if (passt) $('#variante').innerHTML = `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}`;
+  for (const b of document.querySelectorAll('.js-sammeln')) {
+    if (b.closest('#collLeer')) continue;
+    b.disabled = passt && !anders;
+    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : b.closest('.mbar') ? 'Sammeln' : 'In Sammlung';
+  }
+  for (const b of document.querySelectorAll('.js-ueberschreiben')) b.hidden = !anders;
+}
+for (const b of document.querySelectorAll('.js-ueberschreiben')) b.addEventListener('click', () => {
+  const i = coll.findIndex(x => x.id === aktiv);
+  if (i < 0) return;
+  coll[i] = { ...sammlungEintrag(formData(), R), id:coll[i].id, name:coll[i].name };
+  storeColl(); renderColl();
+  flash('.js-msg', `«${esc(coll[i].name)}» überschrieben.`);
+});
 const sammeln = () => {
   const e = sammlungEintrag(formData(), R);
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
   if (gleich) e.name += ` (${gleich + 1})`;
-  coll.push(e); aktiv = e.id; storeColl(); renderColl();
-  flash('.js-sammelmsg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+  coll.push(e); aktiv = e.id; storeAktiv(); storeColl(); renderColl();
+  flash('.js-msg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="sammlung">Zur Sammlung</button>`);
 };
 for (const b of document.querySelectorAll('.js-sammeln')) b.addEventListener('click', sammeln);
-for (const m of document.querySelectorAll('.js-sammelmsg')) m.addEventListener('click', ev => {
-  const id = ev.target.dataset.go;
-  if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+for (const m of document.querySelectorAll('.js-msg')) m.addEventListener('click', ev => {
+  if (ev.target.hasAttribute('data-undo')) rueckgaengig();
 });
 $('#collList').addEventListener('change', ev => {
   const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
-  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); }
+  if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); if (e.id === aktiv) renderVariante(); }
 });
 $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
   if (!act) return;
   const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
-  if (act === 'laden') { aktiv = e.id; applyData(e.data); flash('#collMsg', `«${esc(e.name)}» geladen.`); }
+  if (act === 'laden') {
+    applyData(e.data, { undo:true }); aktiv = e.id; storeAktiv();
+    flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`);
+    geheZu('entwerfen');
+  }
   if (act === 'update') {
-    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id;
+    coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id; storeAktiv();
     flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
   }
   if (act === 'weg') {
     entfernt = { e, i }; coll.splice(i, 1);
-    if (aktiv === e.id) aktiv = null;
+    if (aktiv === e.id) { aktiv = null; storeAktiv(); }
     flash('#collMsg', `«${esc(e.name)}» entfernt. <button type="button" class="linkbtn" id="bUndo">Rückgängig</button>`);
   }
   storeColl(); renderColl();
@@ -1644,14 +1930,21 @@ $('#collMsg').addEventListener('click', ev => {
 
 /* ---------- Start ---------- */
 fillMaterials();
-restore();
+restore(null);
+DEFAULTS = formData();
+try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'), stored()); } catch (e) { entwuerfe = entwuerfeLaden(null, stored()); }
+const erstBesuch = !entwuerfe;   // Task 9 öffnet dann «Was baust du?»
+restore(entwuerfe && entwuerfe[entwuerfe.kind]);
 syncMaterials();
 syncDepths(true);
 syncVisibility();
-try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
+zeigeBau();
 render();
+save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
+zeigeOrt(ortAusHash(location.hash));
+if (erstBesuch) oeffneWahl({ erst:true });
 requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>

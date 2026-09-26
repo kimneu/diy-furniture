@@ -145,12 +145,28 @@ function wuerfelReduit(base, rnd, fix = {}){
   };
 }
 
+/* ---------- Entwürfe ---------- */
+// Ein Entwurf pro Möbeltyp: { kind: aktueller Typ, sideboard: Formularwerte, reduit: Formularwerte }.
+// alt = der frühere Einzelentwurf (localStorage sideboard-werkbank-v2); er wird unter seinem Typ abgelegt.
+function entwuerfeLaden(neu, alt){
+  if (neu && neu.kind && neu[neu.kind]) return neu;
+  if (alt && typeof alt === 'object') { const kind = alt.kind || 'sideboard'; return { kind, [kind]: { ...alt, kind } }; }
+  return null;
+}
+function entwurfSetzen(e, data){
+  const kind = data.kind || 'sideboard';
+  return { ...(e || {}), kind, [kind]: data };
+}
+
 /* ---------- Sammlung ---------- */
+// Was das Möbel kostet: Holz im Zuschnitt bzw. ganze Bretter, Latten und Kaufteile (Reduit).
+function kostenGesamt(R){
+  return sheetCosts(R.groups).cut + (R.solidCost || 0) + (R.buyCost || 0);
+}
 // Ein Eintrag merkt sich die Formularwerte und eine Kurzbeschreibung mit den Kosten beim Speichern.
 function sammlungEintrag(d, R, now = new Date()){
   const reduit = d.kind === 'reduit';
-  const { cut } = sheetCosts(R.groups);
-  const kosten = Math.round(cut + (R.solidCost || 0) + (R.buyCost || 0));
+  const kosten = Math.round(kostenGesamt(R));
   const masse = reduit ? `${R.W} × ${R.D} × ${R.H}` : `${R.W} × ${R.H} × ${R.Dtot}`;
   const typ = reduit ? { I:'Reduit hinten', L:'Reduit L-Form', U:'Reduit U-Form' }[R.shape] : 'Sideboard';
   return {
@@ -161,5 +177,32 @@ function sammlungEintrag(d, R, now = new Date()){
     info: { typ, masse, material:`${R.matShort} ${R.t} mm`, kosten }
   };
 }
+// Weicht der Entwurf von der geladenen Variante ab? Katalogwerte zählen nicht, Zahlen und Texte gelten als gleich.
+// price/sheetL/sheetB gelten trotz unterschiedlichem Wert als gleich, solange beide Seiten (unverändert)
+// ihrem eigenen Katalog folgen – sonst würde ein Materialpreis-Update in preise.js «geändert» auslösen.
+const KATALOGFELDER = ['price', 'sheetL', 'sheetB'];
+function folgtKatalog(d, k){ return d.katalog && String(d[k]) === String(d.katalog[k]); }
+function geaendert(a, b){
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  keys.delete('katalog');
+  for (const k of keys) {
+    if (String(a[k]) === String(b[k])) continue;
+    if (KATALOGFELDER.includes(k) && folgtKatalog(a, k) && folgtKatalog(b, k)) continue;
+    return true;
+  }
+  return false;
+}
+// Sammlung in Anzeige-Reihenfolge: neueste zuerst (die Liste ist nach Speicherzeit geordnet) oder günstigste zuerst.
+function sortiere(coll, nach){
+  const c = [...coll].reverse();
+  return nach === 'preis' ? c.sort((x, y) => x.info.kosten - y.info.kosten) : c;
+}
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, snapBreite, HARMLOS, SPERREN };
+/* ---------- Orte ---------- */
+const ORTE = ['entwerfen', 'einkaufen', 'bauen', 'sammlung'];
+function ortAusHash(hash){
+  const o = String(hash || '').replace(/^#/, '');
+  return ORTE.includes(o) ? o : 'entwerfen';
+}
+
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
