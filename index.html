@@ -1164,11 +1164,14 @@ const HAKEN = STORE + '-haken';
 let haken = {};
 try { haken = JSON.parse(localStorage.getItem(HAKEN) || '{}'); } catch (e) {}
 let kaufListe = [];
+const typVon = R => R.kind === 'reduit' ? 'reduit' : 'sideboard';
 const kaufTitel = R => R.kind === 'reduit' ? `Reduit ${R.W} × ${R.D} × ${R.H} mm` : `Sideboard ${R.W} × ${R.H} × ${R.Dtot} mm`;
 function renderKauf(R){
   kaufListe = einkaufsliste(R);
-  const kind = R.kind === 'reduit' ? 'reduit' : 'sideboard';
-  const an = new Set(haken[kind] = hakenFiltern(haken[kind] || [], kaufListe));
+  const kind = typVon(R);
+  // Der gespeicherte Haken-Satz bleibt unverändert; hakenFiltern gilt nur für Anzeige und Zählung
+  // (sonst löscht Tippen einer Masszahl, die kurz eine andere Zeilenliste rendert, dauerhaft Haken).
+  const an = new Set(hakenFiltern(haken[kind] || [], kaufListe));
   const total = kaufListe.reduce((a, s) => a + s.zeilen.length, 0);
   $('#kaufKopf').textContent = `${kaufTitel(R)} · ca. CHF ${Math.round(kostenGesamt(R) / 5) * 5}`;
   $('#cnt-kauf').textContent = $('#mCntKauf').textContent = an.size ? `${an.size}/${total}` : '';
@@ -1179,7 +1182,7 @@ function renderKauf(R){
   try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
 }
 $('#kaufListe').addEventListener('change', ev => {
-  const id = ev.target.dataset.id, kind = R.kind === 'reduit' ? 'reduit' : 'sideboard';
+  const id = ev.target.dataset.id, kind = typVon(R);
   const s = new Set(haken[kind] || []);
   ev.target.checked ? s.add(id) : s.delete(id);
   haken[kind] = [...s];
@@ -1187,7 +1190,7 @@ $('#kaufListe').addEventListener('change', ev => {
   $('#bHakenWeg').hidden = !s.size;
   $('#cnt-kauf').textContent = $('#mCntKauf').textContent = s.size ? `${s.size}/${kaufListe.reduce((a, x) => a + x.zeilen.length, 0)}` : '';
 });
-$('#bHakenWeg').addEventListener('click', () => { haken[R.kind === 'reduit' ? 'reduit' : 'sideboard'] = []; renderKauf(R); });
+$('#bHakenWeg').addEventListener('click', () => { haken[typVon(R)] = []; renderKauf(R); });
 
 // Bauen: Unterreiter Teile | Ablängplan | Bauablauf
 function zeigeBau(){
