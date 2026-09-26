@@ -279,12 +279,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .box h3{font-size:15px;font-weight:600;margin-bottom:8px}
-.items{list-style:none;margin:0;padding:0;display:grid}
-.items li{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
-.items li:last-child{border-bottom:0}
-.items .q{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--accent);font-weight:500}
-.items small{display:block;color:var(--muted);font-size:12.5px}
-.tools{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
 
 /* Einkaufen */
 .warnhint{margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:9px;font-size:13.5px}
@@ -1551,7 +1545,6 @@ function selectTab(id){
   placeTabInd(true);
 }
 tabs.forEach((t, i) => {
-  t.addEventListener('click', () => selectTab(t.id));
   t.addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
