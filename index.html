@@ -333,6 +333,19 @@ figure.sheet svg{width:100%;height:auto;display:block}
 
 /* Gruppen einklappen (nur schmal) */
 .gh{all:unset;display:flex;align-items:center;justify-content:space-between;width:100%;cursor:default}
+.group[data-lock] > h2{display:flex;align-items:center;gap:6px}
+.group[data-lock] .gh{flex:1;width:auto}
+.lock{all:unset;display:grid;place-items:center;width:26px;height:26px;margin-block:-5px;border-radius:6px;color:var(--muted);opacity:.55;cursor:pointer;transition:opacity 150ms ease,color 150ms ease,background-color 150ms ease}
+.lock:hover{opacity:1}
+.lock:focus-visible{opacity:1;outline:2px solid var(--accent);outline-offset:1px}
+.lock[aria-pressed=true]{opacity:1;color:var(--accent);background:var(--accent-soft)}
+.lock .shut,.lock[aria-pressed=true] .open{display:none}
+.lock[aria-pressed=true] .shut{display:block}
+#lockCount:not(:empty){font-weight:500;opacity:.75}
+.ticks{grid-column:1 / -1;position:relative;height:16px;margin-top:-4px}
+.ticks span{position:absolute;left:calc(var(--p) * (100% - 16px) + 8px);transform:translateX(-50%);padding-top:5px;font-size:10.5px;line-height:1;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks span::before{content:"";position:absolute;top:0;left:50%;width:1px;height:4px;background:var(--line-strong)}
+.ticks span.on{color:var(--accent);font-weight:600}
 .gh:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .gh svg{display:none;transition:transform 200ms var(--ease-out)}
 .vbtn svg{flex:none}
@@ -383,6 +396,7 @@ body[data-ort="sammlung"] .layout{display:none}
   .pick{top:8px;bottom:auto;left:8px;max-width:calc(100% - 16px)}
   .pick:not([hidden]) ~ .dimtag{display:none}
   .gh{cursor:pointer;min-height:44px}
+  .lock{width:44px;height:44px;margin-block:0}
   .gh svg{display:block}
   .group.collapsed{gap:0}
   .group.collapsed > :not(h2){display:none}
@@ -501,10 +515,11 @@ body[data-ort="sammlung"] .layout{display:none}
     <form id="cfg" class="controls" autocomplete="off">
       <section class="group">
         <div class="acts">
-          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall</button>
+          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall<span id="lockCount"></span></button>
         </div>
+        <p class="hint">Mit dem Schloss bei einer Gruppe bleibt sie beim Würfeln, wie sie ist.</p>
       </section>
-      <section class="group" data-kind="sideboard">
+      <section class="group" data-kind="sideboard" data-lock="masse">
         <h2>Masse</h2>
         <div class="dim">
           <label for="w">Breite</label>
@@ -558,7 +573,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <p class="hint">Innenmasse von Wand zu Wand. Die Tür liegt mittig in der Vorderwand.</p>
       </section>
 
-      <section class="group" data-kind="reduit">
+      <section class="group" data-kind="reduit" data-lock="bauart">
         <h2>Bauart</h2>
         <div class="field">
           <span class="lbl" id="lbl-build">Regal</span>
@@ -573,7 +588,7 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="reduit">
+      <section class="group" data-kind="reduit" data-lock="form">
         <h2>Form</h2>
         <div class="field">
           <span class="lbl" id="lbl-shape">Regal an</span>
@@ -585,23 +600,27 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="reduit">
+      <section class="group" data-kind="reduit" data-lock="tablare">
         <h2>Tablare</h2>
         <div class="dim">
           <label for="dBack">Tiefe hinten</label>
           <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
           <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
+          <div class="ticks" id="dBack-ticks" aria-hidden="true" hidden></div>
         </div>
         <div class="dim" id="row-dLeft">
           <label for="dLeft">Tiefe links</label>
           <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
           <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
+          <div class="ticks" id="dLeft-ticks" aria-hidden="true" hidden></div>
         </div>
         <div class="dim" id="row-dRight">
           <label for="dRight">Tiefe rechts</label>
           <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
           <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
+          <div class="ticks" id="dRight-ticks" aria-hidden="true" hidden></div>
         </div>
+        <p class="hint" id="depthHint" hidden></p>
         <div class="dim">
           <label for="nShelves">Anzahl Tablare</label>
           <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
@@ -619,7 +638,7 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="reduit" id="grp-niche">
+      <section class="group" data-kind="reduit" id="grp-niche" data-lock="nische">
         <h2>Nische</h2>
         <div class="field" id="row-nicheL">
           <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
@@ -638,7 +657,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
       </section>
 
-      <section class="group" data-kind="sideboard">
+      <section class="group" data-kind="sideboard" data-lock="aufbau">
         <h2>Aufbau</h2>
         <div class="field">
           <span class="lbl" id="lbl-top">Deckel</span>
@@ -699,7 +718,7 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="sideboard">
+      <section class="group" data-kind="sideboard" data-lock="front">
         <h2>Front</h2>
         <div class="field">
           <span class="lbl" id="lbl-front">Türen</span>
@@ -741,7 +760,7 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group">
+      <section class="group" data-lock="material">
         <h2>Material</h2>
         <div class="field" id="row-room">
           <span class="lbl" id="lbl-room">Einsatzort</span>
@@ -768,7 +787,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <p class="hint" id="matNote"></p>
       </section>
 
-      <section class="group" id="grp-joint">
+      <section class="group" id="grp-joint" data-lock="verbindung">
         <h2>Verbindung</h2>
         <div class="cards" role="radiogroup" aria-label="Verbindung">
           <label class="card"><input type="radio" name="joint" value="pocket" checked><b>Taschenloch</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Schräg von innen verschraubt. Schnell, stabil, aussen unsichtbar. Braucht eine Taschenloch-Bohrlehre.</span></label>
@@ -967,6 +986,7 @@ function syncVisibility(){
   // Möbeltyp
   const kind = f.get('kind'), reduit = kind === 'reduit', free = f.get('build') === 'free';
   for (const sec of form.querySelectorAll('[data-kind]')) sec.hidden = sec.dataset.kind !== kind;
+  syncDepths(false);
   $('#grp-joint').hidden = reduit && !free;
   $('#row-room').hidden = reduit;
   $('#row-back').hidden = reduit && !free;
@@ -982,6 +1002,28 @@ function syncVisibility(){
   $('#row-nicheL-dims').hidden = !f.get('nicheL');
   $('#row-nicheR-dims').hidden = !f.get('nicheR');
   $('#grp-niche').hidden = !hasL && !hasR;
+}
+// Ganze Bretter: Tablartiefe = Brettbreite. Regler und Zahlenfeld rasten auf die Breiten ein, darunter Markierungen.
+const TIEFEN_IDS = ['dBack', 'dLeft', 'dRight'];
+function boardMat(){ const M = MATS[$('#mat').value]; return M && M.boards ? M : null; }
+function syncDepths(snap){
+  const BM = boardMat();
+  $('#depthHint').hidden = !BM;
+  if (BM) $('#depthHint').textContent = `Die Tiefe rastet auf die Brettbreiten von ${BM.name} ein: ${BM.widths.join(', ')} mm.`;
+  for (const k of TIEFEN_IDS) {
+    const num = $('#' + k), r = $('#' + k + '-r'), ticks = $('#' + k + '-ticks');
+    ticks.hidden = !BM;
+    if (!BM) continue;
+    if (snap) num.value = r.value = snapBreite(BM.widths, Number(num.value));
+    const v = Number(num.value), mn = Number(r.min), mx = Number(r.max);
+    if (BM.widths.includes(v)) num.dataset.last = v;
+    ticks.innerHTML = BM.widths.map(w => `<span style="--p:${(w - mn) / (mx - mn)}"${w === v ? ' class="on"' : ''}>${w}</span>`).join('');
+  }
+}
+// Nächste Brettbreite in Richtung dir (+1/-1) ab cur, sonst cur.
+function stepBreite(widths, cur, dir){
+  const next = dir > 0 ? widths.find(w => w > cur) : [...widths].reverse().find(w => w < cur);
+  return next == null ? cur : next;
 }
 function readCfg(){ return cfgFromData(formData()); }
 // Formularwerte als name → Wert (Radio: gewählter Wert, Checkbox: true/false).
@@ -1055,6 +1097,7 @@ function render(){
   $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
   renderVariante();
+  syncLocks();
 }
 function renderSummary(R){
   const main = R.groups[0], back = R.groups[1];
@@ -1493,6 +1536,8 @@ function build3D(R){
 /* ---------- Ereignisse ---------- */
 function onInput(e){
   const el = e.target;
+  const BM = TIEFEN_IDS.includes(el.dataset.for) && boardMat();
+  if (BM) el.value = snapBreite(BM.widths, Number(el.value));
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
@@ -1505,15 +1550,31 @@ function onInput(e){
     const v = el.value === 'plinth' ? 80 : 160;
     $('#baseH').value = v; $('#baseH-r').value = v;
   }
+  if (el.name === 'mat') syncDepths(true);
   syncVisibility(); render(); save();
 }
 form.addEventListener('input', onInput);
 form.addEventListener('change', e => {
   const el = e.target;
   if (el.type === 'number' && el.value !== '') {
-    const v = clamp(Number(el.value), Number(el.min), Number(el.max));
-    if (String(v) !== el.value) { el.value = v; const r = $('#' + el.id + '-r'); if (r) r.value = v; render(); save(); }
+    let v = clamp(Number(el.value), Number(el.min), Number(el.max));
+    const BM = TIEFEN_IDS.includes(el.id) && boardMat();
+    if (BM) {
+      const last = Number(el.dataset.last), d = v - last;
+      v = Math.abs(d) === Number(el.step) ? stepBreite(BM.widths, last, d) : snapBreite(BM.widths, v);
+    }
+    if (String(v) !== el.value) { el.value = v; const r = $('#' + el.id + '-r'); if (r) r.value = v; syncVisibility(); render(); save(); }
   }
+});
+// Pfeiltasten an Tiefenregler und -feld: eine Brettbreite weiter statt 10 mm (sonst rastet es gleich zurück).
+form.addEventListener('keydown', e => {
+  const el = e.target, k = TIEFEN_IDS.includes(el.dataset.for) ? el.dataset.for : el.id;
+  const dir = { ArrowUp:1, ArrowRight:1, PageUp:1, ArrowDown:-1, ArrowLeft:-1, PageDown:-1 }[e.key];
+  const BM = dir && TIEFEN_IDS.includes(k) && boardMat();
+  if (!BM || (el.type === 'number' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) return;
+  e.preventDefault();
+  el.value = stepBreite(BM.widths, snapBreite(BM.widths, Number(el.value)), dir);
+  el.dispatchEvent(new Event('input', { bubbles:true }));
 });
 form.addEventListener('submit', e => e.preventDefault());
 
@@ -1600,6 +1661,39 @@ function applyNarrow(){
 narrow.addEventListener('change', applyNarrow);
 applyNarrow();
 
+// Schloss pro Gruppe: gesperrte Gruppen bleiben beim Zufall, wie sie sind (gemerkt pro Browser).
+const LOCKS = STORE + '-schloss';
+let locks = new Set();
+try { locks = new Set(JSON.parse(localStorage.getItem(LOCKS) || '[]')); } catch (e) {}
+const lockSvg = '<svg class="open" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.7-1.5"/></svg>'
+  + '<svg class="shut" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+for (const g of form.querySelectorAll('.group[data-lock]')) {
+  const h = g.querySelector(':scope > h2'), name = h.textContent.trim(), b = document.createElement('button');
+  b.type = 'button'; b.className = 'lock'; b.dataset.lock = g.dataset.lock; b.dataset.name = name; b.innerHTML = lockSvg;
+  b.setAttribute('aria-label', `${name} beim Zufall festhalten`);
+  h.append(b);
+}
+// Nur sichtbare Gruppen zählen: was man nicht sieht (anderer Möbeltyp, keine Nische möglich), wird gewürfelt.
+const activeLocks = () => [...form.querySelectorAll('.group[data-lock]')].filter(g => !g.hidden && locks.has(g.dataset.lock)).map(g => g.dataset.lock);
+// Zufall für einen anderen Typ (Möbelwahl): dessen Gruppen sind versteckt, darum nach Typ statt nach Sichtbarkeit.
+const locksFuer = kind => [...form.querySelectorAll('.group[data-lock]')].filter(g => (!g.dataset.kind || g.dataset.kind === kind) && locks.has(g.dataset.lock)).map(g => g.dataset.lock);
+function syncLocks(){
+  for (const b of form.querySelectorAll('.lock')) {
+    const on = locks.has(b.dataset.lock);
+    b.setAttribute('aria-pressed', String(on));
+    b.title = on ? `${b.dataset.name} bleibt beim Zufall – klicken zum Lösen` : `${b.dataset.name} beim Zufall festhalten`;
+  }
+  const n = activeLocks().length;
+  $('#lockCount').textContent = n ? ` · ${n} fest` : '';
+}
+form.addEventListener('click', e => {
+  const b = e.target.closest('.lock');
+  if (!b) return;
+  locks.has(b.dataset.lock) ? locks.delete(b.dataset.lock) : locks.add(b.dataset.lock);
+  try { localStorage.setItem(LOCKS, JSON.stringify([...locks])); } catch (e) {}
+  syncLocks();
+});
+
 // Router
 // Orte: Entwerfen · Einkaufen · Bauen · Sammlung. Handy: jeder Ort eine Ansicht. Desktop: Einkaufen und Bauen
 // sind Reiter neben dem Entwurf, nur die Sammlung ist eine eigene Ansicht.
@@ -1666,7 +1760,7 @@ function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } 
 let vorher = null;
 function applyData(data, { undo = false } = {}){
   if (undo) vorher = { entwuerfe: JSON.parse(JSON.stringify(entwuerfe)), aktiv };
-  restore(data); syncMaterials(); syncVisibility();
+  restore(data); syncMaterials(); syncDepths(true); syncVisibility();
   three.userMoved = false;
   render(); save(); placePills();
 }
@@ -1684,7 +1778,7 @@ function wechsleTyp(kind){
 }
 const undoBtn = '<button type="button" class="linkbtn" data-undo>Rückgängig</button>';
 $('#bZufall').addEventListener('click', () => {
-  applyData(zufall(formData()), { undo:true });
+  applyData(zufall(formData(), Math.random, 60, activeLocks()), { undo:true });
   flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
 });
 
@@ -1731,7 +1825,7 @@ wahl.addEventListener('click', ev => {
   if (k) wechsleTyp(k.dataset.kind);
   if (z) {
     const basis = entwuerfe[z.dataset.zufall] || { ...DEFAULTS, kind:z.dataset.zufall };
-    applyData(zufall(basis), { undo: !wahlErst });
+    applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo: !wahlErst });
     if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
   }
   if (wahlErst) { wahlErst = false; wahl.close(); if (s) geheZu('sammlung'); return; }
@@ -1842,6 +1936,7 @@ try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'
 const erstBesuch = !entwuerfe;   // Task 9 öffnet dann «Was baust du?»
 restore(entwuerfe && entwuerfe[entwuerfe.kind]);
 syncMaterials();
+syncDepths(true);
 syncVisibility();
 initThree();
 zeigeBau();

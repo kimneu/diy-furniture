@@ -35,6 +35,18 @@ function computeData(d){
 // Hinweise, die zum Möbel gehören und kein Fehler sind, sind erlaubt: Kippschutz, Bad, Gipskarton (gehört
 // zum Raum) und was die Berechnung schon selbst löst (zusätzliche Winkel/Pfosten eingeplant, Tiefe auf Brettbreite).
 const HARMLOS = /kippt leicht|^Bad:|^Gipskarton|eingeplant|gesetzt \(Brettbreite/;
+// Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder.
+const SPERREN = {
+  masse:['w', 'h', 'd'],
+  bauart:['build', 'sys'],
+  form:['shape', 'corner'],
+  tablare:['dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop'],
+  nische:['nicheL', 'nicheLW', 'nicheLH', 'nicheR', 'nicheRW', 'nicheRH'],
+  aufbau:['top', 'sections', 'shelves', 'base', 'baseH', 'legShape', 'taper', 'legColor'],
+  front:['front', 'doorsPer', 'slideN', 'handle', 'color'],
+  material:['mat', 't', 'back', 'price', 'sheetL', 'sheetB', 'kerf', 'grain', 'katalog'],
+  verbindung:['joint']
+};
 const SB_TYPES = [
   // [Name, Breite, Höhe, Tiefe, Untergestell]
   ['Lowboard',   [1400, 2200], [420, 600],  [350, 450], ['legs', 'legs', 'plinth']],
@@ -45,12 +57,23 @@ const SB_TYPES = [
 ];
 const SB_MATS = ['birke', 'birke', 'birkesi', 'eiche', 'seekiefer', 'fichtesp', 'dreischicht', 'fichte', 'mdf', 'dekorspan'];
 const RD_MATS = ['fichtesp', 'dreischicht', 'birkesi', 'osb', 'osb', 'schaltafel', 'dekorspan', 'seekiefer'];
+const TIEFEN = ['dBack', 'dLeft', 'dRight'];
 
-function zufall(base, rnd = Math.random, tries = 60){
+// Nächste Brettbreite zu v (bei Gleichstand die breitere, wie die Berechnung aufrundet).
+function snapBreite(widths, v){
+  return widths.reduce((a, w) => Math.abs(w - v) <= Math.abs(a - v) ? w : a);
+}
+
+// locks: Namen aus SPERREN; deren Felder bleiben wie in base.
+function zufall(base, rnd = Math.random, tries = 60, locks = []){
+  const fix = {};
+  for (const g of locks) for (const k of SPERREN[g] || []) if (k in base) fix[k] = base[k];
   let best = null;
   for (let i = 0; i < tries; i++) {
-    const d = withCatalog(base.kind === 'reduit' ? wuerfelReduit(base, rnd) : wuerfelSideboard(base, rnd));
-    delete d.katalog;
+    let d = base.kind === 'reduit' ? wuerfelReduit(base, rnd, fix) : wuerfelSideboard(base, rnd, fix);
+    if (!('mat' in fix)) { d = withCatalog(d); delete d.katalog; }
+    const BM = MATS[d.mat].boards ? MATS[d.mat] : null;
+    if (d.kind === 'reduit' && BM) for (const k of TIEFEN) if (!(k in fix)) d[k] = snapBreite(BM.widths, Number(d[k]));
     const warn = computeData(d).warn.filter(w => !HARMLOS.test(w));
     if (!warn.length) return d;
     if (!best || warn.length < best.n) best = { d, n:warn.length };
@@ -58,53 +81,67 @@ function zufall(base, rnd = Math.random, tries = 60){
   return best.d;
 }
 
-function wuerfelSideboard(base, rnd){
+function wuerfelSideboard(base, rnd, fix = {}){
   const pick = a => a[Math.floor(rnd() * a.length)];
   const range = ([a, b], step = 10) => a + Math.round(rnd() * (b - a) / step) * step;
   const chance = p => rnd() < p;
-  const [typ, rw, rh, rdp, bases] = pick(SB_TYPES);
+  const has = k => k in fix, val = (k, f) => has(k) ? fix[k] : f();
+  // Feste Masse: einen Möbeltyp nehmen, in den sie passen.
+  const fits = SB_TYPES.filter(([, rw, rh]) => !has('w') || (fix.w >= rw[0] && fix.w <= rw[1] && fix.h >= rh[0] && fix.h <= rh[1]));
+  const [typ, rw, rh, rdp, bases] = pick(fits.length ? fits : SB_TYPES);
   const regal = typ === 'Regal';
-  const mat = pick(SB_MATS.filter(k => MATS[k])), M = MATS[mat];
-  const t = chance(0.75) ? M.tDef : pick(M.t.filter(v => v >= 15 && v <= 22).concat(M.tDef));
-  const W = range(rw, 50), H = range(rh, 10), D = range(rdp, 10);
-  const b = pick(bases), baseH = b === 'legs' ? range([100, 220], 10) : b === 'plinth' ? range([60, 100], 10) : base.baseH;
+  const mat = val('mat', () => pick(SB_MATS.filter(k => MATS[k]))), M = MATS[mat];
+  const t = Number(val('t', () => chance(0.75) ? M.tDef : pick(M.t.filter(v => v >= 15 && v <= 22).concat(M.tDef))));
+  const W = Number(val('w', () => range(rw, 50))), H = Number(val('h', () => range(rh, 10))), D = Number(val('d', () => range(rdp, 10)));
+  const b = val('base', () => pick(bases));
+  const baseH = Number(val('baseH', () => b === 'legs' ? range([100, 220], 10) : b === 'plinth' ? range([60, 100], 10) : base.baseH));
   const Hi = H - (b === 'none' ? 0 : baseH) - 2 * t;
-  const sections = Math.max(1, Math.min(4, Math.round((W - 2 * t) / range([450, 650], 10))));
+  const sections = Number(val('sections', () => Math.max(1, Math.min(4, Math.round((W - 2 * t) / range([450, 650], 10))))));
   const shelves = Math.max(0, Math.min(3, Math.floor(Hi / range([300, 400], 10)) - 1));
-  const front = regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 && t <= 19 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']);
+  const front = val('front', () => regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 && t <= 19 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']));
   const handle = front === 'sliding' ? pick(['shell', 'hole']) : pick(['hole', 'knob', 'push']);
   const painted = ['weiss', 'salbei', 'taube', 'anthrazit'];
-  const color = mat === 'mdf' ? pick(painted) : mat === 'eiche' || M.coated ? 'korpus' : chance(0.55) ? 'korpus' : pick(painted);
-  const joint = mat === 'mdf' ? pick(['dowels', 'cam', 'pocket']) : pick(['pocket', 'pocket', 'dowels', 'cam', 'screws']);
+  const color = val('color', () => mat === 'mdf' ? pick(painted) : mat === 'eiche' || M.coated ? 'korpus' : chance(0.55) ? 'korpus' : pick(painted));
+  const joint = val('joint', () => mat === 'mdf' ? pick(['dowels', 'cam', 'pocket']) : pick(['pocket', 'pocket', 'dowels', 'cam', 'screws']));
   return {
     ...base, mat, t, w:W, h:H, d:D, base:b, baseH, sections, shelves, front, handle, color, joint,
     top: joint === 'screws' ? 'between' : pick(['over', 'over', 'between']),
     back: base.room === 'bath' ? 'ply6' : M.ply && chance(0.3) ? 'ply6' : 'hdf3',
     doorsPer:'auto', slideN:'auto',
     legShape: pick(['cone', 'cone', 'straight']), taper: range([20, 45], 5),
-    legColor: color === 'anthrazit' || mat === 'mdf' ? pick(['black', 'oak']) : pick(['oak', 'oak', 'black'])
+    legColor: color === 'anthrazit' || mat === 'mdf' ? pick(['black', 'oak']) : pick(['oak', 'oak', 'black']),
+    ...fix
   };
 }
 
-function wuerfelReduit(base, rnd){
+function wuerfelReduit(base, rnd, fix = {}){
   const pick = a => a[Math.floor(rnd() * a.length)];
   const range = ([a, b], step = 10) => a + Math.round(rnd() * (b - a) / step) * step;
   const chance = p => rnd() < p;
+  const has = k => k in fix, val = (k, f) => has(k) ? fix[k] : f();
+  const on = v => v === true || v === 'on';
   const rw = Number(base.rw), rh = Number(base.rh);
-  const shape = rw >= 1500 ? pick(['U', 'U', 'L', 'I']) : rw >= 1100 ? pick(['L', 'L', 'I']) : 'I';
-  const build = chance(0.8) ? 'built' : 'free';
-  const mat = pick(RD_MATS.filter(k => MATS[k]));
+  // Feste Nische: nur Formen, die an dieser Seite ein Regal haben.
+  const wantL = has('nicheL') && on(fix.nicheL), wantR = has('nicheR') && on(fix.nicheR);
+  let shapes = rw >= 1500 ? ['U', 'U', 'L', 'I'] : rw >= 1100 ? ['L', 'L', 'I'] : ['I'];
+  if (wantL || wantR) { shapes = shapes.filter(s => s === 'U' || (s === 'L' && !(wantL && wantR))); if (!shapes.length) shapes = [wantL && wantR ? 'U' : 'L']; }
+  const shape = val('shape', () => pick(shapes));
+  const corner = val('corner', () => wantL && !wantR ? 'L' : wantR && !wantL ? 'R' : pick(['L', 'R']));
+  // Feste Tablartiefen: nur Materialien, die sie ohne Umrunden erlauben.
+  const depthsOk = k => !MATS[k].boards || TIEFEN.every(t => MATS[k].widths.includes(Number(fix[t])));
+  const mat = val('mat', () => pick(RD_MATS.filter(k => MATS[k] && (!has('dBack') || depthsOk(k)))));
   const side = range([200, 400], 50);
-  const gapBottom = range([100, 300], 50), gapTop = range([250, 450], 50);
+  const gapBottom = Number(val('gapBottom', () => range([100, 300], 50))), gapTop = Number(val('gapTop', () => range([250, 450], 50)));
   const nShelves = Math.max(3, Math.min(8, Math.round((rh - gapBottom - gapTop) / range([320, 420], 10)) + 1));
   const niche = shape !== 'I' && chance(0.3);
   return {
-    ...base, shape, corner:pick(['L', 'R']), build, sys:pick(['battens', 'battens', 'rails', 'brackets', 'cheeks', 'posts']),
+    ...base, shape, corner, build:chance(0.8) ? 'built' : 'free', sys:pick(['battens', 'battens', 'rails', 'brackets', 'cheeks', 'posts']),
     mat, t:MATS[mat].tDef, back:'hdf3', joint:pick(['pocket', 'screws', 'dowels']),
     dBack:range([300, 500], 50), dLeft:side, dRight:chance(0.7) ? side : range([200, 400], 50),
     nShelves, gapBottom, gapTop,
     nicheL:niche && chance(0.5), nicheLW:range([400, 500], 10), nicheLH:range([1200, 1400], 50),
-    nicheR:false, nicheRW:range([400, 500], 10), nicheRH:range([1200, 1400], 50)
+    nicheR:false, nicheRW:range([400, 500], 10), nicheRH:range([1200, 1400], 50),
+    ...fix
   };
 }
 
@@ -168,4 +205,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };

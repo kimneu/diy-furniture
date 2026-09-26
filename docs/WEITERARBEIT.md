@@ -35,7 +35,7 @@ Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `te
 ## Orte und Speicher
 
 - Orte: `#entwerfen`, `#einkaufen`, `#bauen`, `#sammlung`. Handy: je eine Ansicht mit Leiste unten. Desktop: Einkaufen/Bauen als Reiter neben dem Entwurf (Hash per `replaceState`), Sammlung als eigene Ansicht. Spec: `docs/superpowers/specs/2026-09-26-ansichten-design.md`.
-- localStorage: `sideboard-werkbank-v2-entwuerfe` (ein Entwurf pro Typ; `sideboard-werkbank-v2` wird nur noch beim ersten Laden übernommen), `-sammlung`, `-aktiv` (geladene Variante), `-haken` (pro Typ), `-bau` (Unterreiter), `-sort`.
+- localStorage: `sideboard-werkbank-v2-entwuerfe` (ein Entwurf pro Typ; `sideboard-werkbank-v2` wird nur noch beim ersten Laden übernommen), `-sammlung`, `-aktiv` (geladene Variante), `-haken` (pro Typ), `-bau` (Unterreiter), `-sort`, `-schloss` (gesperrte Gruppen für «Zufall»).
 
 ## Preise
 
@@ -83,6 +83,8 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 ## Oberfläche
 
 - Möbeltyp-Umschalter steht im Kopf (Radios mit `form="cfg"`, Ereignisse laufen über `#kindBar` in dieselben Handler). «In Sammlung»: Handy in der Leiste unten («Sammeln» neben «Ergebnis»), Desktop im Kopf neben dem Preis (`.js-sammeln`, Meldung `.js-sammelmsg`).
+- Schloss pro Gruppe (`data-lock` an der `section`, Felder in `SPERREN` in `konfig.js`): Gesperrte, sichtbare Gruppen bleiben bei «Zufall», wie sie sind; `zufall(base, rnd, tries, locks)` richtet den Rest danach (feste Nische → Form mit Regal an dieser Seite, feste Tablartiefen → kein Brettmaterial, das sie verschiebt). Gemerkt pro Browser in `sideboard-werkbank-v2-schloss`.
+- Tablartiefe bei ganzen Brettern: Regler und Zahlenfeld rasten auf die Brettbreiten ein (`snapBreite`), Pfeiltasten springen eine Breite weiter, darunter Markierungen und ein Hinweis (`syncDepths` in `index.html`).
 - Reihenfolge im Formular, von Rahmen über Form zu Material und Technik: Zufall · Masse / Raum · Bauart · Form · Tablare · Nische · Aufbau · Front · Material · Verbindung · Platten & Preise · Niveau.
 
 ## Ideen (noch nicht entschieden)
