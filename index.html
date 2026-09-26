@@ -1694,6 +1694,7 @@ function flash(sel, html){
 // Beim ersten Besuch ohne Schliessen. Sonst legt Öffnen einen History-Eintrag an, damit Zurück den Dialog schliesst.
 const wahl = $('#wahl');
 let wahlErst = false;
+let wahlToken = 0;
 function oeffneWahl({ erst = false } = {}){
   wahlErst = erst;
   const aktuell = formData().kind;
@@ -1706,15 +1707,16 @@ function oeffneWahl({ erst = false } = {}){
   }
   $('#wahlZu').hidden = erst;
   $('#wahlColl').hidden = !coll.length;
-  if (!erst) history.pushState({ wahl:true }, '', location.hash || '#entwerfen');
+  if (!erst) { wahlToken = Date.now(); history.pushState({ wahl:wahlToken }, '', location.hash || '#entwerfen'); }
   wahl.showModal();
 }
 function schliesseWahl(){
   if (!wahl.open) return;
-  if (history.state && history.state.wahl) history.back();   // popstate schliesst
+  if (history.state && history.state.wahl === wahlToken) history.back();   // popstate schliesst
   else wahl.close();
 }
-window.addEventListener('popstate', () => { if (wahl.open && !(history.state && history.state.wahl)) wahl.close(); });
+// Jedes Verlassen unseres History-Eintrags (auch über einen älteren, ebenfalls markierten) schliesst den Dialog.
+window.addEventListener('popstate', () => { if (wahl.open && !(history.state && history.state.wahl === wahlToken)) wahl.close(); });
 wahl.addEventListener('cancel', ev => { ev.preventDefault(); if (!wahlErst) schliesseWahl(); });
 $('#bKind').addEventListener('click', () => oeffneWahl());
 $('#wahlZu').addEventListener('click', schliesseWahl);
@@ -1729,7 +1731,7 @@ wahl.addEventListener('click', ev => {
   }
   if (wahlErst) { wahlErst = false; wahl.close(); if (s) geheZu('sammlung'); return; }
   // history.back() läuft asynchron: erst nach dem Zurück-Schritt zur Sammlung, sonst überholt der neue Hash ihn.
-  if (s && history.state && history.state.wahl) addEventListener('popstate', () => geheZu('sammlung'), { once:true });
+  if (s && history.state && history.state.wahl === wahlToken) addEventListener('popstate', () => geheZu('sammlung'), { once:true });
   schliesseWahl();
   if (s && !wahl.open) geheZu('sammlung');
 });
