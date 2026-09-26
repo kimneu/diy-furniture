@@ -153,4 +153,11 @@ function sortiere(coll, nach){
   return nach === 'preis' ? c.sort((x, y) => x.info.kosten - y.info.kosten) : c;
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen, geaendert, sortiere };
+/* ---------- Orte ---------- */
+const ORTE = ['entwerfen', 'einkaufen', 'bauen', 'sammlung'];
+function ortAusHash(hash){
+  const o = String(hash || '').replace(/^#/, '');
+  return ORTE.includes(o) ? o : 'entwerfen';
+}
+
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, HARMLOS, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };

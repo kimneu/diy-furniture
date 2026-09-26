@@ -299,6 +299,19 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .vbtn{display:inline-flex;align-items:center;gap:6px}
 .hint-touch{display:none}
 .mbar{display:none}
+
+/* Orte */
+body:not([data-ort="sammlung"]) .sammlung{display:none}
+body[data-ort="sammlung"] .layout{display:none}
+.sammlung{margin-top:20px}
+.sammlung h2{font-size:20px}
+@media (max-width:920px){
+  body[data-ort="einkaufen"] .cfgwrap,body[data-ort="bauen"] .cfgwrap{display:none}
+  body[data-ort="entwerfen"] .output{display:none}
+  .output .tabs{display:none}
+  body:not([data-ort="entwerfen"]) .top .summary{display:none}
+}
+
 .chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
 .chips li{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
 .chips b{color:var(--ink);font-weight:500}
@@ -319,7 +332,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
 }
 
 @media (max-width:920px){
-  .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(140px + env(safe-area-inset-bottom))}
   .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
   #stage{aspect-ratio:auto;height:38svh;min-height:220px;max-height:none}
   .stage-wrap{border-radius:12px}
@@ -334,7 +347,12 @@ figure.sheet svg{width:100%;height:auto;display:block}
   .group.collapsed{gap:0}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
-  .mbar{display:flex;position:fixed;z-index:10;left:0;right:0;bottom:0;align-items:center;justify-content:space-between;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mprice{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mnav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .mnav button{all:unset;text-align:center;padding:8px 2px;min-height:28px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .mnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+  .mnav .count{font-family:var(--f-mono);font-weight:400;font-size:11px;margin-left:3px}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
   .mbar > div:first-child{min-width:0}
@@ -413,7 +431,7 @@ figure.sheet svg{width:100%;height:auto;display:block}
     </div>
     <div class="seg kindbar" id="kindBar" role="radiogroup" aria-label="Möbeltyp"><input type="radio" name="kind" id="kind-sideboard" value="sideboard" form="cfg" checked><label for="kind-sideboard">Sideboard</label><input type="radio" name="kind" id="kind-reduit" value="reduit" form="cfg"><label for="kind-reduit">Reduit</label></div>
     <dl class="summary" id="summary"></dl>
-    <div class="hacts"><p class="variante" id="variante" hidden></p><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
+    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -746,7 +764,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
       <div class="tabs" role="tablist" aria-label="Ergebnis">
         <button class="tab" role="tab" id="tab-einkaufen" aria-controls="p-einkaufen" aria-selected="true">Einkaufen<span class="count" id="cnt-kauf"></span></button>
         <button class="tab" role="tab" id="tab-bauen" aria-controls="p-bauen" aria-selected="false">Bauen</button>
-        <button class="tab" role="tab" id="tab-coll" aria-controls="p-coll" aria-selected="false">Sammlung<span class="count" id="cnt-coll"></span></button>
         <span class="tabind" aria-hidden="true"></span>
       </div>
 
@@ -790,21 +807,29 @@ figure.sheet svg{width:100%;height:auto;display:block}
         <div class="bau" id="b-ablauf" hidden><ol class="steps" id="steps"></ol></div>
       </div>
 
-      <div class="panel" role="tabpanel" id="p-coll" aria-labelledby="tab-coll" hidden>
-        <div class="toolbar">
-          <p id="collSum"></p>
-          <div class="seg collsort" role="radiogroup" aria-label="Sortieren" id="collSort"><input type="radio" name="collsort" id="cs-datum" value="datum" checked><label for="cs-datum">Neueste</label><input type="radio" name="collsort" id="cs-preis" value="preis"><label for="cs-preis">Preis</label></div>
-          <span class="copied" id="collMsg" aria-live="polite"></span>
-        </div>
-        <div class="acts" id="collLeer" hidden><button type="button" class="btn js-sammeln">Aktuellen Entwurf sammeln</button><button type="button" class="btn ghost" data-go="entwerfen" id="bZumEntwurf">Zum Entwurf</button></div>
-        <ul class="coll" id="collList"></ul>
-      </div>
-
       <p class="foot">Alle Angaben ohne Gewähr. Scharnier- und Schiebetürbeschläge haben herstellerabhängige Masse – prüf vor dem Zuschnitt der Türen das Datenblatt deines Beschlags.</p>
     </section>
   </div>
+  <section class="sammlung" id="ortSammlung" aria-labelledby="h-sammlung">
+    <div class="toolbar"><h2 id="h-sammlung">Sammlung<span class="count" id="cnt-coll"></span></h2><button type="button" class="btn ghost" data-go="entwerfen">Zum Entwurf</button></div>
+    <div class="toolbar">
+      <p id="collSum"></p>
+      <div class="seg collsort" role="radiogroup" aria-label="Sortieren" id="collSort"><input type="radio" name="collsort" id="cs-datum" value="datum" checked><label for="cs-datum">Neueste</label><input type="radio" name="collsort" id="cs-preis" value="preis"><label for="cs-preis">Preis</label></div>
+      <span class="copied" id="collMsg" aria-live="polite"></span>
+    </div>
+    <div class="acts" id="collLeer" hidden><button type="button" class="btn js-sammeln">Aktuellen Entwurf sammeln</button><button type="button" class="btn ghost" data-go="entwerfen">Zum Entwurf</button></div>
+    <ul class="coll" id="collList"></ul>
+  </section>
 </div>
-<div class="mbar" id="mbar"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuelle Konfiguration in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button><button type="button" class="btn" id="bJump">Ergebnis ↓</button></div></div>
+<div class="mbar" id="mbar">
+  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
+  <nav class="mnav" aria-label="Orte">
+    <button type="button" data-ort="entwerfen">Entwerfen</button>
+    <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
+    <button type="button" data-ort="bauen">Bauen</button>
+    <button type="button" data-ort="sammlung">Sammlung <span class="js-anzahl"></span></button>
+  </nav>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -1079,7 +1104,7 @@ function renderKauf(R){
   const an = new Set(haken[kind] = hakenFiltern(haken[kind] || [], kaufListe));
   const total = kaufListe.reduce((a, s) => a + s.zeilen.length, 0);
   $('#kaufKopf').textContent = `${kaufTitel(R)} · ca. CHF ${Math.round(kostenGesamt(R) / 5) * 5}`;
-  $('#cnt-kauf').textContent = an.size ? `${an.size}/${total}` : '';
+  $('#cnt-kauf').textContent = $('#mCntKauf').textContent = an.size ? `${an.size}/${total}` : '';
   $('#bHakenWeg').hidden = !an.size;
   $('#kaufListe').innerHTML = kaufListe.map(s => `<section><h3>${s.titel}</h3>${s.info ? `<p class="info">${s.info}</p>` : ''}<ul>${
     s.zeilen.map(z => `<li><label><input type="checkbox" data-id="${esc(z.id)}"${an.has(z.id) ? ' checked' : ''}><span>${z.text}${z.sub ? `<small>${z.sub}</small>` : ''}</span></label></li>`).join('')
@@ -1093,7 +1118,7 @@ $('#kaufListe').addEventListener('change', ev => {
   haken[kind] = [...s];
   try { localStorage.setItem(HAKEN, JSON.stringify(haken)); } catch (e) {}
   $('#bHakenWeg').hidden = !s.size;
-  $('#cnt-kauf').textContent = s.size ? `${s.size}/${kaufListe.reduce((a, x) => a + x.zeilen.length, 0)}` : '';
+  $('#cnt-kauf').textContent = $('#mCntKauf').textContent = s.size ? `${s.size}/${kaufListe.reduce((a, x) => a + x.zeilen.length, 0)}` : '';
 });
 $('#bHakenWeg').addEventListener('click', () => { haken[R.kind === 'reduit' ? 'reduit' : 'sideboard'] = []; renderKauf(R); });
 
@@ -1457,14 +1482,13 @@ function selectTab(id){
     $('#' + t.getAttribute('aria-controls')).hidden = !on;
   }
   placeTabInd(true);
-  try { localStorage.setItem(STORE + '-tab', id); } catch (e) {}
 }
 tabs.forEach((t, i) => {
   t.addEventListener('click', () => selectTab(t.id));
   t.addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-    selectTab(n.id); n.focus();
+    n.click(); n.focus();
   });
 });
 
@@ -1517,14 +1541,35 @@ function applyNarrow(){
 narrow.addEventListener('change', applyNarrow);
 applyNarrow();
 
-// Schmal: Leiste unten springt zum Ergebnis und zurück
-let atOutput = false;
-new IntersectionObserver(([e]) => {
-  atOutput = e.isIntersecting;
-  $('#bJump').textContent = atOutput ? 'Konfigurieren ↑' : 'Ergebnis ↓';
-}, { rootMargin: '0px 0px -40% 0px' }).observe($('.output'));
-$('#bJump').addEventListener('click', () => {
-  $(atOutput ? '.cfgwrap' : '.output').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+// Router
+// Orte: Entwerfen · Einkaufen · Bauen · Sammlung. Handy: jeder Ort eine Ansicht. Desktop: Einkaufen und Bauen
+// sind Reiter neben dem Entwurf, nur die Sammlung ist eine eigene Ansicht.
+function zeigeOrt(ort){
+  if (ort === 'einkaufen' || ort === 'bauen') selectTab('tab-' + ort);
+  const sicht = narrow.matches || ort === 'sammlung' ? ort : 'entwerfen';
+  const neu = document.body.dataset.ort !== sicht;
+  document.body.dataset.ort = sicht;
+  for (const b of document.querySelectorAll('.mnav button')) {
+    if (b.dataset.ort === ort) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  }
+  if (neu) { window.scrollTo(0, 0); placeTabInd(false); placePills(); }
+}
+// Ortswechsel legt einen History-Eintrag an (Zurück-Taste); hashchange ruft zeigeOrt.
+function geheZu(ort){
+  if (ortAusHash(location.hash) === ort && location.hash) zeigeOrt(ort);
+  else location.hash = ort;
+}
+window.addEventListener('hashchange', () => zeigeOrt(ortAusHash(location.hash)));
+narrow.addEventListener('change', () => zeigeOrt(ortAusHash(location.hash)));
+document.addEventListener('click', ev => {
+  const go = ev.target.closest('[data-go], .mnav button');
+  if (!go) return;
+  geheZu(go.dataset.go || go.dataset.ort);
+});
+// Desktop-Reiter: Ort im Hash nachführen, ohne History-Eintrag.
+for (const t of tabs) t.addEventListener('click', () => {
+  history.replaceState(null, '', '#' + t.id.replace('tab-', ''));
+  zeigeOrt(ortAusHash(location.hash));
 });
 
 // Kopieren wird Teilen
@@ -1541,10 +1586,6 @@ $('#bTeilen').addEventListener('click', async () => {
     const b = $('#bTeilen'); b.classList.add('done'); clearTimeout(b._t);
     b._t = setTimeout(() => b.classList.remove('done'), 1800);
   } catch (e) { fallback(); }
-});
-document.addEventListener('click', ev => {
-  const go = ev.target.closest('[data-go]');
-  if (go && go.dataset.go === 'entwerfen') $('.cfgwrap').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block:'start' });
 });
 
 /* ---------- Zufall und Sammlung ---------- */
@@ -1598,7 +1639,7 @@ $('#collSort').addEventListener('change', ev => {
 function storeAktiv(){ try { aktiv ? localStorage.setItem(AKTIV, aktiv) : localStorage.removeItem(AKTIV); } catch (e) {} }
 
 function renderColl(){
-  $('#cnt-coll').textContent = coll.length || '';
+  for (const el of document.querySelectorAll('#cnt-coll, .js-anzahl')) el.textContent = coll.length ? `(${coll.length})` : '';
   $('#collSum').textContent = coll.length
     ? `${coll.length} Varianten · Kosten beim Speichern (Holz und Kaufteile)`
     : 'Noch keine Varianten. Sammle den aktuellen Entwurf, um ihn später mit anderen zu vergleichen.';
@@ -1642,13 +1683,11 @@ const sammeln = () => {
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
   if (gleich) e.name += ` (${gleich + 1})`;
   coll.push(e); aktiv = e.id; storeAktiv(); storeColl(); renderColl();
-  flash('.js-msg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="tab-coll">Zur Sammlung</button>`);
+  flash('.js-msg', `<span class="nm">«${esc(e.name)}» </span>gesammelt. <button type="button" class="linkbtn" data-go="sammlung">Zur Sammlung</button>`);
 };
 for (const b of document.querySelectorAll('.js-sammeln')) b.addEventListener('click', sammeln);
 for (const m of document.querySelectorAll('.js-msg')) m.addEventListener('click', ev => {
-  if (ev.target.hasAttribute('data-undo')) return rueckgaengig();
-  const id = ev.target.dataset.go;
-  if (id) { selectTab(id); $('#' + id).scrollIntoView({ block:'nearest', behavior:'smooth' }); }
+  if (ev.target.hasAttribute('data-undo')) rueckgaengig();
 });
 $('#collList').addEventListener('change', ev => {
   const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
@@ -1661,6 +1700,7 @@ $('#collList').addEventListener('click', ev => {
   if (act === 'laden') {
     applyData(e.data, { undo:true }); aktiv = e.id; storeAktiv();
     flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`);
+    geheZu('entwerfen');
   }
   if (act === 'update') {
     coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id; storeAktiv();
@@ -1688,12 +1728,12 @@ const erstBesuch = !entwuerfe;   // Task 9 öffnet dann «Was baust du?»
 restore(entwuerfe && entwuerfe[entwuerfe.kind]);
 syncMaterials();
 syncVisibility();
-try { const tb = localStorage.getItem(STORE + '-tab'); if (tb && $('#' + tb)) selectTab(tb); } catch (e) {}
 initThree();
 zeigeBau();
 render();
 save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
+zeigeOrt(ortAusHash(location.hash));
 requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>

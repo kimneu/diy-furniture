@@ -117,3 +117,11 @@ test('sortiere: Datum = neueste zuerst, Preis = günstigste zuerst, Original ble
   assert.deepStrictEqual(K.sortiere(c, 'preis').map(e => e.id), ['b', 'c', 'a']);
   assert.deepStrictEqual(c.map(e => e.id), ['a', 'b', 'c']);
 });
+
+test('ortAusHash: bekannte Orte, sonst Entwerfen', () => {
+  assert.strictEqual(K.ortAusHash('#einkaufen'), 'einkaufen');
+  assert.strictEqual(K.ortAusHash('#sammlung'), 'sammlung');
+  assert.strictEqual(K.ortAusHash('bauen'), 'bauen');
+  assert.strictEqual(K.ortAusHash(''), 'entwerfen');
+  assert.strictEqual(K.ortAusHash('#tab-cut'), 'entwerfen');
+});
