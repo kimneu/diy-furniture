@@ -179,3 +179,14 @@ test('Feste Tablartiefen: Zufall wählt kein Brettmaterial, das sie verschieben 
     assert.ok(!MATS[d.mat].boards, d.mat);
   }
 });
+
+test('geaendert: ältere Einträge ohne Frontmaterial gelten als «wie Korpus»', () => {
+  const alt = { ...FORM };
+  assert.strictEqual(K.geaendert({ ...FORM, frontMat:'korpus' }, alt), false);
+  assert.strictEqual(K.geaendert({ ...FORM, frontMat:'birke', frontT:'12' }, alt), true);
+});
+
+test('Sammlungseintrag nennt abweichende Fronten', () => {
+  const d = { ...FORM, frontMat:'birke', frontT:'12' };
+  assert.strictEqual(K.sammlungEintrag(d, K.computeData(d)).info.material, 'Sperrholz Birke Premium 18 mm · Fronten Sperrholz Birke Premium 12 mm');
+});

@@ -7,7 +7,7 @@ function cfgFromData(d){
   return {
     W:n('w'), H:n('h'), D:n('d'), room:d.room, mat:d.mat, t:n('t'), back:d.back, top:d.top,
     sections:n('sections'), shelves:n('shelves'), base:d.base, baseH:n('baseH'), legShape:d.legShape, taper:n('taper'), legColor:d.legColor, joint:d.joint,
-    front:d.front, doorsPer:d.doorsPer, slideN:d.slideN, handle:d.handle, color:d.color,
+    front:d.front, doorsPer:d.doorsPer, slideN:d.slideN, handle:d.handle, color:d.color, frontMat:d.frontMat, frontT:n('frontT'),
     sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:on('grain'), price:n('price'),
     kind:d.kind,
     rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorIn:on('doorIn'), hinge:d.hinge, wall:d.wall,
@@ -43,7 +43,7 @@ const SPERREN = {
   tablare:['dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop'],
   nische:['nicheL', 'nicheLW', 'nicheLH', 'nicheR', 'nicheRW', 'nicheRH'],
   aufbau:['top', 'sections', 'shelves', 'base', 'baseH', 'legShape', 'taper', 'legColor'],
-  front:['front', 'doorsPer', 'slideN', 'handle', 'color'],
+  front:['front', 'doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
   material:['mat', 't', 'back', 'price', 'sheetL', 'sheetB', 'kerf', 'grain', 'katalog'],
   verbindung:['joint']
 };
@@ -100,11 +100,15 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const shelves = Math.max(0, Math.min(3, Math.floor(Hi / range([300, 400], 10)) - 1));
   const front = val('front', () => regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 && t <= 19 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']));
   const handle = front === 'sliding' ? pick(['shell', 'hole']) : pick(['hole', 'knob', 'push']);
+  // Fronten meist wie der Korpus, sonst dünner aus demselben Material oder lackiertes MDF.
+  const thinner = M.t.filter(v => v < t && v >= 15);
+  const frontMat = val('frontMat', () => front === 'open' || chance(0.7) ? 'korpus' : thinner.length && chance(0.6) ? mat : 'mdf');
+  const frontT = Number(val('frontT', () => frontMat === 'korpus' ? t : frontMat === mat && thinner.length ? pick(thinner) : (MATS[frontMat] || M).tDef));
   const painted = ['weiss', 'salbei', 'taube', 'anthrazit'];
-  const color = val('color', () => mat === 'mdf' ? pick(painted) : mat === 'eiche' || M.coated ? 'korpus' : chance(0.55) ? 'korpus' : pick(painted));
+  const color = val('color', () => mat === 'mdf' || frontMat === 'mdf' ? pick(painted) : mat === 'eiche' || M.coated ? 'korpus' : chance(0.55) ? 'korpus' : pick(painted));
   const joint = val('joint', () => mat === 'mdf' ? pick(['dowels', 'cam', 'pocket']) : pick(['pocket', 'pocket', 'dowels', 'cam', 'screws']));
   return {
-    ...base, mat, t, w:W, h:H, d:D, base:b, baseH, sections, shelves, front, handle, color, joint,
+    ...base, mat, t, w:W, h:H, d:D, base:b, baseH, sections, shelves, front, handle, color, joint, frontMat, frontT,
     top: joint === 'screws' ? 'between' : pick(['over', 'over', 'between']),
     back: base.room === 'bath' ? 'ply6' : M.ply && chance(0.3) ? 'ply6' : 'hdf3',
     doorsPer:'auto', slideN:'auto',
@@ -174,7 +178,7 @@ function sammlungEintrag(d, R, now = new Date()){
     name: `${typ} ${R.W} mm`,
     gespeichert: now.toISOString().slice(0, 10),
     data: d,
-    info: { typ, masse, material:`${R.matShort} ${R.t} mm`, kosten }
+    info: { typ, masse, material:`${R.matShort} ${R.t} mm${R.gFront && R.gFront !== `${R.matShort} ${R.t} mm` ? ` · Fronten ${R.gFront}` : ''}`, kosten }
   };
 }
 // Weicht der Entwurf von der geladenen Variante ab? Katalogwerte zählen nicht, Zahlen und Texte gelten als gleich.
@@ -182,11 +186,14 @@ function sammlungEintrag(d, R, now = new Date()){
 // ihrem eigenen Katalog folgen – sonst würde ein Materialpreis-Update in preise.js «geändert» auslösen.
 const KATALOGFELDER = ['price', 'sheetL', 'sheetB'];
 function folgtKatalog(d, k){ return d.katalog && String(d[k]) === String(d.katalog[k]); }
+// Felder, die ältere Einträge noch nicht kennen, gelten dort als Standardwert.
+const STANDARD = { frontMat:'korpus' };
 function geaendert(a, b){
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   keys.delete('katalog');
+  const wert = (d, k) => String(k in d ? d[k] : STANDARD[k]);
   for (const k of keys) {
-    if (String(a[k]) === String(b[k])) continue;
+    if (wert(a, k) === wert(b, k)) continue;
     if (KATALOGFELDER.includes(k) && folgtKatalog(a, k) && folgtKatalog(b, k)) continue;
     return true;
   }

@@ -751,6 +751,15 @@ body[data-ort="sammlung"] .layout{display:none}
             <input type="radio" name="slideN" id="sn-3" value="3"><label for="sn-3">3</label>
           </div>
         </div>
+        <div class="field" id="row-frontMat">
+          <label for="frontMat">Material Fronten</label>
+          <select id="frontMat" name="frontMat"></select>
+        </div>
+        <div class="field" id="row-frontT">
+          <span class="lbl" id="lbl-frontT">Stärke Fronten<span class="lbl-note">mm</span></span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-frontT" id="frontT"></div>
+        </div>
+        <p class="hint" id="frontNote"></p>
         <div class="field" id="row-handle">
           <label for="handle">Griff</label>
           <select id="handle" name="handle"></select>
@@ -991,6 +1000,23 @@ function fillThickness(mat, keep){
   $('#t').innerHTML = M.t.map(x => `<input type="radio" name="t" id="t-${x}" value="${x}"${x === v ? ' checked' : ''}><label for="t-${x}">${x}</label>`).join('');
   $('#row-t').hidden = M.t.length < 2;
 }
+// Frontmaterial: «wie Korpus» oder eine Zuschnittplatte (ganze Bretter gibt es nur fürs Reduit).
+function fillFrontMats(){
+  const list = Object.entries(MATS).filter(([, M]) => !M.boards).sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef));
+  $('#frontMat').innerHTML = '<option value="korpus">wie Korpus</option>'
+    + `<optgroup label="Andere Platte oder Stärke">${list.map(([k, M]) => `<option value="${k}">${esc(M.name)}</option>`).join('')}</optgroup>`;
+}
+function curFrontT(){ const r = form.querySelector('input[name=frontT]:checked'); return r ? r.value : ''; }
+// Stärken des Frontmaterials. Ohne gültige Wahl: beim Korpusmaterial die nächstdünnere Stärke
+// (wer es eigens wählt, will meist dünnere Türen), sonst die Korpusstärke oder die Standardstärke.
+function fillFrontT(fm, keep){
+  const M = MATS[fm];
+  if (!M || M.boards) { $('#frontT').innerHTML = ''; return; }
+  const t = Number(curT()), thinner = M.t.filter(v => v < t);
+  const v = M.t.includes(Number(keep)) ? Number(keep)
+    : fm === $('#mat').value && thinner.length ? thinner[thinner.length - 1] : M.t.includes(t) ? t : M.tDef;
+  $('#frontT').innerHTML = M.t.map(x => `<input type="radio" name="frontT" id="ft-${x}" value="${x}"${x === v ? ' checked' : ''}><label for="ft-${x}">${x}</label>`).join('');
+}
 function fillHandles(front, keep){
   const sel = $('#handle');
   const list = front === 'sliding' ? HANDLES_SLIDING : HANDLES_HINGED;
@@ -1012,8 +1038,17 @@ function syncVisibility(){
   const [mn, mx] = base === 'plinth' ? [40,150] : [60,350];
   bh.min = bhr.min = mn; bh.max = bhr.max = mx;
   $('#grain').disabled = !MATS[mat].grain;
-  $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
-  $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' || mat === 'dekorspan' ? 'Weiss' : mat === 'schaltafel' ? 'Gelb' : 'Holz';
+  // Fronten: eigenes Material/eigene Stärke; die Farbe «natur» zeigt das Frontmaterial.
+  const fm = f.get('frontMat'), own = MATS[fm] && !MATS[fm].boards, fk = own ? fm : mat, FM = MATS[fk];
+  $('#row-frontMat').hidden = front === 'open';
+  $('#row-frontT').hidden = front === 'open' || !own || FM.t.length < 2;
+  $('#frontNote').hidden = front === 'open';
+  const tf = own ? Number(f.get('frontT')) || FM.tDef : Number(f.get('t'));
+  $('#frontNote').innerHTML = own
+    ? `<b>${m2(matPrice(FM, tf))}</b> bei ${tf}&nbsp;mm · eigene Platte bis ${FM.sheet[0]}&nbsp;×&nbsp;${FM.sheet[1]}&nbsp;mm${fk === mat && tf === Number(f.get('t')) ? ' · gleich wie der Korpus' : ''}${tf < 15 && front === 'hinged' ? ' · Topfscharniere Ø&nbsp;26&nbsp;mm für dünne Türen' : ''}`
+    : `Türen aus ${esc(MATS[mat].name)}, ${f.get('t')}&nbsp;mm. Für leichtere Türen die Platte hier wählen und eine dünnere Stärke setzen.`;
+  $('#sw-korpus').style.background = fk === 'mdf' ? COLORS.weiss : FM.color;
+  $('#sw-korpus').parentElement.lastChild.textContent = fk === 'mdf' || FM.coated && fk !== 'schaltafel' ? 'Weiss' : fk === 'schaltafel' ? 'Gelb' : 'Holz';
   const BM = MATS[mat].boards;
   $('#matSw').style.background = MATS[mat].color;
   $('#matPrice').innerHTML = BM ? matPriceBoards(MATS[mat]) : matPricePlate(MATS[mat], Number(f.get('t')), Number(f.get('price')));
@@ -1104,9 +1139,12 @@ function restore(data){
   fillHandles(front, data && data.handle);
   const cat = catalogValues(mat, curT());
   applyCatalog(mat);
+  const fm = data && MATS[data.frontMat] && !MATS[data.frontMat].boards ? data.frontMat : 'korpus';
+  $('#frontMat').value = fm;
+  fillFrontT(fm, data && data.frontT);
   if (!data) return;
   for (const [k, v] of Object.entries(data)) {
-    if (k === 't' || k === 'handle' || k === 'mat' || k === 'katalog') continue;
+    if (k === 't' || k === 'handle' || k === 'mat' || k === 'katalog' || k === 'frontMat' || k === 'frontT') continue;
     if (k in cat && (!data.katalog || Number(v) === data.katalog[k])) continue;
     const els = form.elements[k];
     if (!els) continue;
@@ -1142,7 +1180,7 @@ function render(){
   syncLocks();
 }
 function renderSummary(R){
-  const main = R.groups[0], back = R.groups[1];
+  const main = R.groups[0];
   const { cut: cost, whole } = sheetCosts(R.groups);
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
@@ -1150,7 +1188,7 @@ function renderSummary(R){
   const item = (dt, dd, cls) => `<div${cls ? ` class="${cls}"` : ''}><dt>${dt}</dt><dd>${dd}</dd></div>`;
   const reduit = R.kind === 'reduit';
   const wood = cost + (reduit ? R.solidCost : 0), woodWhole = whole + (reduit ? R.solidCost : 0);
-  const sheets = `${main.sheets.length} × ${R.matShort}${back ? ` + ${back.sheets.length} × ${R.Bk.name}` : ''}`;
+  const sheets = R.groups.map(g => `${g.sheets.length} × ${g.label}`).join(' + ');
   const boards = !!main.boards, woodName = boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt';
   $('#summary').innerHTML =
     item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
@@ -1506,7 +1544,7 @@ function clearRoot(){
 }
 function build3D(R){
   clearRoot();
-  const root = three.root, t = R.t;
+  const root = three.root, t = R.tf || R.t;   // Fronten können dünner sein als der Korpus
   for (const b of R.boxes) { const m = boxMesh(b); place(m, b.pos, b.ex); reg(b.key, m); root.add(m); }
 
   for (const d of R.doors) {
@@ -1586,6 +1624,7 @@ function onInput(e){
     fillThickness(el.value, curT());
     applyCatalog(el.value);
   }
+  if (el.name === 'frontMat') fillFrontT(el.value, curFrontT());
   if (el.name === 't') $('#price').value = matPrice(MATS[$('#mat').value], Number(el.value));
   if (el.name === 'front') fillHandles(el.value, $('#handle').value);
   if (el.name === 'base') {
@@ -1973,6 +2012,7 @@ $('#collMsg').addEventListener('click', ev => {
 /* ---------- Start ---------- */
 fillMaterials();
 fillBacks();
+fillFrontMats();
 restore(null);
 DEFAULTS = formData();
 try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'), stored()); } catch (e) { entwuerfe = entwuerfeLaden(null, stored()); }
