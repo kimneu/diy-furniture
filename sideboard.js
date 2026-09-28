@@ -142,6 +142,14 @@ function computeSideboard(c){
     frontCount = ns;
     doorsText = `${ns} Schiebetüren`;
     if (ws > 900) warn.push(`Schiebetüren mit ${r0(ws)} mm Breite sind schwer zu führen – nimm 3 Türen.`);
+    if (tf < 16) warn.push(`Die meisten Schiebetürbeschläge für den Korpus sind für 16–19 mm Türen gemacht. Bei ${tf} mm im Datenblatt nach der Mindeststärke schauen oder dickere Fronten wählen.`);
+  }
+  // Dünne Türen verziehen sich (Richtwerte): 12 mm bis 600 mm Türhöhe, 15 mm bis 900 mm; Leimholz erst ab 18 mm.
+  const doorH = hinged ? doors[0].dh : sliding ? slides[0].dh : 0;
+  if (doorH) {
+    const solid = !MF.ply && MF.grain && !MF.coated;
+    if (solid && tf < 18) warn.push(`Türen aus ${MF.name} unter 18 mm werfen sich leicht – Massivholz arbeitet. 18 mm wählen.`);
+    else if ((tf <= 12 && doorH > 600) || (tf <= 15 && doorH > 900)) warn.push(`Die Türen sind ${r0(doorH)} mm hoch – bei ${tf} mm verziehen sie sich leicht. Richtwert: 12 mm bis 600 mm, 15 mm bis 900 mm Türhöhe, darüber 18 mm.`);
   }
 
   // Aggregieren

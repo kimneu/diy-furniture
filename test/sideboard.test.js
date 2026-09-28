@@ -44,7 +44,28 @@ test('Schiebetüren: Schienen und Mittelwände richten sich nach der Frontstärk
   const same = run({ front:'sliding', sections:3 }), thin = run({ front:'sliding', sections:3, frontMat:'birke', frontT:12 });
   const depth = R => R.rows.find(r => r.name === 'Mittelwand').B;
   assert.strictEqual(depth(thin) - depth(same), 2 * (18 - 12));
-  assert.ok(!thin.warn.some(w => w.includes('Schiebetürbeschläge')));
+  assert.ok(!same.warn.some(w => w.includes('Schiebetürbeschläge')));
+});
+
+test('Hinweis: Schiebetüren unter 16 mm passen oft nicht in den Beschlag', () => {
+  const hat = o => run({ front:'sliding', sections:3, ...o }).warn.some(w => w.includes('Schiebetürbeschläge'));
+  assert.ok(hat({ frontMat:'birke', frontT:12 }));
+  assert.ok(hat({ frontMat:'seekiefer', frontT:15 }));
+  assert.ok(!hat({ frontMat:'mdf', frontT:16 }));
+  assert.ok(!hat({ frontMat:'birke', frontT:12, front:'hinged' }));
+});
+
+test('Hinweis: dünne Türen über dem Richtwert verziehen sich', () => {
+  const warnt = o => run(o).warn.some(w => w.includes('verziehen sie sich leicht'));
+  // BASE: Korpus 720 mit 160 mm Füssen → Drehtüren 557 mm hoch
+  assert.ok(!warnt({ frontMat:'birke', frontT:12 }));
+  assert.ok(warnt({ frontMat:'birke', frontT:12, H:900 }));                 // 737 mm > 600
+  assert.ok(!warnt({ frontMat:'seekiefer', frontT:15, H:900 }));            // 15 mm bis 900 ok
+  assert.ok(warnt({ frontMat:'seekiefer', frontT:15, H:1200 }));            // 1037 mm > 900
+  assert.ok(!warnt({ H:1200 }));                                            // 18 mm immer ok
+  assert.ok(!warnt({ frontMat:'birke', frontT:12, H:900, front:'open' }));  // offen: keine Türen
+  const R = run({ frontMat:'birke', frontT:12, H:900 });
+  assert.ok(R.warn.some(w => w.startsWith('Die Türen sind 737 mm hoch')), JSON.stringify(R.warn));
 });
 
 test('Fronten höchstens 19 mm, auch «wie Korpus» bei dickem Korpus', () => {
