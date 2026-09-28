@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 Object.assign(globalThis, require('../shared.js'));
-const { computeSideboard, frontMaterial } = require('../sideboard.js');
+const { computeSideboard, frontMaterial, frontTs } = require('../sideboard.js');
 
 const BASE = { W:1200, H:720, D:400, room:'living', mat:'birke', t:18, back:'hdf3', top:'over', sections:2, shelves:1,
   base:'legs', baseH:160, legShape:'cone', taper:35, legColor:'oak', joint:'pocket', front:'hinged', doorsPer:'auto',
@@ -45,7 +45,19 @@ test('Schiebetüren: Schienen und Mittelwände richten sich nach der Frontstärk
   const depth = R => R.rows.find(r => r.name === 'Mittelwand').B;
   assert.strictEqual(depth(thin) - depth(same), 2 * (18 - 12));
   assert.ok(!thin.warn.some(w => w.includes('Schiebetürbeschläge')));
-  assert.ok(run({ front:'sliding', frontMat:'birke', frontT:21 }).warn.some(w => w.includes('dünnere Fronten')));
+});
+
+test('Fronten höchstens 19 mm, auch «wie Korpus» bei dickem Korpus', () => {
+  assert.strictEqual(frontMaterial({ ...BASE, frontMat:'birke', frontT:21 }).tf, 18);
+  assert.strictEqual(frontMaterial({ ...BASE, t:21 }).tf, 18);
+  assert.strictEqual(frontMaterial({ ...BASE, t:15 }).tf, 15);   // bis 19 mm bleibt es die Korpusstärke
+  assert.strictEqual(frontMaterial({ ...BASE, mat:'dreischicht', t:27 }).tf, 19);
+  assert.strictEqual(frontMaterial({ ...BASE, frontMat:'eiche', frontT:27 }).tf, 18);
+  for (const M of Object.values(MATS)) if (!M.boards) assert.ok(frontTs(M).length, M.name);   // jede Platte taugt als Front
+  const R = run({ t:21, front:'sliding', sections:3, price:MATS.birke.prices[21] });
+  assert.ok(fronts(R).every(r => r.t === 18 && r.group === 'Sperrholz Birke Premium 18 mm'));
+  assert.ok(R.rows.filter(r => r.kind === 'korpus').every(r => r.t === 21));
+  assert.ok(!R.warn.some(w => w.includes('Schiebetürbeschläge')));
 });
 
 test('Lackierte MDF-Fronten am geölten Korpus: Öl nur für den Korpus, Lack für die Fronten', () => {

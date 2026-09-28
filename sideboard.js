@@ -2,13 +2,18 @@
 'use strict';
 
 /* ---------- Berechnung ---------- */
+// Fronten höchstens 19 mm: dickere Türen sind schwer, und Scharniere und Schiebetürbeschläge sind für 16–19 mm gemacht.
+const FRONT_MAX = 19;
+const frontTs = M => M.t.filter(v => v <= FRONT_MAX);
 // Frontmaterial: frontMat = Plattenmaterial (keine ganzen Bretter) oder leer/'korpus' = wie der Korpus.
-// Stärke frontT, sonst die Korpusstärke, wenn es sie gibt, sonst die Standardstärke.
+// Stärke frontT, sonst die Korpusstärke, sonst die Standardstärke, sonst die dickste bis 19 mm.
+// «Wie Korpus» bei einem Korpus über 19 mm: dasselbe Material in der dicksten Stärke bis 19 mm.
 function frontMaterial(c){
-  const F = MATS[c.frontMat];
-  if (!F || F.boards) return { fmat:c.mat, MF:MATS[c.mat], tf:c.t };
-  const tf = F.t.includes(c.frontT) ? c.frontT : F.t.includes(c.t) ? c.t : F.tDef;
-  return { fmat:c.frontMat, MF:F, tf };
+  const F = MATS[c.frontMat], own = !!F && !F.boards && frontTs(F).length > 0;
+  const fmat = own ? c.frontMat : c.mat, MF = MATS[fmat], ts = frontTs(MF);
+  if (!own) return { fmat, MF, tf: c.t <= FRONT_MAX || !ts.length ? c.t : Math.max(...ts) };
+  const tf = ts.includes(c.frontT) ? c.frontT : ts.includes(c.t) ? c.t : ts.includes(MF.tDef) ? MF.tDef : Math.max(...ts);
+  return { fmat, MF, tf };
 }
 function computeSideboard(c){
   const M = MATS[c.mat], t = c.t, Bk = BACKS[c.back], bt = Bk ? Bk.t : 0;
@@ -119,7 +124,6 @@ function computeSideboard(c){
     handleCount = c.handle === 'knob' ? frontCount : 0;
     doorsText = `${frontCount} Drehtür${frontCount > 1 ? 'en' : ''}`;
     if (c.base === 'none') warn.push('Ohne Füsse oder Sockel liegen die Türen nur 1,5 mm über dem Boden. Filzgleiter (mind. 3 mm) oder ein Untergestell verhindern Schleifen.');
-    if (tf >= 26) warn.push('Türen über 22 mm brauchen Topfscharniere für dicke Türen – im Datenblatt nach der maximalen Türstärke schauen.');
   }
   let ns = 0, ws = 0, trackDepth = 0;
   if (sliding) {
@@ -137,7 +141,6 @@ function computeSideboard(c){
     extras.push({ type:'track', y: bh + t + Hi - 4, z: (zf + zb)/2, len: Wi, depth: trackDepth });
     frontCount = ns;
     doorsText = `${ns} Schiebetüren`;
-    if (tf > 19) warn.push('Die meisten Schiebetürbeschläge für den Korpus sind für 16–19 mm Türen gemacht. Prüf den Beschlag oder wähle dünnere Fronten.');
     if (ws > 900) warn.push(`Schiebetüren mit ${r0(ws)} mm Breite sind schwer zu führen – nimm 3 Türen.`);
   }
 
@@ -297,4 +300,4 @@ function buildSteps(o){
   return st;
 }
 
-if (typeof module !== 'undefined') module.exports = { computeSideboard, buildSteps, frontMaterial };
+if (typeof module !== 'undefined') module.exports = { computeSideboard, buildSteps, frontMaterial, frontTs, FRONT_MAX };

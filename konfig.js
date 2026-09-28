@@ -98,10 +98,10 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const Hi = H - (b === 'none' ? 0 : baseH) - 2 * t;
   const sections = Number(val('sections', () => Math.max(1, Math.min(4, Math.round((W - 2 * t) / range([450, 650], 10))))));
   const shelves = Math.max(0, Math.min(3, Math.floor(Hi / range([300, 400], 10)) - 1));
-  const front = val('front', () => regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 && t <= 19 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']));
+  const front = val('front', () => regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']));
   const handle = front === 'sliding' ? pick(['shell', 'hole']) : pick(['hole', 'knob', 'push']);
   // Fronten meist wie der Korpus, sonst dünner aus demselben Material oder lackiertes MDF.
-  const thinner = M.t.filter(v => v < t && v >= 15);
+  const thinner = M.t.filter(v => v < t && v >= 15 && v <= FRONT_MAX);
   const frontMat = val('frontMat', () => front === 'open' || chance(0.7) ? 'korpus' : thinner.length && chance(0.6) ? mat : 'mdf');
   const frontT = Number(val('frontT', () => frontMat === 'korpus' ? t : frontMat === mat && thinner.length ? pick(thinner) : (MATS[frontMat] || M).tDef));
   const painted = ['weiss', 'salbei', 'taube', 'anthrazit'];

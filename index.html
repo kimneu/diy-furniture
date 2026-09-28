@@ -1002,20 +1002,20 @@ function fillThickness(mat, keep){
 }
 // Frontmaterial: «wie Korpus» oder eine Zuschnittplatte (ganze Bretter gibt es nur fürs Reduit).
 function fillFrontMats(){
-  const list = Object.entries(MATS).filter(([, M]) => !M.boards).sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef));
+  const list = Object.entries(MATS).filter(([, M]) => !M.boards && frontTs(M).length).sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef));
   $('#frontMat').innerHTML = '<option value="korpus">wie Korpus</option>'
     + `<optgroup label="Andere Platte oder Stärke">${list.map(([k, M]) => `<option value="${k}">${esc(M.name)}</option>`).join('')}</optgroup>`;
 }
 function curFrontT(){ const r = form.querySelector('input[name=frontT]:checked'); return r ? r.value : ''; }
-// Stärken des Frontmaterials. Ohne gültige Wahl: beim Korpusmaterial die nächstdünnere Stärke
-// (wer es eigens wählt, will meist dünnere Türen), sonst die Korpusstärke oder die Standardstärke.
+// Stärken des Frontmaterials bis 19 mm (frontTs in sideboard.js). Ohne gültige Wahl: beim Korpusmaterial die
+// nächstdünnere Stärke (wer es eigens wählt, will meist dünnere Türen), sonst die Korpusstärke oder die Standardstärke.
 function fillFrontT(fm, keep){
-  const M = MATS[fm];
-  if (!M || M.boards) { $('#frontT').innerHTML = ''; return; }
-  const t = Number(curT()), thinner = M.t.filter(v => v < t);
-  const v = M.t.includes(Number(keep)) ? Number(keep)
-    : fm === $('#mat').value && thinner.length ? thinner[thinner.length - 1] : M.t.includes(t) ? t : M.tDef;
-  $('#frontT').innerHTML = M.t.map(x => `<input type="radio" name="frontT" id="ft-${x}" value="${x}"${x === v ? ' checked' : ''}><label for="ft-${x}">${x}</label>`).join('');
+  const M = MATS[fm], ts = M && !M.boards ? frontTs(M) : [];
+  if (!ts.length) { $('#frontT').innerHTML = ''; return; }
+  const t = Number(curT()), thinner = ts.filter(v => v < t);
+  const v = ts.includes(Number(keep)) ? Number(keep)
+    : fm === $('#mat').value && thinner.length ? thinner[thinner.length - 1] : ts.includes(t) ? t : ts.includes(M.tDef) ? M.tDef : Math.max(...ts);
+  $('#frontT').innerHTML = ts.map(x => `<input type="radio" name="frontT" id="ft-${x}" value="${x}"${x === v ? ' checked' : ''}><label for="ft-${x}">${x}</label>`).join('');
 }
 function fillHandles(front, keep){
   const sel = $('#handle');
@@ -1041,12 +1041,15 @@ function syncVisibility(){
   // Fronten: eigenes Material/eigene Stärke; die Farbe «natur» zeigt das Frontmaterial.
   const fm = f.get('frontMat'), own = MATS[fm] && !MATS[fm].boards, fk = own ? fm : mat, FM = MATS[fk];
   $('#row-frontMat').hidden = front === 'open';
-  $('#row-frontT').hidden = front === 'open' || !own || FM.t.length < 2;
+  $('#row-frontT').hidden = front === 'open' || !own || frontTs(FM).length < 2;
   $('#frontNote').hidden = front === 'open';
-  const tf = own ? Number(f.get('frontT')) || FM.tDef : Number(f.get('t'));
+  const t = Number(f.get('t')), { tf } = frontMaterial({ mat, t, frontMat:fm, frontT:Number(f.get('frontT')) });
+  const hinge = tf < 15 && front === 'hinged' ? ' · Topfscharniere Ø&nbsp;26&nbsp;mm für dünne Türen' : '';
   $('#frontNote').innerHTML = own
-    ? `<b>${m2(matPrice(FM, tf))}</b> bei ${tf}&nbsp;mm · eigene Platte bis ${FM.sheet[0]}&nbsp;×&nbsp;${FM.sheet[1]}&nbsp;mm${fk === mat && tf === Number(f.get('t')) ? ' · gleich wie der Korpus' : ''}${tf < 15 && front === 'hinged' ? ' · Topfscharniere Ø&nbsp;26&nbsp;mm für dünne Türen' : ''}`
-    : `Türen aus ${esc(MATS[mat].name)}, ${f.get('t')}&nbsp;mm. Für leichtere Türen die Platte hier wählen und eine dünnere Stärke setzen.`;
+    ? `<b>${m2(matPrice(FM, tf))}</b> bei ${tf}&nbsp;mm · eigene Platte bis ${FM.sheet[0]}&nbsp;×&nbsp;${FM.sheet[1]}&nbsp;mm${fk === mat && tf === t ? ' · gleich wie der Korpus' : ''}${hinge}`
+    : tf < t
+      ? `Türen aus ${esc(MATS[mat].name)} in ${tf}&nbsp;mm – Fronten sind höchstens ${FRONT_MAX}&nbsp;mm dick, der Korpus bleibt ${t}&nbsp;mm.`
+      : `Türen aus ${esc(MATS[mat].name)}, ${t}&nbsp;mm. Für leichtere Türen die Platte hier wählen und eine dünnere Stärke setzen.${hinge}`;
   $('#sw-korpus').style.background = fk === 'mdf' ? COLORS.weiss : FM.color;
   $('#sw-korpus').parentElement.lastChild.textContent = fk === 'mdf' || FM.coated && fk !== 'schaltafel' ? 'Weiss' : fk === 'schaltafel' ? 'Gelb' : 'Holz';
   const BM = MATS[mat].boards;
