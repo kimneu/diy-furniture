@@ -68,7 +68,7 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   const e = K.sammlungEintrag(d, K.computeData(d), new Date('2026-09-25T10:00:00Z'));
   assert.strictEqual(e.name, 'Sideboard 1200 mm');
   assert.strictEqual(e.gespeichert, '2026-09-25');
-  assert.strictEqual(e.info.material, 'Birke-Multiplex 18 mm');
+  assert.strictEqual(e.info.material, 'Sperrholz Birke Premium 18 mm');
   assert.ok(e.info.kosten > 0);
   const r = K.sammlungEintrag({ ...FORM, kind:'reduit' }, K.computeData({ ...FORM, kind:'reduit' }));
   assert.strictEqual(r.info.typ, 'Reduit U-Form');
@@ -178,4 +178,15 @@ test('Feste Tablartiefen: Zufall wählt kein Brettmaterial, das sie verschieben 
     assert.strictEqual(d.dBack, '350');
     assert.ok(!MATS[d.mat].boards, d.mat);
   }
+});
+
+test('geaendert: ältere Einträge ohne Frontmaterial gelten als «wie Korpus»', () => {
+  const alt = { ...FORM };
+  assert.strictEqual(K.geaendert({ ...FORM, frontMat:'korpus' }, alt), false);
+  assert.strictEqual(K.geaendert({ ...FORM, frontMat:'birke', frontT:'12' }, alt), true);
+});
+
+test('Sammlungseintrag nennt abweichende Fronten', () => {
+  const d = { ...FORM, frontMat:'birke', frontT:'12' };
+  assert.strictEqual(K.sammlungEintrag(d, K.computeData(d)).info.material, 'Sperrholz Birke Premium 18 mm · Fronten Sperrholz Birke Premium 12 mm');
 });

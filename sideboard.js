@@ -2,6 +2,19 @@
 'use strict';
 
 /* ---------- Berechnung ---------- */
+// Fronten höchstens 19 mm: dickere Türen sind schwer, und Scharniere und Schiebetürbeschläge sind für 16–19 mm gemacht.
+const FRONT_MAX = 19;
+const frontTs = M => M.t.filter(v => v <= FRONT_MAX);
+// Frontmaterial: frontMat = Plattenmaterial (keine ganzen Bretter) oder leer/'korpus' = wie der Korpus.
+// Stärke frontT, sonst die Korpusstärke, sonst die Standardstärke, sonst die dickste bis 19 mm.
+// «Wie Korpus» bei einem Korpus über 19 mm: dasselbe Material in der dicksten Stärke bis 19 mm.
+function frontMaterial(c){
+  const F = MATS[c.frontMat], own = !!F && !F.boards && frontTs(F).length > 0;
+  const fmat = own ? c.frontMat : c.mat, MF = MATS[fmat], ts = frontTs(MF);
+  if (!own) return { fmat, MF, tf: c.t <= FRONT_MAX || !ts.length ? c.t : Math.max(...ts) };
+  const tf = ts.includes(c.frontT) ? c.frontT : ts.includes(c.t) ? c.t : ts.includes(MF.tDef) ? MF.tDef : Math.max(...ts);
+  return { fmat, MF, tf };
+}
 function computeSideboard(c){
   const M = MATS[c.mat], t = c.t, Bk = BACKS[c.back], bt = Bk ? Bk.t : 0;
   const warn = [];
@@ -15,18 +28,24 @@ function computeSideboard(c){
   const s = (Wi - (n-1)*t) / n;
   const hinged = c.front === 'hinged', sliding = c.front === 'sliding';
   const topOver = c.top === 'over';
-  const slideSet = sliding ? 2*t + 16 : 0;
+  // Fronten: eigenes Plattenmaterial und eigene Stärke, oder wie der Korpus (frontMat leer/'korpus').
+  const { fmat, MF, tf } = frontMaterial(c);
+  const slideSet = sliding ? 2*tf + 16 : 0;
   const dd = Dp - slideSet;            // Tiefe Mittelwände
   const sd = dd - 10;                  // Tiefe Einlegeböden
-  const paint = c.front === 'open' ? null : (c.color === 'korpus' ? (c.mat === 'mdf' ? COLORS.weiss : null) : COLORS[c.color]);
+  const paint = c.front === 'open' ? null : (c.color === 'korpus' ? (fmat === 'mdf' ? COLORS.weiss : null) : COLORS[c.color]);
   const carcFin = { color: c.mat === 'mdf' ? COLORS.weiss : M.color, ply:M.ply, grain:M.grain, plyColor:M.color };
-  const frontFin = paint ? { color:paint, ply:M.ply, grain:false, plyColor:M.color, painted:true } : carcFin;
+  const frontFin = paint ? { color:paint, ply:MF.ply, grain:false, plyColor:MF.color, painted:true }
+    : fmat === c.mat ? carcFin : { color: fmat === 'mdf' ? COLORS.weiss : MF.color, ply:MF.ply, grain:MF.grain, plyColor:MF.color };
   const backFin = Bk ? { color:Bk.color, ply:Bk.ply, grain:false, plyColor:Bk.color } : null;
   const bath = c.room === 'bath';
-  const matShort = bath && c.mat === 'mdf' ? 'MDF MR' : M.short;
+  const nameOf = k => bath && k === 'mdf' ? 'MDF MR feuchtfest' : MATS[k].name;
+  const matShort = nameOf(c.mat);
   const ss = bath ? ', Edelstahl A2' : '';
   const glueName = bath ? 'Holzleim D4 (wasserfest)' : 'Holzleim D3';
   const gMain = `${matShort} ${t} mm`, gBack = Bk ? `${Bk.name} ${Bk.t} mm` : null;
+  const gFront = `${nameOf(fmat)} ${tf} mm`;   // = gMain, wenn die Fronten wie der Korpus sind
+  const cup = tf < 15 ? 26 : 35;               // Topfscharnier: dünne Türen brauchen den kleinen Topf
   const z0 = -D/2 + bt, z1 = D/2, zc = (z0 + z1) / 2;
 
   const raw = [], boxes = [], doors = [], slides = [], extras = [];
@@ -96,7 +115,7 @@ function computeSideboard(c){
         const hb = side === 'L' ? j : j + 1;
         const outer = hb === 0 || hb === n;
         hingeCount[outer ? 'full' : 'half'] += hpd;
-        const key = add('Tür', dh, dw, t, gMain, `${hpd}× Topfbohrung Ø 35 · Scharnier ${outer ? 'aufliegend' : 'halb aufliegend'}`, 'front');
+        const key = add('Tür', dh, dw, tf, gFront, `${hpd}× Topfbohrung Ø ${cup} · Scharnier ${outer ? 'aufliegend' : 'halb aufliegend'}`, 'front');
         doors.push({ key, cx, dw, dh, yc: yb + dh/2, side });
         if (dw > 600) warn.push(`Eine Tür ist ${r0(dw)} mm breit. Ab etwa 600 mm werden Türen schwer und schwingen weit auf – wähle 2 Türen pro Fach.`);
       }
@@ -105,26 +124,32 @@ function computeSideboard(c){
     handleCount = c.handle === 'knob' ? frontCount : 0;
     doorsText = `${frontCount} Drehtür${frontCount > 1 ? 'en' : ''}`;
     if (c.base === 'none') warn.push('Ohne Füsse oder Sockel liegen die Türen nur 1,5 mm über dem Boden. Filzgleiter (mind. 3 mm) oder ein Untergestell verhindern Schleifen.');
-    if (t >= 26) warn.push('Türen über 22 mm brauchen Topfscharniere für dicke Türen – im Datenblatt nach der maximalen Türstärke schauen.');
   }
   let ns = 0, ws = 0, trackDepth = 0;
   if (sliding) {
     ns = c.slideN === 'auto' ? (Wi > 1500 ? 3 : 2) : Number(c.slideN);
     const ov = 30; ws = (Wi + (ns - 1)*ov) / ns;
     const dhs = Hi - 20;
-    const zf = D/2 - 5 - t/2, zb = zf - t - 6;
-    trackDepth = 2*t + 12;
+    const zf = D/2 - 5 - tf/2, zb = zf - tf - 6;
+    trackDepth = 2*tf + 12;
     for (let i = 0; i < ns; i++) {
       const left = -Wi/2 + i*(ws - ov);
-      const key = add('Schiebetür', dhs, ws, t, gMain, `${ov} mm Überlappung · Höhe nach Beschlag prüfen`, 'front');
+      const key = add('Schiebetür', dhs, ws, tf, gFront, `${ov} mm Überlappung · Höhe nach Beschlag prüfen`, 'front');
       slides.push({ key, cx: left + ws/2, ws, dh: dhs, yc: bh + t + 10 + dhs/2, z: i % 2 === 0 ? zf : zb, shift: i === 0 ? ws - ov : 0, idx:i, last: i === ns - 1 });
     }
     extras.push({ type:'track', y: bh + t + 4, z: (zf + zb)/2, len: Wi, depth: trackDepth });
     extras.push({ type:'track', y: bh + t + Hi - 4, z: (zf + zb)/2, len: Wi, depth: trackDepth });
     frontCount = ns;
     doorsText = `${ns} Schiebetüren`;
-    if (t > 19) warn.push('Die meisten Schiebetürbeschläge für den Korpus sind für 16–19 mm Türen gemacht. Prüf den Beschlag oder wähle eine dünnere Platte.');
     if (ws > 900) warn.push(`Schiebetüren mit ${r0(ws)} mm Breite sind schwer zu führen – nimm 3 Türen.`);
+    if (tf < 16) warn.push(`Die meisten Schiebetürbeschläge für den Korpus sind für 16–19 mm Türen gemacht. Bei ${tf} mm im Datenblatt nach der Mindeststärke schauen oder dickere Fronten wählen.`);
+  }
+  // Dünne Türen verziehen sich (Richtwerte): 12 mm bis 600 mm Türhöhe, 15 mm bis 900 mm; Leimholz erst ab 18 mm.
+  const doorH = hinged ? doors[0].dh : sliding ? slides[0].dh : 0;
+  if (doorH) {
+    const solid = !MF.ply && MF.grain && !MF.coated;
+    if (solid && tf < 18) warn.push(`Türen aus ${MF.name} unter 18 mm werfen sich leicht – Massivholz arbeitet. 18 mm wählen.`);
+    else if ((tf <= 12 && doorH > 600) || (tf <= 15 && doorH > 900)) warn.push(`Die Türen sind ${r0(doorH)} mm hoch – bei ${tf} mm verziehen sie sich leicht. Richtwert: 12 mm bis 600 mm, 15 mm bis 900 mm Türhöhe, darüber 18 mm.`);
   }
 
   // Aggregieren
@@ -149,11 +174,16 @@ function computeSideboard(c){
 
   // Zuschnitt packen
   const groups = [];
-  const mainItems = [], backItems = [];
-  for (const r of rows) for (let q = 0; q < r.qty; q++) (r.kind === 'back' ? backItems : mainItems).push(r);
-  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100);
-  groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate: !(c.grain && M.grain), ...pack(mainItems, sheetL, sheetB, clamp(c.kerf, 0, 8), 10, !(c.grain && M.grain)) });
-  if (Bk) groups.push({ label: gBack, sheet: Bk.sheet, price: Bk.price, rotate: true, ...pack(backItems, Bk.sheet[0], Bk.sheet[1], clamp(c.kerf, 0, 8), 10, true) });
+  const mainItems = [], frontItems = [], backItems = [];
+  for (const r of rows) for (let q = 0; q < r.qty; q++) (r.kind === 'back' ? backItems : r.group === gMain ? mainItems : frontItems).push(r);
+  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100), kerf = clamp(c.kerf, 0, 8);
+  groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate: !(c.grain && M.grain), ...pack(mainItems, sheetL, sheetB, kerf, 10, !(c.grain && M.grain)) });
+  // Fronten aus anderem Material oder anderer Stärke: eigene Platte mit Katalogformat und -preis.
+  if (frontItems.length) {
+    const rot = !(c.grain && MF.grain);
+    groups.push({ label: gFront, sheet: MF.sheet, price: matPrice(MF, tf), rotate: rot, ...pack(frontItems, MF.sheet[0], MF.sheet[1], kerf, 10, rot) });
+  }
+  if (Bk) groups.push({ label: gBack, sheet: Bk.sheet, price: Bk.price, rotate: true, ...pack(backItems, Bk.sheet[0], Bk.sheet[1], kerf, 10, true) });
   for (const g of groups) for (const u of g.unplaced) warn.push(`Teil ${u.pos} (${u.name}, ${u.L} × ${u.B} mm) passt nicht auf die Platte ${g.sheet[0]} × ${g.sheet[1]} mm. Grösseres Plattenformat eintragen${g.rotate ? '' : ' oder Maserung freigeben'}.`);
 
   // Beschläge
@@ -165,8 +195,9 @@ function computeSideboard(c){
   if (c.shelves) hw.push([4*n*c.shelves, bath ? 'Bodenträger Ø 5 mm, Edelstahl' : 'Bodenträger Ø 5 mm (Metall)', '4 pro Einlegeboden']);
   if (hinged) {
     const typ = c.handle === 'push' ? 'ohne Feder (für Push-to-open)' : 'mit Softclose';
-    if (hingeCount.full) hw.push([hingeCount.full, `Topfscharnier Ø 35 mm, 110°, aufliegend, ${typ}`, bath ? 'vernickelt oder Edelstahl, inkl. Montageplatte' : 'inkl. Montageplatte']);
-    if (hingeCount.half) hw.push([hingeCount.half, `Topfscharnier Ø 35 mm, 110°, halb aufliegend (Mittelwand), ${typ}`, bath ? 'vernickelt oder Edelstahl, inkl. Montageplatte' : 'inkl. Montageplatte']);
+    const plate = (bath ? 'vernickelt oder Edelstahl, inkl. Montageplatte' : 'inkl. Montageplatte') + (cup === 26 ? `, für ${tf} mm dünne Türen` : '');
+    if (hingeCount.full) hw.push([hingeCount.full, `Topfscharnier Ø ${cup} mm, 110°, aufliegend, ${typ}`, plate]);
+    if (hingeCount.half) hw.push([hingeCount.half, `Topfscharnier Ø ${cup} mm, 110°, halb aufliegend (Mittelwand), ${typ}`, plate]);
     if (c.handle === 'knob') hw.push([frontCount, 'Holzknopf Ø 30 mm inkl. Schraube', 'Eiche oder Buche']);
     if (c.handle === 'push') hw.push([frontCount, 'Push-to-open-Beschlag (Magnet oder Tip-On)', 'einer pro Tür, oben an der Grifffseite']);
   }
@@ -189,50 +220,63 @@ function computeSideboard(c){
   // Oberfläche
   const areaOf = kind => rows.filter(r => kind(r)).reduce((a, r) => a + r.qty * r.L * r.B / 1e6, 0);
   const finish = [];
-  const woodArea = areaOf(r => r.kind === 'korpus' || (r.kind === 'front' && !paint) || (bath && r.kind === 'back')) * 2;
-  const paintArea = c.mat === 'mdf' ? areaOf(r => r.kind !== 'back' || bath) * 2 : (paint ? areaOf(r => r.kind === 'front') * 2 : 0);
+  // Geölt wird rohes Holz; MDF und lackierte Fronten werden lackiert, beschichtete Platten bleiben, wie sie sind.
+  const bodyOil = c.mat !== 'mdf' && !M.coated, frontOil = !paint && fmat !== 'mdf' && !MF.coated;
+  const woodArea = areaOf(r => r.kind === 'front' ? frontOil : bodyOil && (r.kind === 'korpus' || bath)) * 2;
+  const paintArea = areaOf(r => r.kind === 'front' ? !!paint : c.mat === 'mdf' && (r.kind === 'korpus' || bath)) * 2;
   const coats = bath ? 3 : 2;
-  if (c.mat !== 'mdf' && !M.coated && woodArea > 0) {
+  if (woodArea > 0) {
     if (bath) finish.push([`${Math.max(1, Math.ceil(woodArea * 3 / 10 * 10))} dl`, 'Wasserbasierter PU-Klarlack seidenmatt (für Feuchträume)', `${woodArea.toFixed(1)} m² rundum inkl. Rückwand, 3 Schichten, Kanten 1× extra`]);
     else finish.push([`${Math.max(1, Math.ceil(woodArea * 2 / 22 * 10))} dl`, 'Hartwachsöl, farblos oder weiss pigmentiert', `${woodArea.toFixed(1)} m² beidseitig, 2 Anstriche`]);
   }
   if (paintArea > 0) {
-    finish.push([`${Math.max(1, Math.ceil(paintArea / 10 * 10))} dl`, bath ? 'Isoliergrund (feuchtigkeitssperrend), Kanten 2×' : c.mat === 'mdf' ? 'Grundierung für MDF (Kanten 2×)' : 'Haftgrund', `${paintArea.toFixed(1)} m²`]);
+    finish.push([`${Math.max(1, Math.ceil(paintArea / 10 * 10))} dl`, bath ? 'Isoliergrund (feuchtigkeitssperrend), Kanten 2×' : c.mat === 'mdf' || fmat === 'mdf' ? 'Grundierung für MDF (Kanten 2×)' : 'Haftgrund', `${paintArea.toFixed(1)} m²`]);
     finish.push([`${Math.max(1, Math.ceil(paintArea * coats / 10 * 10))} dl`, `${bath ? 'PU-Möbellack' : 'Möbellack'} seidenmatt${paint ? ', ' + (COLOR_NAMES[c.color] || 'Weiss') : ''}`, `${coats} Schichten, Zwischenschliff Körnung 240`]);
   }
   if (bath) {
-    if (c.mat === 'mdf') warn.push('Bad: Normales MDF quillt bei Feuchtigkeit auf. Kauf MDF MR (feuchtigkeitsbeständig, meist mit grünem Kern) und versiegle alle Kanten doppelt.');
-    if (M.ply) warn.push(`Bad: Verlang beim Kauf wasserfest verleimtes ${M.name} (EN 314-2 Klasse 3 bzw. «AW 100»). Die Schichtkanten saugen stark – mehrfach lackieren.`);
-    if (c.mat === 'fichte') warn.push('Bad: Fichte ist weich und nimmt schnell Wasser auf. Rundum gut versiegeln oder für Spritzwasserbereiche Eiche bzw. wasserfestes Multiplex wählen.');
+    for (const k of new Set([c.mat, fmat])) {
+      if (k === 'mdf') warn.push('Bad: Normales MDF quillt bei Feuchtigkeit auf. Kauf MDF MR (feuchtigkeitsbeständig, meist mit grünem Kern) und versiegle alle Kanten doppelt.');
+      if (MATS[k].ply) warn.push(`Bad: Verlang beim Kauf wasserfest verleimtes ${MATS[k].name} (EN 314-2 Klasse 3 bzw. «AW 100»). Die Schichtkanten saugen stark – mehrfach lackieren.`);
+    }
+    if (c.mat === 'fichte' || fmat === 'fichte') warn.push('Bad: Fichte ist weich und nimmt schnell Wasser auf. Rundum gut versiegeln oder für Spritzwasserbereiche Eiche bzw. wasserfestes Multiplex wählen.');
     if (c.back === 'hdf3') warn.push('Bad: Eine dünne MDF-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
     if (c.back === 'hf3') warn.push('Bad: Eine Hartfaser-Rückwand quillt bei Feuchtigkeit. Nimm besser eine Sperrholz-Rückwand und lackier sie beidseitig.');
     if (c.back === 'ply6') warn.push('Bad: Die Pappel-Rückwand beidseitig lackieren und hinten ein paar Millimeter Luft zur Wand lassen.');
     if (c.base === 'none') warn.push('Bad: Stell den Schrank auf Füsse oder montier ihn an der Wand – so steht er nie in einer Pfütze und du kannst darunter putzen.');
   }
-  if (M.coated) finish.push([`${Math.ceil(rows.reduce((a, r) => a + r.qty * 2 * (r.L + r.B), 0) / 1000 / 5) * 5} m`, 'Kantenband zum Aufbügeln, passend zur Beschichtung', 'für sichtbare Kanten']);
+  const coated = rows.filter(r => r.kind === 'front' ? MF.coated : M.coated);
+  if (coated.length) finish.push([`${Math.ceil(coated.reduce((a, r) => a + r.qty * 2 * (r.L + r.B), 0) / 1000 / 5) * 5} m`, 'Kantenband zum Aufbügeln, passend zur Beschichtung', 'für sichtbare Kanten']);
   finish.push(['1', 'Schleifpapier Körnung 120, 180' + (paintArea || bath ? ', 240' : ''), 'Kanten leicht brechen']);
 
   // Werkzeug
   const tools = new Set(['Akkuschrauber mit Bit-Set', 'Holzbohrer 3–8 mm mit Tiefenstopp', 'Schraubzwingen (mind. 4)', 'Anschlagwinkel und Doppelmeter', 'Schwingschleifer oder Schleifklotz', 'Bleistift und Vorstecher']);
   jointTools(c, t, tools);
   if (c.shelves) tools.add('Lochreihen-Bohrschablone (32-mm-Raster) + Bohrer Ø 5 mm');
-  if (hinged) tools.add('Forstnerbohrer Ø 35 mm + Scharnier-Bohrlehre');
+  if (hinged) tools.add(`Forstnerbohrer Ø ${cup} mm + Scharnier-Bohrlehre`);
   if (sliding) { tools.add('Eisensäge zum Kürzen der Schienen'); if (c.handle === 'shell') tools.add('Forstnerbohrer Ø 35 mm'); }
   if (c.front !== 'open' && c.handle === 'hole') tools.add('Forstnerbohrer Ø 30 mm + Restholz gegen Ausrisse');
   tools.add(paintArea || bath ? 'Schaumstoffrolle und Lackpinsel' : 'Baumwolllappen oder Pinsel für Öl');
 
   // Bauablauf
-  const steps = buildSteps({ c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, dd, slideSet, paint, paintArea, ns });
+  const steps = buildSteps({ c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, dd, slideSet, paint, paintArea, ns, MF, cup });
 
   const level = Math.min(3, JOINTS[c.joint].level + (c.front === 'open' ? 0 : 1));
-  const Dtot = hinged ? D + t + 1 : D;
-  return { W, H, D, Dtot, t, bh, Hc, Dp, Wi, Hi, n, s, M, Bk, rows, boxes, doors, slides, extras, groups, hw, finish, tools:[...tools], steps, warn:[...new Set(warn)], carcFin, frontFin, level, doorsText, handle:c.handle, front:c.front, joint:c.joint, matShort };
+  const Dtot = hinged ? D + tf + 1 : D;
+  return { W, H, D, Dtot, t, bh, Hc, Dp, Wi, Hi, n, s, M, Bk, rows, boxes, doors, slides, extras, groups, hw, finish, tools:[...tools], steps, warn:[...new Set(warn)], carcFin, frontFin, level, doorsText, handle:c.handle, front:c.front, joint:c.joint, matShort, tf, MF, gFront };
 }
 
 function buildSteps(o){
-  const { c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, slideSet, paint, paintArea, ns } = o;
+  const { c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, slideSet, paint, paintArea, ns, MF, cup } = o;
   const st = [];
   const mdf = c.mat === 'mdf';
+  // Fronten mit anderer Oberfläche als der Korpus: ein Satz mehr beim Oberflächen-Schritt.
+  const bodyKind = mdf ? 'lack' : MATS[c.mat].coated ? 'coated' : 'oil';
+  const frontKind = c.front === 'open' ? bodyKind : paint ? 'lack' : MF.coated ? 'coated' : 'oil';
+  const frontNote = frontKind === bodyKind || (bodyKind === 'oil' && frontKind === 'lack') ? '' : {
+    lack: ' Die Fronten grundieren und zweimal lackieren.',
+    oil: ' Die Fronten mit Hartwachsöl zweimal ölen.',
+    coated: ' Die Fronten sind fertig beschichtet – nur ihre sichtbaren Kanten mit Kantenband bekleben.'
+  }[frontKind];
   st.push(['Zuschnitt organisieren', 'Kopier die Zuschnittliste und lass die Platten im Baumarkt oder bei einer Schreinerei zuschneiden – das ist auf den Millimeter genauer als zu Hause mit der Handkreissäge. Die erste Zahl liegt jeweils in Faserrichtung.', 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
   st.push(['Teile beschriften und schleifen', 'Schreib jedem Teil den Positionsbuchstaben auf die Innenseite und markier «vorne» und «oben». Flächen und Kanten mit Körnung 120, dann 180 schleifen, Kanten leicht brechen.', null]);
   if (c.shelves) st.push(['Löcher für Bodenträger bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Seiten${n > 1 ? ' und in beide Seiten der Mittelwände' : ''} bohren, je ca. 40 mm von vorne und hinten, 10 mm tief.${n > 1 ? ' Bei den Mittelwänden nur 8 mm tief und die zweite Seite um 16 mm versetzt bohren, damit nichts durchbricht.' : ''}`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
@@ -249,10 +293,10 @@ function buildSteps(o){
   if (c.base === 'legs') st.push(['Füsse montieren', `Korpus auf eine Decke legen. Anschraubplatten ca. 55 mm von den Aussenkanten unter den Boden schrauben und die ${bh} mm hohen Füsse eindrehen.`, 'Schrauben nicht länger als Bodenstärke minus 3 mm.']);
   if (c.base === 'plinth') st.push(['Sockel bauen und montieren', 'Die vier Sockelteile zu einem Rahmen verschrauben (Blenden aussen, Seitenteile dazwischen). Rahmen 30 mm zurückversetzt unter den Boden stellen und mit den Stahlwinkeln festschrauben.', 'Der zurückgesetzte Sockel lässt das Möbel schweben.']);
   if (bath) { /* bereits vor der Montage versiegelt */ }
-  else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.', null]);
-  else if (MATS[c.mat].coated) st.push(['Kanten versäubern', 'Die Flächen sind fertig beschichtet. Sichtbare Kanten mit dem Bügeleisen und Kantenband bekleben, Überstand mit dem Kantenfräser oder Cutter abnehmen.', null]);
-  else st.push(['Oberfläche ölen', `Staub entfernen und Hartwachsöl dünn mit Lappen oder Pinsel auftragen, nach 15 Minuten Überschuss abnehmen. Nach dem Trocknen ein zweites Mal.${paint ? ' Die Fronten vorher grundieren und zweimal lackieren.' : ''}`, 'Weiss pigmentiertes Öl gibt den hellen, nordischen Ton.']);
-  if (hinged) st.push(['Türen anschlagen', 'In jede Tür Topfbohrungen Ø 35 mm, ca. 12 mm tief, Randabstand meist 3–5 mm (Datenblatt!), ca. 100 mm von oben und unten. Montageplatten an die Seiten bzw. Mittelwände schrauben, Scharniere einklipsen und mit den Stellschrauben auf gleichmässige 3-mm-Fugen einstellen.', 'Eine Scharnier-Bohrlehre sorgt für gerade, gleich tiefe Löcher.']);
+  else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.' + frontNote, null]);
+  else if (MATS[c.mat].coated) st.push(['Kanten versäubern', 'Die Flächen sind fertig beschichtet. Sichtbare Kanten mit dem Bügeleisen und Kantenband bekleben, Überstand mit dem Kantenfräser oder Cutter abnehmen.' + frontNote, null]);
+  else st.push(['Oberfläche ölen', `Staub entfernen und Hartwachsöl dünn mit Lappen oder Pinsel auftragen, nach 15 Minuten Überschuss abnehmen. Nach dem Trocknen ein zweites Mal.${paint ? ' Die Fronten vorher grundieren und zweimal lackieren.' : frontNote}`, 'Weiss pigmentiertes Öl gibt den hellen, nordischen Ton.']);
+  if (hinged) st.push(['Türen anschlagen', `In jede Tür Topfbohrungen Ø ${cup} mm, ${cup === 35 ? 'ca. 12 mm tief' : 'Tiefe laut Datenblatt (die Tür ist dünn – nie durchbohren)'}, Randabstand meist 3–5 mm (Datenblatt!), ca. 100 mm von oben und unten. Montageplatten an die Seiten bzw. Mittelwände schrauben, Scharniere einklipsen und mit den Stellschrauben auf gleichmässige 3-mm-Fugen einstellen.`, 'Eine Scharnier-Bohrlehre sorgt für gerade, gleich tiefe Löcher.']);
   if (sliding) st.push(['Schiebetüren einsetzen', `Untere Laufschiene auf den Boden und obere Führungsschiene unter den Deckel schrauben, 5 mm hinter der Vorderkante, beide auf ${r0(o.c.W - 2*t)} mm gekürzt. Gleiter an die ${ns} Türen montieren, Türen oben einheben und unten einsetzen.`, 'Die Türhöhe hängt vom Beschlag ab – im Zweifel die Türen erst zuschneiden, wenn der Beschlag da ist.']);
   if (c.front !== 'open') {
     if (c.handle === 'hole') st.push(['Grifflöcher bohren', 'Position anzeichnen, Restholz hinter die Tür spannen und mit dem Forstnerbohrer Ø 30 mm durchbohren. Kante innen und aussen leicht brechen.', null]);
@@ -264,4 +308,4 @@ function buildSteps(o){
   return st;
 }
 
-if (typeof module !== 'undefined') module.exports = { computeSideboard, buildSteps };
+if (typeof module !== 'undefined') module.exports = { computeSideboard, buildSteps, frontMaterial, frontTs, FRONT_MAX };

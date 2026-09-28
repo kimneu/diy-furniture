@@ -64,3 +64,13 @@ test('Brett-Material in MATS', () => {
   assert.strictEqual(M.price, 23.33);   // 5.60 / 0.24 m²
   assert.ok(!S.MATS.birke.boards);
 });
+
+test('Materialnamen: Werkstoff zuerst, eindeutig, Marke in Klammern nur bei ganzen Brettern', () => {
+  const WERKSTOFFE = ['Sperrholz', 'Leimholz', 'Dreischicht', 'MDF', 'OSB', 'Spanplatte', 'Schaltafel', 'Regalbauplatte', 'Möbelplatte'];
+  const names = Object.values(S.MATS).map(M => M.name);
+  assert.strictEqual(new Set(names).size, names.length, names.join(', '));
+  for (const M of Object.values(S.MATS)) {
+    assert.ok(WERKSTOFFE.includes(M.name.split(' ')[0]), M.name);
+    assert.ok(!M.name.includes('(') || M.boards, `${M.name}: Marke in Klammern nur bei ganzen Brettern`);
+  }
+});

@@ -7,44 +7,47 @@ const r0 = v => Math.round(v);
 // Preise, Stärken und Plattenformate stehen in preise.js (im Browser vorher geladen, in Node per require).
 // Birke-Platte 1500 × 3000 mit Maserung über die 1500er-Seite.
 const PRICE_DATA = typeof PREISE !== 'undefined' ? PREISE : require('./preise.js');
+// Namen einheitlich: Werkstoff, dann Holzart oder Farbe, dann Qualität; die Marke ganzer Bretter in Klammern
+// (z. B. «Sperrholz Birke Premium», «Spanplatte weiss», «Leimholz Fichte (go/on)»). Ohne Holzart sagt das zweite Wort,
+// wie die Oberfläche ab Händler ist: roh (ölen, lackieren oder roh lassen) oder die Farbe der Beschichtung.
 const MAT_INFO = {
-  birke:  { name:'Multiplex Birke Premium', short:'Birke-Multiplex', color:'#E2D3B6', ply:true,  grain:true,  tDef:18,
+  birke:  { name:'Sperrholz Birke Premium', color:'#E2D3B6', ply:true,  grain:true,  tDef:18,
             note:'Sichtbare Schichtkanten sind der typisch skandinavische Look. Fast fehlerfreie Sichtseite. Einfach ölen, Kanten nur schleifen.' },
-  birkesi: { name:'Multiplex Birke Standard', short:'Birke-Multiplex', color:'#E2D3B6', ply:true, grain:true, tDef:18,
+  birkesi: { name:'Sperrholz Birke Standard', color:'#E2D3B6', ply:true, grain:true, tDef:18,
             note:'Gleicher Look wie Premium, aber einfachere Sichtseite mit kleinen Ästen und Ausbesserungen – rund ein Drittel günstiger.' },
-  eiche:  { name:'Eiche Leimholz',  short:'Eiche-Leimholz',  color:'#C9A26D', ply:false, grain:true,  tDef:18,
+  eiche:  { name:'Leimholz Eiche', color:'#C9A26D', ply:false, grain:true,  tDef:18,
             note:'Massivholz arbeitet leicht mit der Luftfeuchtigkeit. Qualität B/C: lebendige Oberfläche mit einzelnen Ästen.' },
-  fichte: { name:'Fichte Leimholz', short:'Fichte-Leimholz', color:'#EAD6A8', ply:false, grain:true,  tDef:18,
+  fichte: { name:'Leimholz Fichte', color:'#EAD6A8', ply:false, grain:true,  tDef:18,
             note:'Günstig und leicht zu bearbeiten, aber weich. Weissöl verhindert das Nachdunkeln ins Gelbliche.' },
-  seekiefer: { name:'Sperrholz Seekiefer', short:'Seekiefer-Sperrholz', color:'#D8B685', ply:true, grain:true, tDef:15,
+  seekiefer: { name:'Sperrholz Seekiefer', color:'#D8B685', ply:true, grain:true, tDef:15,
             note:'Lebhafte, rötliche Maserung und sichtbare Schichtkanten. Günstiger als Birke, Oberfläche etwas rauer – gut schleifen.' },
-  fichtesp: { name:'Sperrholz Fichte', short:'Fichte-Sperrholz', color:'#E6CF9E', ply:true, grain:true, tDef:18,
+  fichtesp: { name:'Sperrholz Fichte', color:'#E6CF9E', ply:true, grain:true, tDef:18,
             note:'Helles Nadelholz mit sichtbaren Schichtkanten. Weicher als Birke, Weissöl hält den hellen Ton.' },
-  mdf:    { name:'MDF',            short:'MDF',             color:'#E9E7E1', ply:false, grain:false, tDef:19,
+  mdf:    { name:'MDF roh', color:'#E9E7E1', ply:false, grain:false, tDef:19,
             note:'Glatt und formstabil, ideal zum Lackieren. Schrauben in MDF-Kanten immer vorbohren.' },
   // Günstige, robuste Platten – gut für Reduit, Keller und Werkstatt. coated = fertige Beschichtung, nicht ölen.
-  schaltafel: { name:'Schaltafel 3-Schicht', short:'Schaltafel', color:'#E8C547', ply:true, grain:false, coated:true, boards:true,
+  schaltafel: { name:'Schaltafel gelb', color:'#E8C547', ply:true, grain:false, coated:true, boards:true,
             note:'Die gelbe Platte von der Baustelle: sehr robust und wasserfest, die Oberfläche ist schon fertig. Gibt es nur als ganze Tafel 2000 × 500 – die Tiefe richtet sich danach. Die Schnittkanten einmal lackieren oder ölen.' },
-  osb:    { name:'OSB-Platte', short:'OSB', color:'#CFAE78', ply:false, grain:false, tDef:18,
+  osb:    { name:'OSB roh', color:'#CFAE78', ply:false, grain:false, tDef:18,
             note:'Aus grossen, gepressten Holzspänen – sieht rustikal aus, wie in einer Werkstatt. Stabil und robust. Kanten gut schleifen, dann ölen oder roh lassen.' },
-  dreischicht: { name:'Dreischichtplatte Fichte', short:'Dreischicht-Fichte', color:'#E6CF9E', ply:true, grain:true, tDef:19,
+  dreischicht: { name:'Dreischicht Fichte', color:'#E6CF9E', ply:true, grain:true, tDef:19,
             note:'Drei verleimte Holzschichten: sieht aus wie Massivholz, verzieht sich aber kaum. Fichte ist weich und bekommt schnell Dellen – Weissöl hält den hellen Ton.' },
-  dekorspan: { name:'Spanplatte weiss beschichtet', short:'Dekorspan weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, tDef:19,
+  dekorspan: { name:'Spanplatte weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, tDef:19,
             note:'Weiss beschichtet wie bei Fertigmöbeln – fertig, kein Streichen nötig. An den Schnittkanten sieht man die Spanplatte: mit weissem Kantenband überbügeln. Hängt als Tablar schneller durch als Sperrholz.' },
   // Ganze Bretter in festen Formaten (nur ablängen, nur Reduit). Formate und Stückpreise in preise.js → bretter.
-  gon_fichte: { name:'go/on Leimholz Fichte', short:'go/on Fichte', color:'#EAD6A8', ply:false, grain:true, boards:true,
+  gon_fichte: { name:'Leimholz Fichte (go/on)', color:'#EAD6A8', ply:false, grain:true, boards:true,
             note:'Ganze Bretter 200 oder 400 breit, 1200 oder 2000 lang – viel günstiger als der Zuschnitt. Die Regaltiefe richtet sich nach der Brettbreite. Weissöl hält den hellen Ton.' },
-  gon_3s: { name:'go/on 3-Schicht Fichte', short:'go/on 3-Schicht', color:'#E6CF9E', ply:true, grain:true, boards:true,
+  gon_3s: { name:'Dreischicht Fichte (go/on)', color:'#E6CF9E', ply:true, grain:true, boards:true,
             note:'Dreischichtplatte, 600 breit und 1200 oder 2500 lang. Verzieht sich kaum – nur für 60 cm tiefe Regale.' },
-  mood_fichte: { name:'Mood Leimholz Fichte A', short:'Mood Fichte', color:'#EAD6A8', ply:false, grain:true, boards:true,
+  mood_fichte: { name:'Leimholz Fichte A (Mood)', color:'#EAD6A8', ply:false, grain:true, boards:true,
             note:'Schöne Sichtqualität A, viele Formate von 800 bis 2500 lang und 200 bis 600 breit.' },
-  regalbau: { name:'Regalbauplatte weiss', short:'Regalbauplatte', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
+  regalbau: { name:'Regalbauplatte weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
             note:'Weiss beschichtet, die Längskanten sind schon bekantet. Nur 1150 lang – lange Tablare werden über einer Stütze gestossen.' },
-  moebel_weiss: { name:'Möbelplatte weiss', short:'Möbelplatte', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
+  moebel_weiss: { name:'Möbelplatte weiss', color:'#F1F0EB', ply:false, grain:false, coated:true, boards:true,
             note:'Weiss beschichtet, 2600 lang und 250 bis 600 breit – ähnlich günstig wie die Regalbauplatte, aber lang genug für die meisten Reduit-Wände.' }
 };
 const BACK_INFO = {
-  hdf3: { name:'MDF weiss beschichtet', t:3, color:'#F0EFEA', ply:false },
+  hdf3: { name:'MDF weiss', t:3, color:'#F0EFEA', ply:false },
   hf3:  { name:'Hartfaser roh', t:3, color:'#9C7A55', ply:false },
   ply6: { name:'Sperrholz Pappel', t:5, color:'#E8D9B8', ply:true }
 };

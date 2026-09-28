@@ -541,11 +541,11 @@ function computeReduit(c0){
   const max = maxSpan(c.mat, t);
   const fin = { color: c.mat === 'mdf' ? COLORS.weiss : M.color, ply:M.ply, grain:M.grain, plyColor:M.color };
   const backFin = Bk ? { color:Bk.color, ply:Bk.ply, grain:false, plyColor:Bk.color } : null;
-  const gMain = `${M.short} ${t} mm`, gBack = Bk ? `${Bk.name} ${Bk.t} mm` : null, gSolid = 'Massivholz Fichte';
+  const gMain = `${M.name} ${t} mm`, gBack = Bk ? `${Bk.name} ${Bk.t} mm` : null, gSolid = 'Massivholz Fichte';
 
   const raw = [], boxes = [], extras = [], buys = new Map();
   const ctx = {
-    c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.short, warn, extras,
+    c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.name, warn, extras,
     boards:!!BM, bm:BM, stripFin: BM ? SOLID_FIN : fin,
     lmax(seg){
       if (!BM) return Infinity;
@@ -672,7 +672,7 @@ function computeReduit(c0){
   const level = free ? JOINTS[c.joint].level : SYS[c.sys].level;
   return {
     kind:'reduit', W, H, D, Dtot:D, t, M, Bk, rows, boxes, doors:[], slides:[], extras, groups, hw, finish,
-    tools:[...tools], steps, warn:[...new Set(warn)], carcFin:fin, frontFin:fin, level, joint:c.joint, matShort:M.short,
+    tools:[...tools], steps, warn:[...new Set(warn)], carcFin:fin, frontFin:fin, level, joint:c.joint, matShort:M.name,
     buyCost, solidCost, room:{ W, D, H, doorW:c.doorW, doorH }, build:c.build, sys:c.sys, shape:c.shape, modules:ctx.modules, max
   };
 }

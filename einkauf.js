@@ -9,7 +9,7 @@ function einkaufsliste(R){
   const abschnitt = (titel, info, zeilen) => {
     if (zeilen.length) liste.push({ titel, info, zeilen: zeilen.map(([text, sub]) => ({ id:`${titel}|${text}`, text, sub: sub || '' })) });
   };
-  const maserung = r => R.M.grain && (r.kind === 'korpus' || r.kind === 'front');
+  const maserung = r => r.kind === 'front' ? (R.MF || R.M).grain : r.kind === 'korpus' && R.M.grain;
   for (const g of R.groups) {
     if (g.boards) {
       const per = new Map();
