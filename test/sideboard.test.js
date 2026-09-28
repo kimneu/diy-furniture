@@ -101,3 +101,11 @@ test('Bad: Hinweise auch für das Frontmaterial', () => {
   const R = run({ room:'bath', mat:'eiche', frontMat:'seekiefer', frontT:15 });
   assert.ok(R.warn.some(w => w.includes('wasserfest verleimtes Sperrholz Seekiefer')));
 });
+
+test('Schiebetüren: vordere Lochreihe liegt unter dem Einlegeboden (SK-1)', () => {
+  const R = run({ front:'sliding', sections:2, shelves:1 });
+  const seite = R.rows.find(r => r.name === 'Seite'), boden = R.rows.find(r => r.name === 'Einlegeboden');
+  const vorn = Number(seite.note.match(/vorne (\d+) mm/)[1]);
+  assert.ok(vorn >= seite.B - boden.B, `${vorn} < ${seite.B - boden.B}`);   // Loch hinter der Vorderkante des Bodens
+  assert.ok(R.steps.find(s => s[0].startsWith('Löcher für Bodenträger'))[1].includes(`${vorn} mm von vorne`));
+});

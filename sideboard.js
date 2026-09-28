@@ -58,7 +58,7 @@ function computeSideboard(c){
 
   // Korpus
   const sideH = topOver ? Hc - t : Hc;
-  for (const sx of [-1, 1]) add('Seite', sideH, Dp, t, gMain, c.shelves ? 'Lochreihe Bodenträger innen' : 'Vorderkante sichtbar', 'korpus',
+  for (const sx of [-1, 1]) add('Seite', sideH, Dp, t, gMain, c.shelves ? `Lochreihe Bodenträger innen${sliding ? `, vorne ${slideSet + 40} mm von der Kante` : ''}` : 'Vorderkante sichtbar', 'korpus',
     { size:[t, sideH, Dp], pos:[sx*(W/2 - t/2), bh + sideH/2, zc], thin:'x', grain:'y', fin:carcFin, ex:[sx*150, 0, 0] });
   const topW = topOver ? W : Wi;
   add('Deckel', topW, Dp, t, gMain, topOver ? 'liegt auf den Seiten · Oberseite = Sichtseite' : 'zwischen den Seiten', 'korpus',
@@ -279,7 +279,9 @@ function buildSteps(o){
   }[frontKind];
   st.push(['Zuschnitt organisieren', 'Kopier die Zuschnittliste und lass die Platten im Baumarkt oder bei einer Schreinerei zuschneiden – das ist auf den Millimeter genauer als zu Hause mit der Handkreissäge. Die erste Zahl liegt jeweils in Faserrichtung.', 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
   st.push(['Teile beschriften und schleifen', 'Schreib jedem Teil den Positionsbuchstaben auf die Innenseite und markier «vorne» und «oben». Flächen und Kanten mit Körnung 120, dann 180 schleifen, Kanten leicht brechen.', null]);
-  if (c.shelves) st.push(['Löcher für Bodenträger bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Seiten${n > 1 ? ' und in beide Seiten der Mittelwände' : ''} bohren, je ca. 40 mm von vorne und hinten, 10 mm tief.${n > 1 ? ' Bei den Mittelwänden nur 8 mm tief und die zweite Seite um 16 mm versetzt bohren, damit nichts durchbricht.' : ''}`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
+  // Schiebetüren: Die Einlegeböden liegen hinter den Schienen, die vordere Lochreihe der Seiten darum um slideSet weiter hinten (SK-1).
+  const vorn = sliding ? slideSet + 40 : 40;
+  if (c.shelves) st.push(['Löcher für Bodenträger bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Seiten${n > 1 ? ' und in beide Seiten der Mittelwände' : ''} bohren, je ca. ${sliding ? `${vorn} mm von vorne und 40 mm von hinten` : '40 mm von vorne und hinten'}, 10 mm tief.${sliding ? ` Vorne so weit hinten, weil die Einlegeböden hinter den Schiebetüren liegen${n > 1 ? ' – bei den zurückversetzten Mittelwänden sind es 40 mm von ihrer Kante' : ''}.` : ''}${n > 1 ? ' Bei den Mittelwänden nur 8 mm tief und die zweite Seite um 16 mm versetzt bohren, damit nichts durchbricht.' : ''}`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
   const between = topOver ? 'den Boden' : 'Deckel und Boden';
   if (c.joint === 'pocket') st.push(['Taschenlöcher bohren', `Bohrlehre auf ${t} mm Plattenstärke einstellen. Taschenlöcher an beiden Enden von ${between}${n > 1 ? ' und der Mittelwände' : ''} bohren, alle ca. 15 cm und 40 mm von vorne und hinten.${topOver ? ' Für den aufgesetzten Deckel die Taschenlöcher oben innen in die Seiten bohren.' : ''} Die Löcher kommen immer auf Innen- oder Unterseiten – beim Boden auf die Unterseite.`, null]);
   if (c.joint === 'screws') st.push(['Schraublöcher vorbohren', `Schraubpositionen anreissen: ${t/2} mm von der Plattenkante, alle ca. 15 cm, 40 mm von vorne und hinten. In ${topOver ? 'Deckel (von oben) und Seiten' : 'die Seiten'} Ø ${mdf ? '5' : '4'} mm durchbohren und ansenken. In die Stirnkante des Gegenstücks Ø ${mdf ? '5 mm mit Stufenbohrer (Konfirmat)' : '2,5–3 mm'} vorbohren.`, mdf ? 'MDF reisst ohne Vorbohren an den Kanten auf.' : 'Mittig in die Kante bohren – ein Anschlag an der Bohrmaschine hilft.']);
