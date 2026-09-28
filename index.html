@@ -184,6 +184,10 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .card:not(:has(input:checked)) .desc{display:none}
 .card:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .card:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+/* Von einer Regel gesperrt (konfig.js → REGELN): sichtbar, aber nicht wählbar; der Grund steht in .hint.sperre */
+.card:has(input:disabled){opacity:.5;cursor:not-allowed}
+.seg input:disabled + label{opacity:.4;cursor:not-allowed}
+.hint.sperre{margin-top:-4px}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .swatches input{position:absolute;opacity:0;pointer-events:none}
 .swatches label{display:grid;justify-items:center;gap:3px;font-size:11px;color:var(--muted);cursor:pointer;width:52px;text-align:center;line-height:1.2}
@@ -1086,6 +1090,11 @@ function syncVisibility(){
 // Ganze Bretter: Tablartiefe = Brettbreite. Regler und Zahlenfeld rasten auf die Breiten ein, darunter Markierungen.
 const TIEFEN_IDS = ['dBack', 'dLeft', 'dRight'];
 function boardMat(){ const M = MATS[$('#mat').value]; return M && M.boards ? M : null; }
+// Brettbreiten, die im Tiefenfeld k erlaubt sind (min/max setzen die Regeln, siehe zeigeSperren).
+function breiten(BM, k){
+  const el = $('#' + k), w = BM.widths.filter(x => x >= Number(el.min) && x <= Number(el.max));
+  return w.length ? w : BM.widths;
+}
 function syncDepths(snap){
   const BM = boardMat();
   $('#depthHint').hidden = !BM;
@@ -1094,10 +1103,10 @@ function syncDepths(snap){
     const num = $('#' + k), r = $('#' + k + '-r'), ticks = $('#' + k + '-ticks');
     ticks.hidden = !BM;
     if (!BM) continue;
-    if (snap) num.value = r.value = snapBreite(BM.widths, Number(num.value));
+    if (snap) num.value = r.value = snapBreite(breiten(BM, k), Number(num.value));
     const v = Number(num.value), mn = Number(r.min), mx = Number(r.max);
     if (BM.widths.includes(v)) num.dataset.last = v;
-    ticks.innerHTML = BM.widths.map(w => `<span style="--p:${(w - mn) / (mx - mn)}"${w === v ? ' class="on"' : ''}>${w}</span>`).join('');
+    ticks.innerHTML = breiten(BM, k).map(w => `<span style="--p:${(w - mn) / Math.max(1, mx - mn)}"${w === v ? ' class="on"' : ''}>${w}</span>`).join('');
   }
 }
 // Nächste Brettbreite in Richtung dir (+1/-1) ab cur, sonst cur.
@@ -1158,12 +1167,76 @@ function restore(data){
   for (const r of form.querySelectorAll('input[type=range][data-for]')) r.value = $('#' + r.dataset.for).value;
 }
 
+// Setzt die von den Regeln angepassten Felder, Material wie bei einer Eingabe (Stärken, Katalog, Tiefen).
+function setzeFelder(d, keys){
+  if (keys.includes('mat')) { $('#mat').value = d.mat; fillThickness(d.mat, d.t); applyCatalog(d.mat); }
+  for (const k of keys) {
+    if (k === 'mat') continue;
+    const els = form.elements[k];
+    if (!els) continue;
+    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === String(d[k]); }
+    else if (els.type === 'radio') els.checked = els.value === String(d[k]);
+    else if (els.type === 'checkbox') els.checked = !!d[k];
+    else els.value = d[k];
+    const r = $('#' + k + '-r'); if (r) r.value = d[k];
+  }
+  if (keys.includes('front')) fillHandles(d.front, $('#handle').value);
+  if (keys.includes('frontMat')) fillFrontT(d.frontMat, curFrontT());
+  if (keys.includes('mat')) syncDepths(true);
+}
+// Gesperrte Optionen aus, der Grund als Hinweis beim Feld; Tiefenfelder mit den Grenzen der Regeln.
+function zeigeSperren(P){
+  for (const el of form.querySelectorAll('[data-sperre]')) { el.disabled = false; delete el.dataset.sperre; }
+  for (const h of form.querySelectorAll('.hint.sperre')) h.remove();
+  $('#grain').disabled = !MATS[$('#mat').value].grain;   // Grundzustand wie in syncVisibility
+  const hints = new Map();   // Feld-Container → { grund → [Werte] }
+  const hint = (box, grund, wert) => {
+    const g = hints.get(box) || new Map(); hints.set(box, g);
+    const l = g.get(grund) || []; g.set(grund, l); if (wert && !l.includes(wert)) l.push(wert);
+  };
+  for (const [feld, werte] of Object.entries(P.gesperrt)) {
+    const els = form.elements[feld];
+    if (!els) continue;
+    const list = els instanceof RadioNodeList ? [...els] : els.tagName === 'SELECT' ? [...els.querySelectorAll('option')] : [els];
+    for (const o of list) {
+      const w = o.type === 'checkbox' ? 'false' : o.value, s = werte[w];
+      if (!s) continue;
+      o.disabled = true; o.dataset.sperre = '1';
+      const box = (o.tagName === 'OPTION' ? o.closest('select') : o).closest('.cards, .field, .check');
+      hint(box, s.grund, o.type === 'checkbox' ? null : wertName(feld, w));
+    }
+  }
+  for (const k of TIEFEN_IDS) {
+    const num = $('#' + k), rng = $('#' + k + '-r'), g = P.grenzen[k];
+    num.dataset.min0 = num.dataset.min0 || num.min; num.dataset.max0 = num.dataset.max0 || num.max;
+    num.min = rng.min = g ? g.min : num.dataset.min0;
+    num.max = rng.max = g ? Math.max(g.min, g.max) : num.dataset.max0;
+    if (g) for (const r of g.regeln) hint($('#depthHint'), r.grund, null);   // ein Hinweis für alle Tiefen
+  }
+  for (const [box, g] of hints) if (box) for (const [grund, werte] of [...g].reverse()) {
+    const p = document.createElement('p');
+    p.className = 'hint sperre';
+    p.textContent = werte.length ? `${werte.join(', ')}: ${grund}` : grund;
+    box.insertAdjacentElement('afterend', p);
+  }
+}
+
 /* ---------- Ausgabe ---------- */
 let R = null;
 function render(){
+  // Regeln (konfig.js): gesperrte Werte weichen aus, Zahlen bleiben in ihren Grenzen; Anpassungen zurück ins Formular.
+  const d = formData(), P = pruefeRegeln(d);
+  const diff = Object.keys(P.d).filter(k => k !== 'katalog' && String(P.d[k]) !== String(d[k]));
+  if (diff.length) {
+    setzeFelder(P.d, diff); syncVisibility(); placePills();
+    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(/^d(Back|Left|Right)$/.test(k) ? P.d[k] + ' mm' : wertName(k, String(P.d[k])))}`);
+    if (was.length) flash('.js-msg', `Angepasst – ${was.join(' · ')}. Der Grund steht beim Feld.`);
+  }
+  zeigeSperren(P);
   const c = readCfg();
   const reduit = c.kind === 'reduit';
   R = reduit ? computeReduit(c) : computeSideboard(c);
+  R.warn = [...P.warnungen, ...R.warn];
   renderSummary(R); renderWarns(R); renderCut(R); renderSteps(R); renderKauf(R);
   const zu = R.groups.filter(g => !g.boards), br = R.groups.filter(g => g.boards);
   renderSheets(zu, $('#sheets')); renderSheets(br, $('#ablaengen'));
@@ -1620,7 +1693,7 @@ function build3D(R){
 function onInput(e){
   const el = e.target;
   const BM = TIEFEN_IDS.includes(el.dataset.for) && boardMat();
-  if (BM) el.value = snapBreite(BM.widths, Number(el.value));
+  if (BM) el.value = snapBreite(breiten(BM, el.dataset.for), Number(el.value));
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
@@ -1645,7 +1718,7 @@ form.addEventListener('change', e => {
     const BM = TIEFEN_IDS.includes(el.id) && boardMat();
     if (BM) {
       const last = Number(el.dataset.last), d = v - last;
-      v = Math.abs(d) === Number(el.step) ? stepBreite(BM.widths, last, d) : snapBreite(BM.widths, v);
+      v = Math.abs(d) === Number(el.step) ? stepBreite(breiten(BM, el.id), last, d) : snapBreite(breiten(BM, el.id), v);
     }
     if (String(v) !== el.value) { el.value = v; const r = $('#' + el.id + '-r'); if (r) r.value = v; syncVisibility(); render(); save(); }
   }
@@ -1657,7 +1730,7 @@ form.addEventListener('keydown', e => {
   const BM = dir && TIEFEN_IDS.includes(k) && boardMat();
   if (!BM || (el.type === 'number' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) return;
   e.preventDefault();
-  el.value = stepBreite(BM.widths, snapBreite(BM.widths, Number(el.value)), dir);
+  el.value = stepBreite(breiten(BM, k), snapBreite(breiten(BM, k), Number(el.value)), dir);
   el.dispatchEvent(new Event('input', { bubbles:true }));
 });
 form.addEventListener('submit', e => e.preventDefault());

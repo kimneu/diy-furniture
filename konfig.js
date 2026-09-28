@@ -24,9 +24,158 @@ function withCatalog(d){
   return { ...d, t, price:matPrice(M, t), sheetL:M.sheet[0], sheetB:M.sheet[1] };
 }
 
-function computeData(d){
-  const c = cfgFromData(d);
-  return c.kind === 'reduit' ? computeReduit(c) : computeSideboard(c);
+/* ---------- Regeln ---------- */
+// Sofort-Sperren aus dem Schreiner-Review (docs/review/2026-09-28-eingrenzung-regeln.md, Kapitel 3.4 im Bericht).
+// sperren:     die Option ist im Formular aus, mit Grund; ist sie trotzdem gesetzt (alter Entwurf, Sammlung, Zufall),
+//              weicht der Wert auf den nächsten erlaubten aus und meldet das als Korrektur.
+// grenze:      Zahlenfeld mit eigenem min/max (Grund im Formular), Werte ausserhalb werden angepasst.
+// warnen:      Meldung, der Wert bleibt.
+// Eine Sperre trifft immer das spätere Feld: Einsatzort, Wand → Bauart → Material → Stärke → Front → Rückwand → Verbindung → Maserung → Masse.
+const LEIMHOLZ = k => { const M = MATS[k]; return !!M && M.grain && !M.ply && !M.coated; };
+const istSideboard = c => c.kind !== 'reduit', freiStehend = c => c.kind === 'reduit' && c.build === 'free';
+const eingebaut = c => c.kind === 'reduit' && c.build !== 'free';
+const mitVerbindung = c => istSideboard(c) || freiStehend(c);   // Korpusverbindung: Sideboard und selbststehende Module
+// Ausweichreihenfolge, wenn der gesetzte Wert gesperrt ist (Stärke: nächste erlaubte Stärke des Materials).
+const AUSWEICH = {
+  joint:['pocket', 'dowels', 'cam', 'screws'], front:['hinged', 'sliding', 'open'], back:['hdf3', 'ply6', 'hf3', 'none'],
+  sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true']
+};
+const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 260;
+// Brettbreiten, die in [a, b] liegen (ganze Bretter); bei Plattenmaterial null.
+const breitenIn = (c, a, b) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.filter(w => w >= a && w <= b) : null; };
+const REGELN = [
+  { id:'S01', wirkung:'sperren', feld:'t', werte:c => istSideboard(c) ? MATS[c.mat].t.filter(t => t < 15) : [],
+    grund:() => 'Nur für Fronten – der Korpus braucht mindestens 15 mm, sonst brechen Bohrungen und Schrauben durch.', befunde:['SK-6', 'MX-2', 'MX-1', 'DY-2'] },
+  { id:'S04', wirkung:'sperren', feld:'joint', werte:c => !mitVerbindung(c) ? [] : [...(c.t < 15 || c.t > 22 ? ['cam'] : []), ...(c.t < 15 ? ['dowels', 'screws'] : [])],
+    grund:(c, w) => w === 'cam' ? 'Die Beschläge gibt es nur für 15–22 mm Platten.' : 'Dübel und Schrauben erst ab 15 mm – in dünneren Platten brechen sie durch.', befunde:['SK-2', 'MX-1', 'DY-2', 'SK-10'] },
+  { id:'W03', wirkung:'warnen', wenn:c => mitVerbindung(c) && c.joint === 'cam' && c.t === 15,
+    text:() => 'Exzenter in 15 mm: nur mit Minifix 15, der für 15 mm zugelassen ist. Das Gehäuse lässt rund 3 mm Holz stehen – mit Tiefenanschlag bohren.', befunde:['MX-1', 'SK-2'] },
+  { id:'S05', wirkung:'sperren', feld:'joint', werte:c => mitVerbindung(c) && c.mat === 'osb' ? ['screws'] : [],
+    grund:() => 'OSB-Kanten reissen zwischen den Spänen aus – Taschenloch oder Dübel.', befunde:['SK-10'] },
+  { id:'S06', wirkung:'sperren', feld:'joint', werte:c => mitVerbindung(c) && LEIMHOLZ(c.mat) ? ['screws'] : [],
+    grund:() => 'Bei Leimholz gingen die Schrauben ins Hirnholz – Taschenloch oder Dübel.', befunde:['SK-E2'] },
+  { id:'S07', wirkung:'sperren', feld:'back', werte:c => istSideboard(c) && c.front !== 'open' ? ['none'] : [],
+    grund:() => 'Mit Türen braucht der Korpus eine Rückwand, sonst verzieht er sich und die Türen schliessen nicht mehr.', befunde:['SK-9'] },
+  { id:'S08', wirkung:'sperren', feld:'back', werte:c => freiStehend(c) && c.rh - c.gapTop > 1200 ? ['none'] : [],
+    grund:() => 'Module über 1,2 m Höhe schieben sich ohne Rückwand schräg.', befunde:['MX-5', 'RM-9'] },
+  { id:'S09', wirkung:'sperren', feld:'mat', werte:c => istSideboard(c) && c.room === 'bath' ? ['dekorspan'] : [],
+    grund:() => 'Spanplatte quillt im Bad an Kanten und Bohrungen auf.', befunde:['SK-7', 'MX-10'] },
+  { id:'S09', wirkung:'sperren', feld:'frontMat', werte:c => istSideboard(c) && c.room === 'bath' ? ['dekorspan'] : [],
+    grund:() => 'Spanplatte quillt im Bad an Kanten und Bohrungen auf.', befunde:['SK-7', 'MX-10'] },
+  { id:'S09', wirkung:'sperren', feld:'back', werte:c => istSideboard(c) && c.room === 'bath' ? ['hdf3', 'hf3'] : [],
+    grund:() => 'MDF und Hartfaser quellen im Bad – Sperrholz Pappel nehmen und beidseitig lackieren.', befunde:['SK-7', 'SK-21'] },
+  { id:'S10', wirkung:'sperren', feld:'front', werte:c => istSideboard(c) && c.t >= 22 ? ['hinged'] : [],
+    grund:() => 'Topfscharniere erreichen ab 22 mm Korpus den Überschlag nicht – Korpus 16–21 mm, Schiebetüren oder offen.', befunde:['SF-1', 'SK-E1'] },
+  { id:'S13', wirkung:'sperren', feld:'grain', werte:c => LEIMHOLZ(c.mat) && !MATS[c.mat].boards ? ['false'] : [],
+    grund:() => 'Massivholz nur in Faserrichtung schneiden – quer zur Faser bricht es.', befunde:['SK-4'] },
+  { id:'S14', wirkung:'grenze', felder:['dBack', 'dLeft', 'dRight'], wenn:c => eingebaut(c) && c.sys === 'brackets', max:TIEFE_MAX_WINKEL,
+    grund:() => `Tablarwinkel tragen bis ${TIEFE_MAX_WINKEL} mm Tiefe (grösster Winkel 250 mm, ⅔ der Tiefe).`, befunde:['TR-16'] },
+  { id:'S14', wirkung:'sperren', feld:'mat', werte:c => eingebaut(c) && c.sys === 'brackets' ? Object.keys(MATS).filter(k => MATS[k].boards && !MATS[k].widths.some(w => w <= TIEFE_MAX_WINKEL)) : [],
+    grund:() => `Die Bretter sind breiter als ${TIEFE_MAX_WINKEL} mm – zu tief für Tablarwinkel.`, befunde:['TR-16'] },
+  { id:'S15', wirkung:'grenze', felder:['dBack', 'dLeft', 'dRight'], wenn:c => eingebaut(c) && c.sys === 'rails', min:TIEFE_MIN_SCHIENE,
+    grund:() => `Die kürzeste Konsole ist 250 mm – Wandschienen ab ${TIEFE_MIN_SCHIENE} mm Tiefe. Für flachere Tablare Tablarwinkel.`, befunde:['EP-9', 'TR-16'] },
+  { id:'S16', wirkung:'sperren', feld:'sys', werte:c => eingebaut(c) && c.wall === 'drywall' ? ['rails', 'brackets'] : [],
+    grund:() => 'Schienen und Winkel ziehen an den Dübeln – in Gipskarton hält das nur in den Ständern. Pfostenrahmen, Leisten, Wangen oder selbststehend wählen.', befunde:['TR-7', 'RM-13'] },
+  { id:'K14', wirkung:'grenze', felder:['dBack'], wenn:c => c.kind === 'reduit' && c.doorIn, max:c => c.rd - c.doorW - 50,
+    grund:() => 'Die Tür geht nach innen auf – vor dem hinteren Regal braucht sie ihre Breite und 50 mm Luft.', befunde:['EG-6', 'RM-2'] }
+];
+const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
+const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
+
+// Gesperrte Werte je Feld: { feld: { wert: { regel, grund } } } (Werte als Text, wie im Formular).
+function gesperrt(c){
+  const g = {};
+  for (const r of REGELN) if (r.wirkung === 'sperren') for (const w of r.werte(c).map(String)) {
+    const f = g[r.feld] || (g[r.feld] = {});
+    if (!f[w]) f[w] = { regel:r.id, grund:r.grund(c, w) };
+  }
+  return g;
+}
+// Grenzen der Zahlenfelder: { feld: { min, max, regel, grund } }.
+function grenzen(c){
+  const g = {};
+  for (const r of REGELN) if (r.wirkung === 'grenze' && r.wenn(c)) for (const f of r.felder) {
+    const [a, b] = RANGES[f], cur = g[f] || { min:a, max:b, regeln:[] };
+    const mn = regelWert(r, 'min', c), mx = regelWert(r, 'max', c);
+    if (mn != null && mn > cur.min) cur.min = mn;
+    if (mx != null && mx < cur.max) cur.max = mx;
+    cur.regeln.push({ regel:r.id, grund:r.grund(c) });
+    g[f] = cur;
+  }
+  return g;
+}
+// Anzeigename eines Werts für Meldungen.
+function wertName(feld, w){
+  if (feld === 'joint') return JOINTS[w] ? JOINTS[w].name : w;
+  if (feld === 'front') return { open:'offen', hinged:'Drehtüren', sliding:'Schiebetüren' }[w] || w;
+  if (feld === 'back') return w === 'none' ? 'keine Rückwand' : BACKS[w] ? BACKS[w].name : w;
+  if (feld === 'sys') return SYS[w] ? SYS[w].name : w;
+  if (feld === 'mat') return MATS[w] ? MATS[w].name : w;
+  if (feld === 'frontMat') return w === 'korpus' ? 'wie Korpus' : MATS[w] ? MATS[w].name : w;
+  if (feld === 't') return `${w} mm`;
+  if (feld === 'grain') return w === 'true' ? 'Maserung einhalten' : 'Maserung frei';
+  return w;
+}
+const FELDNAME = { joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
+  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts' };
+
+// Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
+// dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 5 Runden).
+// Ergebnis: d (angepasste Werte), gesperrt, grenzen, korrekturen und warnungen (Texte).
+function pruefeRegeln(d, fest = new Set()){
+  let x = { ...d };
+  const korrekturen = [], warnungen = [];
+  const setzeKatalog = () => { if (x.katalog) x.katalog = { price:matPrice(MATS[x.mat], Number(x.t)), sheetL:MATS[x.mat].sheet[0], sheetB:MATS[x.mat].sheet[1] }; };
+  for (let runde = 0; runde < 5; runde++) {
+    const c = cfgFromData(x), g = gesperrt(c);
+    let neu = false;
+    for (const [feld, werte] of Object.entries(g)) {
+      const cur = String(x[feld]), hit = werte[cur];
+      if (!hit) continue;
+      if (fest.has(feld)) { warnungen.push(`${FELDNAME[feld]} ${wertName(feld, cur)}: ${hit.grund}`); continue; }
+      let alt;
+      if (feld === 't') {
+        const ts = MATS[c.mat].t.filter(t => !werte[String(t)]);
+        alt = ts.find(t => t >= c.t) ?? ts[ts.length - 1];
+      } else if (feld === 'mat') {
+        const ok = k => MATS[k] && !werte[k] && (!MATS[k].boards || c.kind === 'reduit');
+        alt = AUSWEICH.mat.find(ok) ?? Object.keys(MATS).find(ok);
+      } else alt = (AUSWEICH[feld] || []).find(w => !werte[w]);
+      if (alt == null) { warnungen.push(`${FELDNAME[feld]} ${wertName(feld, cur)}: ${hit.grund}`); continue; }
+      korrekturen.push(`${FELDNAME[feld]}: ${wertName(feld, String(alt))} statt ${wertName(feld, cur)} – ${hit.grund}`);
+      if (feld === 'mat') { x = withCatalog({ ...x, mat:alt }); setzeKatalog(); }
+      else if (feld === 't') { x = { ...x, t:typeof x.t === 'number' ? alt : String(alt), price:matPrice(MATS[x.mat], alt) }; setzeKatalog(); }
+      else if (feld === 'grain') x = { ...x, grain:true };
+      else x = { ...x, [feld]:alt };
+      neu = true;
+    }
+    for (const [feld, gr] of Object.entries(grenzen(c))) {
+      const v = Number(x[feld]);
+      if (v >= gr.min && v <= gr.max) continue;
+      const grund = gr.regeln.map(r => r.grund).join(' ');
+      if (fest.has(feld) || gr.min > gr.max) { warnungen.push(`${FELDNAME[feld]} ${v} mm: ${grund}`); continue; }
+      let w = clamp(v, gr.min, gr.max);
+      const B = breitenIn(c, gr.min, gr.max);
+      if (B && B.length) w = B.reduce((a, b) => Math.abs(b - w) < Math.abs(a - w) ? b : a);
+      else if (B) { warnungen.push(`${FELDNAME[feld]} ${v} mm: ${grund}`); continue; }
+      korrekturen.push(`${FELDNAME[feld]}: ${w} statt ${v} mm – ${grund}`);
+      x = { ...x, [feld]:typeof x[feld] === 'number' ? w : String(w) };
+      neu = true;
+    }
+    if (!neu) break;
+  }
+  const c = cfgFromData(x);
+  for (const r of REGELN) if (r.wirkung === 'warnen' && r.wenn(c)) warnungen.push(r.text(c));
+  return { d:x, gesperrt:gesperrt(c), grenzen:grenzen(c), korrekturen:[...new Set(korrekturen)], warnungen:[...new Set(warnungen)] };
+}
+
+// Berechnung aus Formularwerten, nach den Regeln angepasst. R.form = angepasste Werte, R.korrekturen = was angepasst wurde.
+function computeData(d, fest){
+  const P = pruefeRegeln(d, fest), c = cfgFromData(P.d);
+  const R = c.kind === 'reduit' ? computeReduit(c) : computeSideboard(c);
+  R.warn = [...P.warnungen, ...R.warn];
+  R.form = P.d; R.gesperrt = P.gesperrt; R.grenzen = P.grenzen; R.korrekturen = P.korrekturen;
+  return R;
 }
 
 /* ---------- Zufall ---------- */
@@ -74,7 +223,9 @@ function zufall(base, rnd = Math.random, tries = 60, locks = []){
     if (!('mat' in fix)) { d = withCatalog(d); delete d.katalog; }
     const BM = MATS[d.mat].boards ? MATS[d.mat] : null;
     if (d.kind === 'reduit' && BM) for (const k of TIEFEN) if (!(k in fix)) d[k] = snapBreite(BM.widths, Number(d[k]));
-    const warn = computeData(d).warn.filter(w => !HARMLOS.test(w));
+    const R = computeData(d, new Set(Object.keys(fix)));
+    d = R.form;
+    const warn = R.warn.filter(w => !HARMLOS.test(w));
     if (!warn.length) return d;
     if (!best || warn.length < best.n) best = { d, n:warn.length };
   }
@@ -212,4 +363,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
