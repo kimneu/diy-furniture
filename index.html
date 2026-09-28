@@ -591,11 +591,11 @@ body[data-ort="sammlung"] .layout{display:none}
           <div class="seg" role="radiogroup" aria-labelledby="lbl-build"><input type="radio" name="build" id="build-built" value="built" checked><label for="build-built">eingebaut</label><input type="radio" name="build" id="build-free" value="free"><label for="build-free">selbststehend</label></div>
         </div>
         <div class="cards" role="radiogroup" aria-label="Einbau-Art" id="row-sys">
-          <label class="card"><input type="radio" name="sys" value="battens" checked><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/></svg><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
+          <label class="card"><input type="radio" name="sys" value="battens"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/></svg><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
           <label class="card"><input type="radio" name="sys" value="rails"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 3v18M17 3v18"/><path d="M4 9h16M4 15h16"/></svg><b>Wandschienen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Schienen mit einhängbaren Konsolen. Höhen jederzeit verstellbar, teurer.</span></label>
           <label class="card"><input type="radio" name="sys" value="brackets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10l4 4M4 16l4 4"/></svg><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
           <label class="card"><input type="radio" name="sys" value="cheeks"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="4" height="18" rx=".5"/><rect x="17" y="3" width="4" height="18" rx=".5"/><path d="M7 9h10M7 15h10"/></svg><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
-          <label class="card"><input type="radio" name="sys" value="posts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Latten rundum als Auflage, Kanthölzer vor den Tablaren – das klassische Kellerregal. Trägt auch tiefe Tablare.</span></label>
+          <label class="card"><input type="radio" name="sys" value="posts" checked><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Latten rundum als Auflage, Kanthölzer vor den Tablaren – das klassische Kellerregal. Trägt auch tiefe Tablare.</span></label>
         </div>
       </section>
 
@@ -822,7 +822,7 @@ body[data-ort="sammlung"] .layout{display:none}
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
             <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
-            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="2100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
+            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
           </div>
         </div>
         <div class="field" id="row-boards" hidden>
@@ -1931,7 +1931,7 @@ function rueckgaengig(){
 }
 // Wechselt zum Entwurf des Typs; ohne Entwurf mit den Startwerten der Seite.
 function wechsleTyp(kind){
-  applyData(entwuerfe && entwuerfe[kind] || { ...DEFAULTS, kind });
+  applyData(entwuerfe && entwuerfe[kind] || startwerte(DEFAULTS, kind));
 }
 const undoBtn = '<button type="button" class="linkbtn" data-undo>Rückgängig</button>';
 $('#bZufall').addEventListener('click', () => {
@@ -1981,7 +1981,7 @@ wahl.addEventListener('click', ev => {
   if (!k && !z && !s) return;
   if (k) wechsleTyp(k.dataset.kind);
   if (z) {
-    const basis = entwuerfe[z.dataset.zufall] || { ...DEFAULTS, kind:z.dataset.zufall };
+    const basis = entwuerfe[z.dataset.zufall] || startwerte(DEFAULTS, z.dataset.zufall);
     applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo: !wahlErst });
     if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
   }

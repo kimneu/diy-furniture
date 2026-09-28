@@ -176,7 +176,7 @@ function computeSideboard(c){
   const groups = [];
   const mainItems = [], frontItems = [], backItems = [];
   for (const r of rows) for (let q = 0; q < r.qty; q++) (r.kind === 'back' ? backItems : r.group === gMain ? mainItems : frontItems).push(r);
-  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100), kerf = clamp(c.kerf, 0, 8);
+  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 3100), kerf = clamp(c.kerf, 0, 8);
   groups.push({ label: gMain, sheet:[sheetL, sheetB], price: clamp(c.price, 0, 500), rotate: !(c.grain && M.grain), ...pack(mainItems, sheetL, sheetB, kerf, 10, !(c.grain && M.grain)) });
   // Fronten aus anderem Material oder anderer Stärke: eigene Platte mit Katalogformat und -preis.
   if (frontItems.length) {

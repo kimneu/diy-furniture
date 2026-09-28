@@ -317,6 +317,17 @@ function wuerfelReduit(base, rnd, fix = {}){
 }
 
 /* ---------- Entwürfe ---------- */
+// Startwerte eines Typs ohne Entwurf: die Formularwerte beim Laden plus die Abweichungen des Typs.
+// Reduit: Pfostenrahmen mit Sperrholz Fichte 18 – ohne Warnung (Entscheid 28.09.2026).
+const START = { reduit:{ sys:'posts', mat:'fichtesp', t:'18' } };
+function startwerte(defaults, kind){
+  let d = { ...defaults, kind, ...(START[kind] || {}) };
+  if (START[kind] && START[kind].mat) {
+    d = withCatalog(d);
+    d = { ...d, t:String(d.t), katalog:{ price:d.price, sheetL:d.sheetL, sheetB:d.sheetB } };
+  }
+  return d;
+}
 // Ein Entwurf pro Möbeltyp: { kind: aktueller Typ, sideboard: Formularwerte, reduit: Formularwerte }.
 // alt = der frühere Einzelentwurf (localStorage sideboard-werkbank-v2); er wird unter seinem Typ abgelegt.
 function entwuerfeLaden(neu, alt){
@@ -379,4 +390,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };

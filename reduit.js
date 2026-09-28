@@ -3,7 +3,7 @@
 
 const REDUIT_DEFAULTS = {
   rw:1600, rd:1400, rh:2400, doorW:800, doorIn:false, hinge:'L', wall:'solid',
-  shape:'U', corner:'L', build:'built', sys:'battens',
+  shape:'U', corner:'L', build:'built', sys:'posts',
   dBack:400, dLeft:300, dRight:300, nShelves:5, gapBottom:150, gapTop:300,
   nicheL:false, nicheLW:450, nicheLH:1300, nicheR:false, nicheRW:450, nicheRH:1300
 };
@@ -618,7 +618,7 @@ function computeReduit(c0){
   // Zuschnitt packen (Massivholz nicht)
   const groups = [], mainItems = [], backItems = [];
   for (const r of rows) for (let q = 0; q < r.qty; q++) { if (r.kind === 'back') backItems.push(r); else if (r.kind !== 'solid') mainItems.push(r); }
-  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 2100), kerf = clamp(c.kerf, 0, 8);
+  const sheetL = clamp(c.sheetL, 500, 3100), sheetB = clamp(c.sheetB, 300, 3100), kerf = clamp(c.kerf, 0, 8);
   const rotate = !(c.grain && M.grain);
   if (BM) {
     const r = packBoards(mainItems, BM.boards, kerf);
