@@ -348,3 +348,84 @@ test('Tiefenhinweis nennt nur Seiten, die wirklich auf einer Brettbreite liegen'
   const hint = n.warn.find(w => w.includes('Brettbreite'));
   assert.ok(!hint || !/links 350|rechts 350/.test(hint), hint);
 });
+
+/* ---------- Pfostenrahmen (Schreiner-Review, Variante A) ---------- */
+const postBoxes = Rr => Rr.boxes.filter(b => b.key.startsWith('Kantholz'));
+const postRun = over => run({ sys:'posts', ...over });
+const lo = (b, i) => b.pos[i] - b.size[i] / 2, hi = (b, i) => b.pos[i] + b.size[i] / 2;
+// Auflager einer Querlatte: Wand an einem Ende (Winkel auf die Endlatte) oder ein Pfosten, der sie von vorne berührt.
+function querlattenAuflager(Rr, q){
+  const ax = q.size[0] > q.size[2] ? 0 : 2, px = 2 - ax;
+  const walls = ax === 0 ? [-Rr.W / 2, Rr.W / 2] : [-Rr.D / 2, Rr.D / 2];
+  let n = walls.filter(w => Math.abs(lo(q, ax) - w) < 6 || Math.abs(hi(q, ax) - w) < 6).length;
+  for (const p of postBoxes(Rr)) {
+    const touch = Math.abs(lo(p, px) - hi(q, px)) < 1 || Math.abs(hi(p, px) - lo(q, px)) < 1;
+    if (touch && hi(p, ax) > lo(q, ax) + 1 && lo(p, ax) < hi(q, ax) - 1 && hi(p, 1) >= hi(q, 1) - 1) n++;
+  }
+  return n;
+}
+const postCases = [];
+for (const shape of ['I', 'L', 'U']) for (const rd of [1100, 1400, 2600])
+  for (const extra of [{}, { corner:'R' }, { doorIn:true, hinge:'L' }, { nicheL:true, nicheR:true }, { mat:'gon_fichte', t:18, rw:2400 }, { mat:'regalbau', t:16 }, { mat:'osb', t:12 }])
+    postCases.push({ shape, rd, ...extra });
+
+test('Pfostenrahmen: Pfosten stehen vor den Tablaren, nicht darin', () => {
+  for (const o of postCases) {
+    const Rr = postRun(o), posts = postBoxes(Rr);
+    assert.ok(posts.length || o.shape === 'I', JSON.stringify(o));
+    for (const p of posts) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), JSON.stringify(o) + ' ' + b.key);
+  }
+});
+
+test('Pfostenrahmen: jede Querlatte hat mindestens zwei Auflager', () => {
+  for (const o of [...postCases, { shape:'I', rw:790, rd:900, doorW:600 }, { shape:'U', rd:1100 }]) {
+    const Rr = postRun(o);
+    for (const q of Rr.boxes.filter(b => b.key.includes('|Querlatte vorne'))) assert.ok(querlattenAuflager(Rr, q) >= 2, JSON.stringify(o) + ' ' + JSON.stringify(q.pos));
+  }
+});
+
+test('Pfostenrahmen: Eckpfosten an jeder Innenecke, keine Eckleiste', () => {
+  for (const [shape, n] of [['I', 0], ['L', 1], ['U', 2]]) for (const rd of [1100, 1400]) {
+    const Rr = postRun({ shape, rd });
+    assert.strictEqual(Rr.rows.filter(r => r.note.startsWith('Eckpfosten')).reduce((a, r) => a + r.qty, 0), n, shape + rd);
+    assert.ok(!Rr.rows.some(r => r.name === 'Eckleiste'), shape);
+  }
+});
+
+test('Pfostenrahmen: Pfostenzahl richtet sich nach der Querlatte, nicht nach dem Tablarmaterial', () => {
+  const count = over => postRun(over).rows.filter(r => r.name.startsWith('Kantholz')).reduce((a, r) => a + r.qty, 0);
+  assert.strictEqual(count({}), 2);                 // Standard-U: nur die Eckpfosten
+  assert.strictEqual(count({ mat:'osb', t:12 }), 2);
+  assert.strictEqual(count({ mat:'dekorspan', t:16 }), 2);
+  assert.strictEqual(count({ shape:'L' }), 2);      // Eckpfosten + einer im 1255 mm langen Feld hinten
+  assert.ok(postRun({ shape:'L' }).warn.some(w => w.includes('Zwischenpfosten')));
+});
+
+test('Pfostenrahmen: Bauablauf – erst Tablare, dann Pfosten, dann verschrauben', () => {
+  const names = postRun({}).steps.map(s => s[0]);
+  const i = n => names.indexOf(n);
+  assert.ok(i('Latten montieren') < i('Tablare einschieben') && i('Tablare einschieben') < i('Pfosten stellen') && i('Pfosten stellen') < i('Tablare verschrauben'), names.join(' → '));
+  assert.ok(!names.includes('Tablare auflegen'));
+});
+
+test('Pfostenrahmen: Verbindungen stehen auf der Kaufliste', () => {
+  const Rr = postRun({});
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 60'), 2 * Math.ceil(3 * 5 * 1.1));   // 2 Eckpfosten × 3 Schrauben × 5 Ebenen
+  assert.strictEqual(qtyOf(Rr, 'Winkelverbinder'), 3 * 2 * 5);                          // je Querlatte 2 Enden (Wand oder Ecke) × 5 Ebenen
+  assert.ok(qtyOf(Rr, 'Senkkopfschrauben 4 × 40') > 0);
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 70'), 0);
+});
+
+test('Pfostenrahmen: Durchgang wird zwischen den Pfosten gemessen', () => {
+  const o = { shape:'U', rw:1300, doorW:800, dLeft:320, dRight:320 };
+  assert.ok(postRun(o).warn.some(w => w.includes('Durchgang') && w.includes('Pfosten')));
+  assert.ok(!run({ ...o, sys:'battens' }).warn.some(w => w.includes('Durchgang')));
+});
+
+test('Stützen an freien Enden und Stössen stehen vor dem Tablar', () => {
+  for (const sys of ['battens', 'rails', 'brackets'])
+    for (const o of [{ shape:'U', doorIn:true, hinge:'L' }, { mat:'gon_fichte', t:18, shape:'I', rw:2400 }, { mat:'regalbau', t:16, shape:'U', nicheL:true }]) {
+      const Rr = run({ sys, ...o });
+      for (const p of postBoxes(Rr)) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), sys + JSON.stringify(o) + ' ' + b.key);
+    }
+});

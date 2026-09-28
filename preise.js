@@ -42,7 +42,8 @@ const PREISE = {
     "dowel6": { "price": 0.2, "est": true, "stand": "2026-09-25", "quelle": "Fischer Dübel SX 6x30 S" },
     "hollow": { "price": 1.6, "stand": "2026-09-25", "quelle": "Fischer HM 5 x 52 S, 4 Stück CHF 6.30" },
     "screw35": { "price": 0.08, "est": true, "stand": "2026-09-25", "quelle": "Spax Senkkopf Torx 4 x 35 mm, 25 Stück" },
-    "screw70": { "price": 0.19, "stand": "2026-09-25", "quelle": "SPAX 5 x 70 mm, 50 Stück CHF 9.50" },
+    "screw4x40": { "price": 0.09, "est": true, "stand": "2026-09-28", "quelle": "Spax Senkkopf Torx 4 x 40 mm" },
+    "screw5x60": { "price": 0.18, "est": true, "stand": "2026-09-28", "quelle": "SPAX 5 x 60 mm (5 x 70 mm: 50 Stück CHF 9.50)" },
     "tipguard": { "price": 22.5, "stand": "2026-09-25", "quelle": "Abus TV-Kippsicherung Isa, 2 Stück; eigentliches Möbel-Kippschutz-Set nicht im Sortiment" }
   },
   "bretter": {

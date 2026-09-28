@@ -21,9 +21,24 @@ Wichtigste Punkte:
 - **Ecken:** Geometrie richtig; Innenecke ohne Auflager bei Leisten/Pfosten, Blindecke bei Wangen/Modulen, Tablare 9 mm in den Wandschienen.
 - **Eingrenzung:** Empfehlung «Bauweisen vorne (5 Sideboard, 6 Reduit), Regeln dahinter» statt freier Kombination und `HARMLOS`-Regex.
 
-Offene Entscheide (Kapitel 5 im Bericht): Pfostenrahmen Variante A oder B · Bauweisen oder nur Regeln (Materialfilter war früher verworfen) · Exzenter bei 15 mm · Schwellen Eckfach 350 mm / Durchlauf + 100 mm · Seekiefer beim Sideboard · neue Eingaben Türlage/Türhöhe · neuer Reduit-Standard.
+Entschieden am 28.09.2026:
 
-Nächster Schritt nach dem Entscheid: Vorgehen Kapitel 4 im Bericht, beginnend mit dem Pfostenrahmen.
+- **Pfostenrahmen: Variante A** – Pfosten vor der Querlatte, Tablare rechteckig, Eckpfosten an jeder Innenecke.
+- **Eingrenzung: Bauweisen vorne, Regeln dahinter.** Der Filter folgt aus der Konstruktion, nicht aus der Optik (der frühere Entscheid gegen einen Materialfilter unter «Ideen» betraf die Optik).
+- **Exzenter bei 15 mm: warnen**, nicht sperren (Minifix 15 ist vom Hersteller zugelassen, rund 3 mm Rest).
+
+Noch offen: Schwellen Eckfach 350 mm / Durchlauf + 100 mm · Seekiefer beim Sideboard · neue Eingaben Türlage/Türhöhe · neuer Reduit-Standard.
+
+Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude/next-steps-9c8hnq` (baut auf `schreiner-review` auf):
+
+- [x] **1. Pfostenrahmen, Variante A:** Pfosten stehen vor der Querlatte (`addPost`, v = Tiefe … Tiefe + 45), Tablare rechteckig. Eckpfosten an jeder Innenecke (beim Seitenregal gesetzt, trägt auch die hintere Querlatte), keine Eckleiste mehr. Pfostenabstand nach der Querlatte (`POST_MAX` 1200) statt nach der Tablar-Spannweite: Standard-U 2 statt 4 Pfosten, unabhängig vom Material. Verbindungen auf der Kaufliste: Winkel je Querlatten-Ende (Wand, Ecke), 5 × 60 durch die Pfosten (Eckpfosten 3 je Ebene), Tablare mit 4 × 40 von oben. Bauablauf: Latten → Tablare einschieben → Pfosten stellen → Tablare verschrauben. Durchgang wird zwischen den Pfosten gemessen (− 90 mm). Stützen an freien Enden und Stössen (Leisten, Schienen, Winkel) stehen ebenfalls vor dem Tablar. Stösse bei ganzen Brettern brauchen beim Pfostenrahmen keinen eigenen Pfosten (das Tablar liegt auf Wand- und Querlatte).
+- [ ] 2. Schraubentabelle `screwFor`
+- [ ] 3. Sofort-Sperren (3.4)
+- [ ] 4. Geometrie
+- [ ] 5. SPAN nach `shared.js`
+- [ ] 6. Anleitung
+- [ ] 7. Bauweisen-Schicht
+- [ ] 8. Tests quer über alle Kombinationen
 
 ## Repo & Setup
 

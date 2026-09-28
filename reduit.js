@@ -94,8 +94,10 @@ function layoutReduit(c){
     if (s.niche.w > maxW) { s.niche.w = maxW; warn.push(`Nische ${SIDE_NAME[s.id]} auf ${maxW} mm Breite begrenzt.`); }
   }
   if (c.hasL && c.hasR) {
-    const pass = W - c.dLeft - c.dRight;
-    if (pass < 600) warn.push(`Zwischen den Seitenregalen bleiben nur ${pass} mm Durchgang – ab etwa 600 mm lässt es sich bequem hineingehen.`);
+    // Beim Pfostenrahmen stehen die Pfosten 45 mm vor den Seitenregalen.
+    const posts = c.build !== 'free' && c.sys === 'posts' ? 90 : 0;
+    const pass = W - c.dLeft - c.dRight - posts;
+    if (pass < 600) warn.push(`Zwischen den Seitenregalen bleiben nur ${pass} mm Durchgang${posts ? ' (zwischen den Pfosten)' : ''} – ab etwa 600 mm lässt es sich bequem hineingehen.`);
   }
   return { segs, warn, wf };
 }
@@ -164,7 +166,8 @@ const BUY_INFO = {
   dowel6:    { name:'Spreizdübel 6 mm + Schraube 4,5 × 50 mm' },
   hollow:    { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)' },
   screw35:   { name:'Holzschrauben 4 × 35 mm' },
-  screw70:   { name:'Holzschrauben 5 × 70 mm' },
+  screw4x40: { name:'Senkkopfschrauben 4 × 40 mm' },
+  screw5x60: { name:'Holzschrauben 5 × 60 mm' },
   tipguard:  { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)' }
 };
 const BUY = Object.fromEntries(Object.entries(BUY_INFO).map(([k, b]) => {
@@ -244,11 +247,10 @@ function addCornerBatten(ctx, seg, p){
     ctx.box(seg, { u0:p.a - 20, u1:p.a + 20, y0:p.y - ctx.t, y1:p.y, v0:3, v1:seg.depth }, 'y', 'v', ctx.stripFin, [0, -60, 0]));
   ctx.buy('screw35', 4, 'Eckleisten');
 }
-// Kantholz vorne; at = linke Kante entlang u.
-function addPost(ctx, seg, at, height, note, v1){
-  const vb = v1 == null ? seg.depth : v1;
+// Kantholz vor der Tablarkante (v = Tiefe … Tiefe + 45), damit die Tablare rechteckig bleiben; at = linke Kante entlang u.
+function addPost(ctx, seg, at, height, note){
   ctx.add('Kantholz 45 × 45', height, 45, 45, ctx.gSolid, note, 'solid',
-    ctx.box(seg, { u0:at, u1:at + 45, y0:0, y1:height, v0:vb - 45, v1:vb }, 'u', 'y', SOLID_FIN, [0, 0, 120]), BUY.kant45.price);
+    ctx.box(seg, { u0:at, u1:at + 45, y0:0, y1:height, v0:seg.depth, v1:seg.depth + 45 }, 'u', 'y', SOLID_FIN, [0, 0, 120]), BUY.kant45.price);
 }
 // Stützen an freien Enden (Tür nach innen, Nischenkante) für Leisten, Schienen, Winkel.
 function freeEndPosts(ctx, seg, shelves){
@@ -260,7 +262,7 @@ function freeEndPosts(ctx, seg, shelves){
     at.set(u, { h: Math.max(cur.h, p.y + ctx.t), n: cur.n + 1 });
   }
   for (const [u, { h, n }] of at) {
-    addPost(ctx, seg, u, h, 'Stütze am freien Ende, Tablare mit Winkeln verschraubt');
+    addPost(ctx, seg, u, h, 'Stütze vor dem freien Ende, Tablare mit Winkeln verschraubt');
     ctx.buy('angle40', n, 'Tablare an die Stütze');
   }
 }
@@ -324,6 +326,10 @@ function splitShelves(ctx, seg, shelves, supports, v1){
   return { pieces, supports:[...new Set(more.map(r0))].sort((x, y) => x - y) };
 }
 
+// Grösster Abstand der Auflager einer Querlatte beim Pfostenrahmen: 24 × 48 hochkant aus Fichte trägt die halbe
+// Tablarlast über 1200 mm mit ca. L/340 Durchbiegung – unabhängig vom Tablarmaterial (Review TR-E1).
+const POST_MAX = 1200;
+
 const SUPPORTS = {
   battens(ctx, seg, shelves){
     const t = ctx.t;
@@ -335,7 +341,7 @@ const SUPPORTS = {
       jointPosts.set(u, { h: Math.max(cur.h, q.y + ctx.t), n: cur.n + 2 });
     }
     for (const [u, { h, n }] of jointPosts) {
-      addPost(ctx, seg, u, h, 'Stütze vorne unter dem Tablarstoss, Tablare mit Winkeln verschraubt');
+      addPost(ctx, seg, u, h, 'Stütze vor dem Tablarstoss, Tablare mit Winkeln verschraubt');
       ctx.buy('angle40', n, 'Tablare an die Stütze beim Stoss');
     }
     for (const p of shelves) {
@@ -442,30 +448,40 @@ const SUPPORTS = {
 
   posts(ctx, seg, shelves){
     const top = Math.max(...ctx.levels) + ctx.t;
-    // Stützpunkte entlang der Vorderkante: Wand-/Eck-Enden tragen über die Latten, freie Enden und die Nischenkante brauchen Pfosten.
+    // Die Pfosten stehen vor der Querlatte (addPost), die Tablare bleiben rechteckig. Die Querlatte trägt die Tablare vorne;
+    // Auflager hat sie an Wand-Enden (Winkel auf die Endlatte) und an den Pfosten. Pfosten: linke Kante entlang u.
     const edge = seg.niche ? (seg.niche.at === 'end' ? seg.u1 - seg.niche.w : seg.u0 + seg.niche.w) : null;
-    const pts = [seg.u0, seg.u1];
-    const posts = [];
-    if (seg.ends[0] === 'free') posts.push(seg.u0);
-    if (seg.ends[1] === 'free') posts.push(seg.u1 - 45);
-    if (edge != null) { pts.push(edge); posts.push(r0(edge - 22)); }
+    const posts = [], pts = [];   // pts = Auflager der Querlatte (Mitten entlang u)
+    const addP = (u, kind) => { posts.push({ u:r0(u), kind }); pts.push(u + 22.5); };
+    if (seg.ends[0] === 'wall') pts.push(seg.u0); else addP(seg.u0, seg.ends[0]);
+    if (seg.ends[1] === 'wall') pts.push(seg.u1); else addP(seg.u1 - 45, seg.ends[1]);
+    if (edge != null) addP(seg.niche.at === 'end' ? edge - 45 : edge, 'niche');
+    // Hinten: Die Eckpfosten der Seitenregale stehen vor der hinteren Querlatte und tragen sie mit.
+    if (seg.id === 'back') for (const s of ctx.segs) if (s.ends[0] === 'corner') pts.push(s.id === 'left' ? s.depth + 22.5 : ctx.W - s.depth - 22.5);
     pts.sort((x, y) => x - y);
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p = pts[i], q = pts[i + 1];
-      const isNiche = edge != null && (seg.niche.at === 'end' ? p >= edge : q <= edge);
-      if (isNiche) { if (q - p >= ctx.max) spanWarn(ctx, seg, q - p, `liegen über der Nische vorne frei – ab ca. ${ctx.max} mm biegen sie sich durch. Nische schmaler machen.`); continue; }
-      const k = Math.floor((q - p) / ctx.max);
-      for (let j = 1; j <= k; j++) posts.push(r0(p + (q - p) * j / (k + 1) - 22));
+    const fields = pts.slice(1).map((q, i) => [pts[i], q]);
+    for (const [p, q] of fields) {
+      const mid = (p + q) / 2;
+      if (edge != null && (seg.niche.at === 'end' ? mid > edge : mid < edge)) {
+        // In der Nische steht kein Pfosten.
+        if (q - p > POST_MAX) spanWarn(ctx, seg, q - p, `liegen über der Nische auf einer Querlatte ohne Pfosten – ab ca. ${POST_MAX} mm biegt sie sich durch. Nische schmaler machen.`);
+        continue;
+      }
+      const k = Math.ceil((q - p) / POST_MAX) - 1;
+      for (let j = 1; j <= k; j++) { const u = p + (q - p) * j / (k + 1) - 22.5; posts.push({ u:r0(u), kind:'mid' }); }
     }
-    // Pfosten stehen hinter der Querlatte (v bis Tiefe − 24, 45 tief): Stossleiste davor enden lassen.
-    const split = splitShelves(ctx, seg, shelves, posts.map(u => u + 22), seg.depth - 24 - 45 - 5);
-    for (const s of split.supports) posts.push(r0(s - 22));
-    for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Latten, vorne auf der Querlatte');
+    // Ganze Bretter: Stösse neben einen Pfosten legen. Das Tablar liegt auch am Stoss auf Wand- und Querlatte,
+    // ein zusätzlicher Pfosten ist dort nicht nötig. Die Stossleiste endet vor der Querlatte.
+    const split = splitShelves(ctx, seg, shelves, pts.filter(u => u > seg.u0 && u < seg.u1), seg.depth - 30);
+    for (const q of split.pieces) {
+      addShelf(ctx, seg, q, 'liegt auf den Latten, von oben verschraubt');
+      ctx.buy('screw4x40', 2 * (2 + q.ends.filter(e => e === 'wall').length), 'Tablare von oben auf die Latten, 2 pro Latte');
+    }
     for (const p of shelves) {
       ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Wandlatte, alle 40 cm an die Wand', 'solid',
         ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:0, v1:24 }, 'v', 'u', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
       ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
-      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Querlatte vorne, an die Pfosten geschraubt', 'solid',
+      ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Querlatte vorne, trägt die Tablare, an Pfosten und Endlatten befestigt', 'solid',
         ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:seg.depth - 24, v1:seg.depth }, 'v', 'u', SOLID_FIN, [0, -40, 60]), BUY.latte.price);
       for (const e of [0, 1]) {
         if (p.ends[e] !== 'wall') continue;
@@ -474,12 +490,16 @@ const SUPPORTS = {
           ctx.box(seg, { u0:u, u1:u + 24, y0:p.y - 48, y1:p.y, v0:24, v1:seg.depth - 24 }, 'u', 'v', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
         ctx.fix += 2;
       }
-      if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
+      // Ein Winkel je Querlatten-Ende an der Wand und in der Ecke (seitliche an die hintere Querlatte).
+      ctx.buy('angle40', p.ends.filter(e => e === 'wall' || e === 'corner').length, 'Querlatten an Endlatten und in der Ecke');
     }
-    const inner = seg.depth - 24;
-    for (const u of posts) addPost(ctx, seg, u, top, 'Pfosten, vom Boden bis zum obersten Tablar', inner);
-    ctx.buy('screw70', plusTen(posts.length * ctx.levels.length * 2), 'Querlatten an die Pfosten');
-    if (posts.length > (seg.ends.includes('free') ? 1 : 0) + (edge != null ? 1 : 0)) extraWarn(ctx, seg, 'Zwischenpfosten');
+    for (const { u, kind } of posts) addPost(ctx, seg, u, top, kind === 'corner'
+      ? 'Eckpfosten vor beiden Querlatten, vom Boden bis zum obersten Tablar'
+      : 'Pfosten vor der Querlatte, vom Boden bis zum obersten Tablar');
+    // Je Ebene 2 Schrauben durch den Pfosten in die Querlatte, am Eckpfosten eine mehr für die seitliche Querlatte.
+    const screws = posts.reduce((a, p) => a + (p.kind === 'corner' ? 3 : 2), 0) * ctx.levels.length;
+    ctx.buy('screw5x60', plusTen(screws), 'Querlatten durch die Pfosten, vorbohren');
+    if (posts.some(p => p.kind === 'mid')) groupWarn(ctx, 'postsMid', SIDE_NAME[seg.id], sides => `Querlatten ${sides} länger als ${POST_MAX} mm – Zwischenpfosten eingeplant.`);
   }
 };
 const plusTen = x => Math.ceil(x * 1.1);
@@ -545,7 +565,7 @@ function computeReduit(c0){
 
   const raw = [], boxes = [], extras = [], buys = new Map();
   const ctx = {
-    c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.name, warn, extras,
+    c, W, D, H, t, max, levels, fin, backFin, Bk, gMain, gBack, gSolid, matShort:M.name, warn, extras, segs:lay.segs,
     boards:!!BM, bm:BM, stripFin: BM ? SOLID_FIN : fin,
     lmax(seg){
       if (!BM) return Infinity;
@@ -699,9 +719,16 @@ function buildReduitSteps(o){
     if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
     if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
     if (c.sys === 'cheeks') st.push(['Lochreihen bohren, Wangen stellen', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Wangen bohren (10 mm tief). Wangen senkrecht stellen und mit je 3 Winkeln an Wand und Boden befestigen (${ank}).`, 'Zwischenwangen bohren beidseitig – dort nur 8 mm tief und um 16 mm versetzt.']);
-    if (c.sys === 'posts') st.push(['Latten und Pfosten montieren', `Wandlatten und Endlatten auf die Linien schrauben (${ank}, alle 40 cm). Pfosten ablängen, lotrecht stellen und die vorderen Querlatten mit je 2 Schrauben 5 × 70 an die Pfosten schrauben.`, 'Pfosten zuerst oben mit einer Schraube fixieren, lotrecht ausrichten, dann festschrauben.']);
-    if (hasFreeEnds) st.push(['Stützen an den freien Enden', 'Kanthölzer an die freien Tablar-Enden stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel an die Stütze schrauben.', null]);
-    st.push(['Tablare auflegen', c.sys === 'cheeks' ? 'Bodenträger stecken und die Tablare auflegen.' : 'Tablare auflegen und von unten mit Schrauben 4 × 35 an Leisten, Konsolen oder Winkeln fixieren.', null]);
+    if (c.sys === 'posts') {
+      // Reihenfolge: Latten, Tablare einschieben, dann erst die Pfosten davor – sonst kommen die Tablare nicht mehr hinein.
+      const corner = o.segs.some(s => s.ends[0] === 'corner');
+      st.push(['Latten montieren', `Wandlatten und Endlatten auf die Linien schrauben (${ank}, alle 40 cm). Die vorderen Querlatten an den Wänden mit je einem Winkel auf die Endlatte schrauben${corner ? ', in der Ecke die seitliche Querlatte mit einem Winkel an die hintere' : ''}.`, 'Bis die Pfosten stehen, lange Querlatten in der Mitte mit einem Reststück abstützen.']);
+      st.push(['Tablare einschieben', `Die Tablare auf ihrer Höhe von vorne auf Wand- und Querlatte schieben${corner ? ', zuerst die hinteren, dann die seitlichen' : ''}. Die Pfosten kommen erst danach.`, null]);
+      st.push(['Pfosten stellen', `Pfosten auf Länge sägen, vor die Querlatten stellen und lotrecht ausrichten. Jede Querlatte mit 2 Schrauben 5 × 60 von vorne durch den Pfosten anschrauben, vorbohren mit Ø 3 mm.${corner ? ' Am Eckpfosten die seitliche Querlatte mit einer Schraube von der Gangseite befestigen, 24 mm unter dem Tablar – so treffen sich die Schrauben im Pfosten nicht.' : ''}`, 'Einen Kunststoffgleiter unter jeden Pfosten legen, nicht in den Boden dübeln.']);
+      st.push(['Tablare verschrauben', 'Jedes Tablar von oben mit 2 Senkkopfschrauben 4 × 40 pro Latte an Wand-, End- und Querlatte schrauben, vorbohren. Erst dann belasten.', 'Verschraubt wird das Tablar zur Scheibe und hält den Rahmen an der Wand.']);
+    }
+    if (hasFreeEnds) st.push(['Stützen an den freien Enden', 'Kanthölzer vor die freien Tablar-Enden stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel an die Stütze schrauben.', null]);
+    if (c.sys !== 'posts') st.push(['Tablare auflegen', c.sys === 'cheeks' ? 'Bodenträger stecken und die Tablare auflegen.' : 'Tablare auflegen und von unten mit Schrauben 4 × 35 an Leisten, Konsolen oder Winkeln fixieren.', null]);
     if (hasCorner) st.push(['Eckstösse verbinden', 'Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben in jedes Tablar.', null]);
     if (hasJoints) st.push(['Stösse verbinden', 'Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben 4 × 35 in beide Stücke schrauben.', 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
   }
