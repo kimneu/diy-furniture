@@ -1,9 +1,29 @@
-# Weiterarbeit – Stand 25.09.2026
+# Weiterarbeit – Stand 28.09.2026
 
 Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit-Features:
 
 - Spec: `docs/superpowers/specs/2026-09-25-reduit-design.md`
 - Umsetzungsplan: `docs/superpowers/plans/2026-09-25-reduit.md`
+
+## Schreiner-Review (28.09.2026) – hier weitermachen
+
+Prüfung der ganzen App aus Sicht eines Möbel- und Holzbauers: Konstruktion Sideboard/Reduit, Ecken der L-/U-Form, Material- und Beschlagkombinationen, Vorschlag zur Eingrenzung. Branch `schreiner-review` auf dem Fork (noch nicht in `main`).
+
+- Einstieg: `docs/review/2026-09-28-schreiner-review.md` (Kurzurteil, Ecken, Befunde nach Thema, Vorschlag, Vorgehen, offene Entscheide)
+- Details: `docs/review/2026-09-28-eck-urteil.md`, `…-eingrenzung-bauweisen.md`, `…-eingrenzung-regeln.md`, alle 172 Befunde in `…-befunde.md`
+- Prüfskripte zum Nachrechnen: `docs/review/skripte/` (`node docs/review/skripte/main_check.js`)
+
+Wichtigste Punkte:
+
+- **Pfostenrahmen so nicht baubar** (Pfosten stehen in den Tablaren, kein Eckpfosten, Rahmen unverbunden, Reihenfolge unmöglich) – sperren oder umbauen (Pfosten vor die Querlatte).
+- **Schrauben fix statt nach Stärke** (4 × 35 kommt durch Konsolen/Winkel oben aus dem Tablar, erreicht es bei Leisten nicht) – `screwFor(anbau, t)`.
+- **Harte Sperren fehlen:** 12-mm-Korpus, Exzenter ausserhalb 16–22 mm, Drehtüren ab 22 mm Korpus, «Verschraubt» mit OSB/Leimholz, Tür nach innen gegen hinteres Regal.
+- **Ecken:** Geometrie richtig; Innenecke ohne Auflager bei Leisten/Pfosten, Blindecke bei Wangen/Modulen, Tablare 9 mm in den Wandschienen.
+- **Eingrenzung:** Empfehlung «Bauweisen vorne (5 Sideboard, 6 Reduit), Regeln dahinter» statt freier Kombination und `HARMLOS`-Regex.
+
+Offene Entscheide (Kapitel 5 im Bericht): Pfostenrahmen Variante A oder B · Bauweisen oder nur Regeln (Materialfilter war früher verworfen) · Exzenter bei 15 mm · Schwellen Eckfach 350 mm / Durchlauf + 100 mm · Seekiefer beim Sideboard · neue Eingaben Türlage/Türhöhe · neuer Reduit-Standard.
+
+Nächster Schritt nach dem Entscheid: Vorgehen Kapitel 4 im Bericht, beginnend mit dem Pfostenrahmen.
 
 ## Repo & Setup
 
