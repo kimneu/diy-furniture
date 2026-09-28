@@ -511,3 +511,41 @@ test('Leisten: Eckstütze vor jeder Innenecke, Warnung misst das freie Feld', ()
   const J = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).warn.find(x => x.includes('vorne frei'));
   assert.ok(J && !J.includes('2394'), J);
 });
+
+/* ---------- Eckfach bei Wangen und Modulen (350 mm) ---------- */
+// Offene Breite des hintersten Fachbodens, der im linken Eckquadrat beginnt; Infinity = Ecke leer.
+function eckOffen(Rr, dL, dB){
+  const xc = -Rr.W / 2 + dL, zc = -Rr.D / 2 + dB;
+  let min = Infinity;
+  for (const b of Rr.boxes) if (/^(Tablar|Einlegeboden|Boden|Deckel)\|/.test(b.key) && lo(b, 0) < xc - 1 && hi(b, 2) <= zc + 1) min = Math.min(min, hi(b, 0) - xc);
+  return min;
+}
+
+test('Eckfach: mindestens 350 mm offen oder leer (Wangen und Module, L und U)', () => {
+  for (const build of ['built', 'free']) for (const shape of ['L', 'U'])
+    for (const [mat, t] of [['birke', 18], ['mdf', 19], ['dekorspan', 19], ['gon_fichte', 18], ['osb', 18]]) for (const side of [200, 300, 400, 450, 500]) {
+      const Rr = run({ build, sys:'cheeks', shape, corner:'L', mat, t, dLeft:side, dRight:side, dBack:Math.min(600, side + 100) });
+      const dL = Rr.boxes.length && R.normReduit({ ...R.REDUIT_DEFAULTS, ...base, mat, t, shape, dLeft:side, dBack:Math.min(600, side + 100) }).cfg;
+      const offen = eckOffen(Rr, dL.dLeft, dL.dBack);
+      assert.ok(offen >= 345, `${build} ${shape} ${mat} Seite ${side}: ${offen}`);
+      for (const a of Rr.boxes) for (const b of Rr.boxes) if (a !== b && a.key.startsWith('Wange') && !b.key.startsWith('Wange')) assert.ok(!overlaps(a, b), b.key);
+    }
+});
+
+test('Eckfach: Standard-U mit Wangen wird genutzt und zuerst bestückt', () => {
+  const Rr = run({ sys:'cheeks', shape:'U', dLeft:300, dRight:300 });
+  assert.ok(Math.abs(eckOffen(Rr, 300, 400) - 490) < 5);
+  assert.ok(Rr.steps.some(s => s[0] === 'Eckfach zuerst einrichten'));
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 4 × 40'), 6);   // 3 je Ecke
+  assert.ok(!Rr.warn.some(w => w.includes('Eckfach')));
+});
+
+test('Eckfach: MDF 19 lässt das Eckquadrat leer und sagt es', () => {
+  const Rr = run({ sys:'cheeks', shape:'U', mat:'mdf', t:19, dLeft:300, dRight:300 });
+  assert.strictEqual(eckOffen(Rr, 300, 400), Infinity);
+  assert.ok(Rr.warn.some(w => w.includes('leeres Eckquadrat eingeplant')));
+  assert.ok(Rr.steps.some(s => s[0] === 'Ecke schliessen'));
+  const M = run({ build:'free', shape:'U', mat:'mdf', t:19, dLeft:300, dRight:300 });
+  assert.strictEqual(eckOffen(M, 300, 400), Infinity);
+  assert.ok(M.steps.some(s => s[0] === 'Ecke leer lassen'));
+});

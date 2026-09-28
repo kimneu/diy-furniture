@@ -237,6 +237,16 @@ function cheekPositions(seg, t, max){
   return out.map(r0);
 }
 
+// Eckfach (Wangen, selbststehend, L/U): Das Seitenregal steht vor dem ersten hinteren Fach. Bleiben davon mindestens
+// ECKFACH_MIN offen, wird das Fach genutzt und zuerst bestückt; sonst bleibt das Eckquadrat leer (Entscheid 28.09.2026).
+const ECKFACH_MIN = 350;
+// Seitenregale, die an der Ecke ans hintere stossen: { id, depth }.
+const eckSeiten = ctx => ctx.segs.filter(s => s.ends[0] === 'corner');
+function eckfachMelden(ctx, id, offen, leer){
+  if (leer) groupWarn(ctx, 'eckLeer', SIDE_NAME[id], sides => `Das hintere Eckfach ${sides} wäre nur ${r0(offen)} mm offen – leeres Eckquadrat eingeplant, so bezahlst du keine Tablare, an die man nicht herankommt.`);
+  (ctx.eck[leer ? 'leer' : 'fach'] = ctx.eck[leer ? 'leer' : 'fach'] || []).push(SIDE_NAME[id]);
+}
+
 // Selbststehend: Anzahl und Breite der Module, damit die Böden unter max bleiben.
 function moduleSplit(len, max, t){
   const mw = Math.min(900, max + 2*t - 1);
@@ -455,7 +465,24 @@ const SUPPORTS = {
   },
 
   cheeks(ctx, seg, shelves){
-    const t = ctx.t, pos = cheekPositions(seg, t, ctx.max);
+    const t = ctx.t;
+    let pos = cheekPositions(seg, t, ctx.max);
+    if (seg.id === 'back') {
+      // Eckfach: offen ist das erste Fach von der Seitentiefe bis zur zweiten Wange.
+      const leer = {};
+      for (const s of eckSeiten(ctx)) {
+        const offen = s.id === 'left' ? pos[1] - s.depth : (ctx.W - s.depth) - (pos[pos.length - 2] + t);
+        leer[s.id] = offen < ECKFACH_MIN;
+        eckfachMelden(ctx, s.id, offen, leer[s.id]);
+        ctx.screw('kante', 3, 'Eckwange an die hintere Wange');
+      }
+      // Leeres Eckquadrat: das hintere Regal beginnt mit einer eigenen Wange bündig hinter der Eckwange.
+      if (leer.left || leer.right) {
+        const dS = id => eckSeiten(ctx).find(s => s.id === id).depth;
+        pos = cheekPositions({ ...seg, u0:leer.left ? dS('left') - t : seg.u0, u1:leer.right ? ctx.W - dS('right') + t : seg.u1,
+          ends:[leer.left ? 'corner' : 'wall', leer.right ? 'corner' : 'wall'] }, t, ctx.max);
+      }
+    }
     // Bis 50 mm über das oberste Tablar: so lässt sich die Wange im Raum aufrichten (raumhoch ginge sie nicht).
     const h = Math.min(ctx.H - 10, Math.max(...ctx.levels) + t + 50);
     for (const u of pos) {
@@ -544,8 +571,27 @@ const dowelFor = durch => durch <= 20 ? 'dowel6' : durch <= 24 ? 'dowel6x60' : '
 /* ---------- Selbststehend ---------- */
 function freeModules(ctx, seg){
   const t = ctx.t, Bk = ctx.Bk, bt = Bk ? Bk.t : 0;
-  const u0 = seg.ends[0] === 'corner' ? seg.u0 + 2 : seg.u0 + 10;
-  const u1 = seg.ends[1] === 'free' ? seg.u1 : seg.u1 - 10;
+  let u0 = seg.ends[0] === 'corner' ? seg.u0 + 2 : seg.u0 + 10;
+  let u1 = seg.ends[1] === 'free' ? seg.u1 : seg.u1 - 10;
+  if (seg.id === 'back' && eckSeiten(ctx).length) {
+    // Eckfach: offen ist das hintere Eckmodul von der Seitentiefe bis zu seiner inneren Seite. Zu wenig offen →
+    // die hintere Reihe beginnt erst neben dem Seitenregal. Die Modulbreite hängt von beiden Ecken ab, darum bis es stimmt.
+    const leer = {};
+    for (let i = 0; i < 3; i++) {
+      const { w } = moduleSplit(u1 - u0, ctx.max, t);
+      for (const s of eckSeiten(ctx)) {
+        if (leer[s.id]) continue;
+        const offen = s.id === 'left' ? u0 + w - t - s.depth : (ctx.W - s.depth) - (u1 - w + t);
+        if (offen < ECKFACH_MIN) { leer[s.id] = offen; if (s.id === 'left') u0 = s.depth + 2; else u1 = ctx.W - s.depth - 2; }
+      }
+    }
+    const { w } = moduleSplit(u1 - u0, ctx.max, t);
+    for (const s of eckSeiten(ctx)) {
+      const offen = s.id in leer ? leer[s.id] : s.id === 'left' ? u0 + w - t - s.depth : (ctx.W - s.depth) - (u1 - w + t);
+      eckfachMelden(ctx, s.id, offen, s.id in leer);
+      if (!(s.id in leer)) ctx.screw('kante', 3, 'Seitenmodul an das hintere Eckmodul');
+    }
+  }
   const v0 = 10, v1 = seg.depth, dep = v1 - v0;
   const zones = [];
   if (seg.niche) {
@@ -609,7 +655,7 @@ function computeReduit(c0){
       const B = boardWidthFor(BM.widths, seg.depth - 3);
       return B == null ? Infinity : Math.max(...BM.boards.filter(f => f.B === B).map(f => f.L));
     },
-    fix:0, fixBy:new Map(), lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
+    fix:0, fixBy:new Map(), eck:{}, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
     // Wanddübel; durch = Dicke des Anbauteils (0 für Metall)
     dowel(durch, n){ const k = dowelFor(durch); ctx.fix += n; ctx.fixBy.set(k, (ctx.fixBy.get(k) || 0) + n); },
     screw(anbau, qty, note){ ctx.buy(screwKey(screwFor(anbau, t)), qty, note); },
@@ -714,7 +760,7 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
+  const steps = buildReduitSteps({ eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
 
   // Raumwände und Nischen für die 3D-Ansicht
   const WT = 100, doorH = Math.min(2000, H - 150);
@@ -753,6 +799,8 @@ function buildReduitSteps(o){
     if (Bk) st.push(['Rückwände montieren', 'Diagonalen messen, bis sie gleich lang sind, dann die Rückwand rundum 1 mm zurück alle 15 cm verschrauben.', null]);
     else st.push(['Module aussteifen', 'Diagonalen messen, bis sie gleich lang sind, dann hinten Metallwinkel in alle vier Ecken schrauben.', null]);
     st.push(['Module stellen', 'Zuerst die hinteren Module stellen und ausrichten, dann die seitlichen davor. Nebeneinanderstehende Module mit 2–3 Schrauben pro Seite verbinden.', 'Bei unebenem Boden Unterlegkeile oder Stellfüsse verwenden.']);
+    if (o.eck.fach) st.push(['Eckfach zuerst einrichten', `Hinten ${joinDe(o.eck.fach)}: Das hintere Eckmodul stellen, sofort oben sichern und seine Einlegeböden einlegen – erst dann das Seitenmodul davor stellen, danach kommt man kaum noch hinein. Das Seitenmodul mit 3 Schrauben ${sc('kante')} von innen durch seine Stirnseite in die Vorderkante der hinteren Modulseite schrauben (oben, Mitte, unten, vorbohren Ø 2,5 mm).`, null]);
+    if (o.eck.leer) st.push(['Ecke leer lassen', `Hinten ${joinDe(o.eck.leer)} bleibt das Eckquadrat hinter dem Seitenmodul leer – dort käme man nicht an die Böden.`, null]);
     if (c.rh - c.gapTop > 1200) st.push(['Kippschutz montieren', `Jedes Modul oben mit dem Kippschutz an die Wand schrauben${drywall ? ' – bei Gipskarton in einen Ständer oder mit Hohlraumdübeln' : ''}.`, null]);
     st.push(['Einlegeböden einlegen', 'Bodenträger in die gewünschte Höhe stecken und die Einlegeböden auflegen.', null]);
   } else {
@@ -761,7 +809,12 @@ function buildReduitSteps(o){
     if (c.sys === 'battens') st.push(['Leisten montieren', `Wandleisten und Endleisten auf die Linien halten, alle 40 cm vorbohren und mit ${ank} befestigen. Die Oberkante der Leiste ist die Unterkante des Tablars.`, 'Erst die Enden befestigen, dann mit der Wasserwaage die Mitte ausrichten.']);
     if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
     if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
-    if (c.sys === 'cheeks') st.push(['Lochreihen bohren, Wangen stellen', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Wangen bohren (10 mm tief). Wangen senkrecht stellen und mit je 3 Winkeln an Wand und Boden befestigen (${ank}).`, 'Zwischenwangen bohren beidseitig – dort nur 8 mm tief und um 16 mm versetzt.']);
+    if (c.sys === 'cheeks') {
+      const eck = o.eck.fach || o.eck.leer;
+      st.push(['Lochreihen bohren, Wangen stellen', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Wangen bohren (10 mm tief). Wangen senkrecht stellen und mit je 3 Winkeln an Wand und Boden befestigen (${ank})${eck ? ' – die Eckwangen der Seitenregale erst im nächsten Schritt' : ''}.`, 'Zwischenwangen bohren beidseitig – dort nur 8 mm tief und um 16 mm versetzt.']);
+      if (o.eck.fach) st.push(['Eckfach zuerst einrichten', `Hinten ${joinDe(o.eck.fach)}: Bodenträger und Tablare ins hintere Eckfach einsetzen, solange die Eckwange noch nicht steht. Dann die Eckwange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in die Vorderkante der hinteren Wange schrauben (oben, Mitte, unten, vorbohren Ø 2,5 mm).`, null]);
+      if (o.eck.leer) st.push(['Ecke schliessen', `Hinten ${joinDe(o.eck.leer)} bleibt das Eckquadrat leer: Die Eckwange vor die hintere Wange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in deren Vorderkante schrauben (vorbohren Ø 2,5 mm).`, null]);
+    }
     if (c.sys === 'posts') {
       // Reihenfolge: Latten, Tablare einschieben, dann erst die Pfosten davor – sonst kommen die Tablare nicht mehr hinein.
       const corner = o.segs.some(s => s.ends[0] === 'corner');
