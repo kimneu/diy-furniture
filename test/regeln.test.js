@@ -27,7 +27,7 @@ test('Regeltabelle: jede Regel hat Wirkung, Grund und Befunde', () => {
     assert.ok(['sperren', 'grenze', 'warnen'].includes(r.wirkung), r.id);
     assert.ok(r.befunde.length, r.id);
     if (r.wirkung === 'sperren') assert.ok(r.feld && typeof r.werte === 'function' && typeof r.grund === 'function', r.id);
-    if (r.wirkung === 'grenze') assert.ok(r.felder.length && (r.min != null || r.max != null), r.id);
+    if (r.wirkung === 'grenze') assert.ok((typeof r.felder === 'function' || r.felder.length) && (r.min != null || r.max != null), r.id);
     if (r.wirkung === 'warnen') assert.ok(typeof r.text === 'function', r.id);
   }
 });
@@ -127,12 +127,12 @@ test('S13: Leimholz immer in Faserrichtung', () => {
   assert.strictEqual(K.pruefeRegeln({ ...FORM, mat:'eiche', t:'18', grain:false }).d.grain, true);
 });
 
-test('S14/S15: Tiefe bei Tablarwinkeln bis 375, bei Wandschienen ab 260', () => {
+test('S14/S15: Tiefe bei Tablarwinkeln bis 375, bei Wandschienen ab 280', () => {
   const w = K.pruefeRegeln({ ...RD, sys:'brackets', dBack:'400' });
   assert.strictEqual(w.d.dBack, '375');
   assert.strictEqual(w.grenzen.dBack.max, 375);
   const s = K.pruefeRegeln({ ...RD, sys:'rails', dLeft:'200' });
-  assert.strictEqual(s.d.dLeft, '260');
+  assert.strictEqual(s.d.dLeft, '280');
   // Ganze Bretter: auf eine Brettbreite innerhalb der Grenze
   assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'brackets', mat:'gon_fichte', t:'18', dBack:'400' }).d.dBack, '200');
   assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'rails', mat:'gon_fichte', t:'18', dLeft:'200' }).d.dLeft, '400');
@@ -214,4 +214,24 @@ test('Zufall auf Gipskarton würfelt keine Schienen und Winkel', () => {
     const d = K.zufall({ ...RD, wall:'drywall' }, rnd);
     if (d.build === 'built') assert.ok(!['rails', 'brackets'].includes(d.sys), d.sys);
   }
+});
+
+test('K09: unterstes Tablar über der untersten Auflage', () => {
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'battens', gapBottom:'0' }).d.gapBottom, '50');
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'posts', gapBottom:'0' }).d.gapBottom, '60');
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'rails', gapBottom:'0' }).d.gapBottom, '70');
+  // Tablarwinkel: Wandschenkel 300 bei 375 mm Tiefe, 250 bei 300 mm
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'brackets', dBack:'375', gapBottom:'150' }).d.gapBottom, '310');
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'brackets', dBack:'300', gapBottom:'150' }).d.gapBottom, '260');
+  assert.ok(!K.pruefeRegeln({ ...RD, sys:'cheeks', gapBottom:'0' }).grenzen.gapBottom);
+});
+
+test('K13: Seiten höchstens 100 mm tiefer als hinten, nur sichtbare Seiten', () => {
+  const P = K.pruefeRegeln({ ...RD, shape:'U', dBack:'300', dLeft:'500', dRight:'350' });
+  assert.strictEqual(P.d.dLeft, '400');
+  assert.strictEqual(P.d.dRight, '350');
+  const L = K.pruefeRegeln({ ...RD, shape:'L', corner:'L', dBack:'300', dRight:'600' });
+  assert.strictEqual(L.d.dRight, '600', 'rechts gibt es in dieser Form nicht');
+  assert.deepStrictEqual(L.korrekturen, []);
+  assert.strictEqual(K.pruefeRegeln({ ...RD, shape:'I', dBack:'200', dLeft:'600' }).d.dLeft, '600');
 });

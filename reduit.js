@@ -79,7 +79,7 @@ function layoutReduit(c){
   for (const id of ['left', 'right']) {
     if (id === 'left' ? !c.hasL : !c.hasR) continue;
     const depth = id === 'left' ? c.dLeft : c.dRight;
-    const s = { id, depth, u0:c.dBack, u1:D, ends:['corner', 'wall'], niche:null };
+    const s = { id, depth, u0:c.dBack + railsVor(c), u1:D, ends:['corner', 'wall'], niche:null };
     if (c.doorIn && c.hinge === (id === 'left' ? 'L' : 'R')) { s.u1 = D - c.doorW; s.ends[1] = 'free'; }
     if (s.u1 - s.u0 < 200) { warn.push(`Das Regal ${SIDE_NAME[id]} entfällt – die nach innen aufgehende Tür braucht den Platz.`); continue; }
     if (s.ends[1] === 'wall' && depth > wf) warn.push(`Das Regal ${SIDE_NAME[id]} ist ${depth} mm tief, neben der Tür bleiben aber nur ${r0(wf)} mm Wand – es ragt in die Türöffnung.`);
@@ -96,7 +96,7 @@ function layoutReduit(c){
   if (c.hasL && c.hasR) {
     // Beim Pfostenrahmen stehen die Pfosten 45 mm vor den Seitenregalen.
     const posts = c.build !== 'free' && c.sys === 'posts' ? 90 : 0;
-    const pass = W - c.dLeft - c.dRight - posts;
+    const pass = W - c.dLeft - c.dRight - posts - 2 * railsVor(c);
     if (pass < 600) warn.push(`Zwischen den Seitenregalen bleiben nur ${pass} mm Durchgang${posts ? ' (zwischen den Pfosten)' : ''} – ab etwa 600 mm lässt es sich bequem hineingehen.`);
   }
   return { segs, warn, wf };
@@ -177,8 +177,15 @@ const BUY = Object.fromEntries(Object.entries(BUY_INFO).map(([k, b]) => {
   return [k, { ...b, price:P.price, ...(P.est ? { est:true } : {}) }];
 }));
 const RAIL_LENS = [1000, 1500, 2000];
+// Wandschiene: so tief steht sie von der Wand ab (Annahme, am Produkt nachmessen). Das Tablar beginnt 2 mm davor.
+const RAIL_T = 12, RAIL_V0 = RAIL_T + 2;
+// Ganze Bretter bei Wandschienen: das Brett beginnt vor der Schiene und steht darum so viel weiter vor als die Tiefe.
+const railsVor = c => c.build !== 'free' && c.sys === 'rails' && MATS[c.mat] && MATS[c.mat].boards ? RAIL_V0 - 3 : 0;
 const KONSOLE_LENS = [250, 300, 350, 400, 470];
 const WINKEL_LENS = [150, 200, 250];
+// Blechkonsolen: Tiefenschenkel → Wandschenkel (der lange Schenkel kommt an die Wand).
+const WINKEL_WAND = { 150:200, 200:250, 250:300 };
+const winkelFuer = depth => WINKEL_LENS.find(l => l >= depth * 2 / 3) || WINKEL_LENS[WINKEL_LENS.length - 1];
 const SYS = {
   battens:  { name:'Leisten', level:1 },
   rails:    { name:'Wandschienen', level:1 },
@@ -238,10 +245,13 @@ function moduleSplit(len, max, t){
 }
 
 /* ---------- Bauarten (eingebaut) ---------- */
-function addShelf(ctx, seg, p, note){
+// v0 = Abstand der Tablar-Hinterkante zur Wand: 3 mm Luft, bei Wandschienen vor der Schiene.
+// Plattenmaterial wird entsprechend schmaler zugeschnitten; ein ganzes Brett behält seine Breite und steht weiter vor.
+function addShelf(ctx, seg, p, note, v0 = 3){
   if (p.ends.includes('joint')) note += ', am Stoss auf der Stossleiste';
-  ctx.add('Tablar', p.b - p.a, seg.depth - 3, ctx.t, ctx.gMain, note, 'korpus',
-    ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y, y1:p.y + ctx.t, v0:3, v1:seg.depth }, 'y', 'u', ctx.fin, [0, 0, 200]));
+  const v1 = seg.depth + (ctx.boards ? v0 - 3 : 0);
+  ctx.add('Tablar', p.b - p.a, v1 - v0, ctx.t, ctx.gMain, note, 'korpus',
+    ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y, y1:p.y + ctx.t, v0, v1 }, 'y', 'u', ctx.fin, [0, 0, 200]));
 }
 // Eckleiste unter dem Stoss zum hinteren Regal.
 function addCornerBatten(ctx, seg, p){
@@ -251,8 +261,9 @@ function addCornerBatten(ctx, seg, p){
 }
 // Kantholz vor der Tablarkante (v = Tiefe … Tiefe + 45), damit die Tablare rechteckig bleiben; at = linke Kante entlang u.
 function addPost(ctx, seg, at, height, note){
+  const f = seg.depth + railsVor(ctx.c);   // Vorderkante der Tablare
   ctx.add('Kantholz 45 × 45', height, 45, 45, ctx.gSolid, note, 'solid',
-    ctx.box(seg, { u0:at, u1:at + 45, y0:0, y1:height, v0:seg.depth, v1:seg.depth + 45 }, 'u', 'y', SOLID_FIN, [0, 0, 120]), BUY.kant45.price);
+    ctx.box(seg, { u0:at, u1:at + 45, y0:0, y1:height, v0:f, v1:f + 45 }, 'u', 'y', SOLID_FIN, [0, 0, 120]), BUY.kant45.price);
 }
 // Stützen an freien Enden (Tür nach innen, Nischenkante) für Leisten, Schienen, Winkel.
 function freeEndPosts(ctx, seg, shelves){
@@ -364,7 +375,20 @@ const SUPPORTS = {
       if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     }
     freeEndPosts(ctx, seg, shelves);
-    const longest = Math.max(...shelves.map(p => p.b - p.a));
+    // Eckstütze vor der Innenecke: sonst hat die Ecke kein Auflager, die Eckleiste hängt nur am hinteren Tablar.
+    if (seg.ends[0] === 'corner') {
+      addPost(ctx, seg, seg.u0, Math.max(...shelves.map(p => p.y)) + t, 'Eckstütze vor der Innenecke, beide Tablare mit Winkeln verschraubt');
+      ctx.buy('angle40', 2 * shelves.length, 'Tablare an die Eckstütze, 2 pro Ebene');
+    }
+    // Längstes freies Feld der Vorderkante zwischen Wand, Eckstütze und Stützen (freie Enden, Stösse).
+    let longest = 0;
+    for (const p of shelves) {
+      const pts = [0, 1].map(e => p.ends[e] === 'wall' ? (e ? p.b : p.a) : e ? p.b - 22.5 : p.a + 22.5);
+      for (const u of jointPosts.keys()) if (u > p.a && u < p.b) pts.push(u + 22.5);
+      if (seg.id === 'back') for (const s of ctx.segs) if (s.ends[0] === 'corner') pts.push(s.id === 'left' ? s.depth + 22.5 : ctx.W - s.depth - 22.5);
+      pts.sort((x, y) => x - y);
+      for (let i = 1; i < pts.length; i++) longest = Math.max(longest, pts[i] - pts[i - 1]);
+    }
     if (longest >= ctx.max) spanWarn(ctx, seg, longest, `liegen vorne frei – bei ${ctx.matShort} ${ctx.t} mm biegen sie sich ab ca. ${ctx.max} mm Spannweite durch. Pfostenrahmen, Wandschienen oder dickeres Material wählen.`);
   },
 
@@ -374,9 +398,11 @@ const SUPPORTS = {
     const split = splitShelves(ctx, seg, shelves, us);
     us = [...new Set([...us, ...split.supports])].sort((x, y) => x - y);
     const list = split.pieces;
-    const kl = [...KONSOLE_LENS].reverse().find(l => l <= seg.depth - 10) || KONSOLE_LENS[0];
-    if (kl > seg.depth - 10) ctx.warn.push(`Die kürzeste Konsole (${kl} mm) steht bei ${seg.depth} mm tiefen Tablaren ${SIDE_NAME[seg.id]} vorne vor – Tablare tiefer machen oder Tablarwinkel wählen.`);
-    for (const p of list) addShelf(ctx, seg, p, 'liegt auf Konsolen, von unten verschraubt');
+    // Konsole endet mindestens 10 mm hinter der Vorderkante des Tablars.
+    const front = seg.depth + railsVor(ctx.c), kmax = front - RAIL_T - 10;
+    const kl = [...KONSOLE_LENS].reverse().find(l => l <= kmax) || KONSOLE_LENS[0];
+    if (kl > kmax) ctx.warn.push(`Die kürzeste Konsole (${kl} mm) steht bei ${seg.depth} mm tiefen Tablaren ${SIDE_NAME[seg.id]} vorne vor – Tablare tiefer machen oder Tablarwinkel wählen.`);
+    for (const p of list) addShelf(ctx, seg, p, 'liegt auf Konsolen vor der Schiene, von unten verschraubt', RAIL_V0);
     let konsolen = 0;
     for (const u of us) {
       const on = list.filter(p => u >= p.a + 20 && u <= p.b - 20);
@@ -388,9 +414,9 @@ const SUPPORTS = {
       for (let rest = need; rest > 0; ) { const l = RAIL_LENS.find(x => x >= rest) || RAIL_LENS[RAIL_LENS.length - 1]; parts.push(l); rest -= l; }
       if (parts.length > 1) groupWarn(ctx, 'rails2', SIDE_NAME[seg.id], sides => `Die Wandschienen ${sides} brauchen ${r0(need)} mm – längste Schiene ist ${RAIL_LENS[RAIL_LENS.length - 1]} mm, darum je zwei Stücke bündig übereinander (eingeplant).`);
       for (const l of parts) { ctx.buy('rail' + l, 1, 'senkrecht, auf Länge kürzen'); ctx.dowel(0, Math.ceil(l / 300) + 1); }
-      ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y1, v0:0, v1:12 }, 'v', 'y', null) });
+      ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y1, v0:0, v1:RAIL_T }, 'v', 'y', null) });
       for (const p of on) {
-        ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 6, u1:u + 6, y0:p.y - 25, y1:p.y, v0:12, v1:12 + kl }, 'u', 'v', null, [0, 0, 120]) });
+        ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 6, u1:u + 6, y0:p.y - 25, y1:p.y, v0:RAIL_T, v1:RAIL_T + kl }, 'u', 'v', null, [0, 0, 120]) });
         konsolen++;
       }
     }
@@ -403,7 +429,9 @@ const SUPPORTS = {
 
   brackets(ctx, seg, shelves){
     const want = seg.depth * 2 / 3;
-    const size = WINKEL_LENS.find(l => l >= want) || WINKEL_LENS[WINKEL_LENS.length - 1];
+    const size = winkelFuer(seg.depth), wand = WINKEL_WAND[size];
+    const unten = Math.min(...shelves.map(p => p.y));
+    if (unten < wand + 10) groupWarn(ctx, 'winkelBoden', SIDE_NAME[seg.id], sides => `Die untersten Tablarwinkel ${sides} reichen in den Boden (Wandschenkel ${wand} mm) – unterstes Tablar mindestens ${wand + 10} mm über dem Boden.`);
     if (size < want) ctx.warn.push(`Für ${seg.depth} mm tiefe Tablare ${SIDE_NAME[seg.id]} sind Tablarwinkel knapp (grösster: ${size} mm). Wandschienen oder Pfostenrahmen tragen tiefe Tablare besser.`);
     let count = 0, extra = false;
     for (const p of shelves) {
@@ -413,7 +441,7 @@ const SUPPORTS = {
       const split = splitShelves(ctx, seg, [p], base);
       for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Tablarwinkeln');
       for (const u of [...base, ...split.supports]) {
-        ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 10, u1:u + 10, y0:p.y - size * 0.8, y1:p.y, v0:0, v1:4 }, 'v', 'y', null) });
+        ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 10, u1:u + 10, y0:Math.max(0, p.y - wand), y1:p.y, v0:0, v1:4 }, 'v', 'y', null) });
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 10, u1:u + 10, y0:p.y - 4, y1:p.y, v0:4, v1:size }, 'y', 'v', null, [0, 0, 120]) });
         count++;
       }
@@ -428,7 +456,8 @@ const SUPPORTS = {
 
   cheeks(ctx, seg, shelves){
     const t = ctx.t, pos = cheekPositions(seg, t, ctx.max);
-    const h = ctx.H - 10;
+    // Bis 50 mm über das oberste Tablar: so lässt sich die Wange im Raum aufrichten (raumhoch ginge sie nicht).
+    const h = Math.min(ctx.H - 10, Math.max(...ctx.levels) + t + 50);
     for (const u of pos) {
       ctx.add('Wange', h, seg.depth, t, ctx.gMain, 'Lochreihen 32er-Raster, oben und unten mit Winkeln an die Wand', 'korpus',
         ctx.box(seg, { u0:u, u1:u + t, y0:0, y1:h, v0:0, v1:seg.depth }, 'u', 'y', ctx.fin, [0, 0, 80]));
@@ -749,6 +778,7 @@ function buildReduitSteps(o){
       cheeks: 'Bodenträger stecken und die Tablare auflegen.'
     };
     if (auflegen[c.sys]) st.push(['Tablare auflegen', auflegen[c.sys], null]);
+    if (c.sys === 'battens' && hasCorner) st.push(['Eckstützen stellen', 'An jeder Innenecke ein Kantholz vor beide Tablarkanten stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel daran schrauben – je Ebene 2 Winkel.', 'Einen Kunststoffgleiter unter die Stütze legen, nicht in den Boden dübeln.']);
     if (hasCorner) st.push(['Eckstösse verbinden', `Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben ${sc(o.boards ? 'latte' : 'streifen')} in jedes Tablar.`, null]);
     if (hasJoints) st.push(['Stösse verbinden', `Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben ${sc('latte')} in beide Stücke schrauben.`, 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
   }
@@ -759,5 +789,6 @@ function buildReduitSteps(o){
 
 if (typeof module !== 'undefined') module.exports = {
   REDUIT_DEFAULTS, normReduit, shelfLevels, layoutReduit, toWorld, boxOf,
-  SPAN, BUY, SYS, maxSpan, cheekPositions, moduleSplit, computeReduit, shelfJoints
+  SPAN, BUY, SYS, maxSpan, cheekPositions, moduleSplit, computeReduit, shelfJoints,
+  RAIL_T, RAIL_V0, WINKEL_WAND, winkelFuer, railsVor
 };

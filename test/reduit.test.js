@@ -466,3 +466,48 @@ test('Dübelschraube nach Anbauteil: 4,5 × 50 für Metall, 5 × 60 für Latten 
   assert.ok(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 5 × 70') > 0);
   assert.ok(qtyOf(run({ sys:'posts', wall:'drywall' }), 'Hohlraumdübel') > 0);
 });
+
+/* ---------- Geometrie (Schreiner-Review, Schritt 4) ---------- */
+test('Wandschienen: Tablar beginnt 2 mm vor der Schiene, die Ecke schliesst', () => {
+  const Rr = run({ sys:'rails', shape:'U', dBack:400, dLeft:300 });
+  const back = rowsNamed(Rr, 'Tablar').find(r => r.L === 1594), side = rowsNamed(Rr, 'Tablar').find(r => r.L !== 1594);
+  assert.strictEqual(back.B, 400 - R.RAIL_V0);
+  assert.strictEqual(side.B, 300 - R.RAIL_V0);
+  const rails = Rr.extras.filter(e => e.type === 'metal' && e.size[1] > 500);
+  for (const s of Rr.boxes.filter(b => b.key.startsWith('Tablar'))) for (const r of rails) assert.ok(!overlaps(s, r), 'Tablar steckt in der Schiene');
+  for (const s of Rr.boxes) for (const t of Rr.boxes) if (s !== t && s.key.startsWith('Tablar') && t.key.startsWith('Tablar')) assert.ok(!overlaps(s, t));
+});
+
+test('Wandschienen mit ganzen Brettern: Seitenregal beginnt vor dem vorstehenden Brett', () => {
+  const Rr = run({ sys:'rails', shape:'U', mat:'gon_fichte', t:18, dBack:400, dLeft:400, dRight:400, rw:2000 });
+  const shelves = Rr.boxes.filter(b => b.key.startsWith('Tablar'));
+  for (const a of shelves) for (const b of shelves) if (a !== b) assert.ok(!overlaps(a, b));
+});
+
+test('Tablarwinkel: Wandschenkel als Daten, reicht nicht in den Boden', () => {
+  const Rr = run({ sys:'brackets', shape:'I', dBack:300, gapBottom:260 });
+  assert.ok(Rr.extras.filter(e => e.type === 'metal').every(e => e.pos[1] - e.size[1] / 2 >= 0));
+  assert.ok(!Rr.warn.some(w => w.includes('in den Boden')));
+  assert.ok(run({ sys:'brackets', shape:'I', dBack:300, gapBottom:150 }).warn.some(w => w.includes('in den Boden')));
+});
+
+test('Wangen: Höhe bis 50 mm über das oberste Tablar statt raumhoch', () => {
+  const Rr = run({ sys:'cheeks', shape:'I', rh:2400, gapTop:300, nShelves:5 });
+  const top = Math.max(...R.shelfLevels(5, 150, 300, 2400));
+  assert.ok(rowsNamed(Rr, 'Wange').every(r => r.L === top + 18 + 50), JSON.stringify(rowsNamed(Rr, 'Wange').map(r => r.L)));
+});
+
+test('Leisten: Eckstütze vor jeder Innenecke, Warnung misst das freie Feld', () => {
+  for (const [shape, n] of [['I', 0], ['L', 1], ['U', 2]]) {
+    const Rr = run({ sys:'battens', shape });
+    assert.strictEqual(Rr.rows.filter(r => r.note.startsWith('Eckstütze')).reduce((a, r) => a + r.qty, 0), n, shape);
+    for (const p of postBoxes(Rr)) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), shape + b.key);
+  }
+  const U = run({ sys:'battens', shape:'U' });
+  const w = U.warn.find(x => x.includes('vorne frei'));
+  assert.ok(w && w.includes('hinten (955 mm)') && !w.includes('1594'), w);
+  assert.ok(U.steps.some(s => s[0] === 'Eckstützen stellen'));
+  // Stoss mit Stütze: das freie Feld ist rund die halbe Wand, nicht die ganze Tablarlänge
+  const J = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).warn.find(x => x.includes('vorne frei'));
+  assert.ok(J && !J.includes('2394'), J);
+});

@@ -1206,12 +1206,14 @@ function zeigeSperren(P){
       hint(box, s.grund, o.type === 'checkbox' ? null : wertName(feld, w));
     }
   }
-  for (const k of TIEFEN_IDS) {
+  for (const k of Object.keys(RANGES)) {
     const num = $('#' + k), rng = $('#' + k + '-r'), g = P.grenzen[k];
     num.dataset.min0 = num.dataset.min0 || num.min; num.dataset.max0 = num.dataset.max0 || num.max;
     num.min = rng.min = g ? g.min : num.dataset.min0;
     num.max = rng.max = g ? Math.max(g.min, g.max) : num.dataset.max0;
-    if (g) for (const r of g.regeln) hint($('#depthHint'), r.grund, null);   // ein Hinweis für alle Tiefen
+    // Grund nur zeigen, wenn der Wert an der Grenze dieser Regel anstösst. Tiefen: ein Hinweis unter allen drei Feldern.
+    const v = Number(num.value), an = r => (r.min != null && v <= r.min) || (r.max != null && v >= r.max);
+    if (g) for (const r of g.regeln) if (an(r)) hint(TIEFEN_IDS.includes(k) ? $('#depthHint') : num.closest('.dim'), r.grund, null);
   }
   for (const [box, g] of hints) if (box) for (const [grund, werte] of [...g].reverse()) {
     const p = document.createElement('p');
@@ -1229,7 +1231,7 @@ function render(){
   const diff = Object.keys(P.d).filter(k => k !== 'katalog' && String(P.d[k]) !== String(d[k]));
   if (diff.length) {
     setzeFelder(P.d, diff); syncVisibility(); placePills();
-    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(/^d(Back|Left|Right)$/.test(k) ? P.d[k] + ' mm' : wertName(k, String(P.d[k])))}`);
+    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(k in RANGES ? P.d[k] + ' mm' : wertName(k, String(P.d[k])))}`);
     if (was.length) flash('.js-msg', `Angepasst – ${was.join(' · ')}. Der Grund steht beim Feld.`);
   }
   zeigeSperren(P);

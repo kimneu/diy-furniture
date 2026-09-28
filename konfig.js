@@ -40,7 +40,20 @@ const AUSWEICH = {
   joint:['pocket', 'dowels', 'cam', 'screws'], front:['hinged', 'sliding', 'open'], back:['hdf3', 'ply6', 'hf3', 'none'],
   sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true']
 };
-const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 260;
+// Wandschienen: kürzeste Konsole 250 mm + Schiene 12 mm + 10 mm Luft vorne, gerundet.
+const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 280;
+// Seitenregale höchstens so viel tiefer als hinten (Entscheid 28.09.2026: begrenzen statt durchlaufen lassen).
+const SEITE_MEHR = 100;
+// Tiefenfelder der Regale, die es in dieser Form gibt.
+const tiefenFelder = c => ['dBack', ...(c.shape === 'U' || (c.shape === 'L' && c.corner !== 'R') ? ['dLeft'] : []), ...(c.shape === 'U' || (c.shape === 'L' && c.corner === 'R') ? ['dRight'] : [])];
+// Höhe der untersten Auflage unter dem Tablar (Leiste, Latte, Schiene, Wandschenkel des Tablarwinkels).
+function auflageUnten(c){
+  if (c.sys === 'battens') return MATS[c.mat] && MATS[c.mat].boards ? 48 : 40;
+  if (c.sys === 'posts') return 48;
+  if (c.sys === 'rails') return 60;
+  if (c.sys === 'brackets') return WINKEL_WAND[winkelFuer(Math.max(...tiefenFelder(c).map(k => c[k])))];
+  return 0;
+}
 // Korpus beim Sideboard sowie Wangen und hohe Module im Reduit: mindestens 18 mm (Entscheid 28.09.2026).
 const KORPUS_MIN = 18;
 const hoheSeiten = c => c.kind === 'reduit' && (c.build === 'free' ? c.rh - c.gapTop > 1200 : c.sys === 'cheeks');
@@ -79,18 +92,22 @@ const REGELN = [
     grund:() => 'Topfscharniere erreichen ab 22 mm Korpus den Überschlag nicht – Korpus 16–21 mm, Schiebetüren oder offen.', befunde:['SF-1', 'SK-E1'] },
   { id:'S13', wirkung:'sperren', feld:'grain', werte:c => LEIMHOLZ(c.mat) && !MATS[c.mat].boards ? ['false'] : [],
     grund:() => 'Massivholz nur in Faserrichtung schneiden – quer zur Faser bricht es.', befunde:['SK-4'] },
-  { id:'S14', wirkung:'grenze', felder:['dBack', 'dLeft', 'dRight'], wenn:c => eingebaut(c) && c.sys === 'brackets', max:TIEFE_MAX_WINKEL,
+  { id:'S14', wirkung:'grenze', felder:tiefenFelder, wenn:c => eingebaut(c) && c.sys === 'brackets', max:TIEFE_MAX_WINKEL,
     grund:() => `Tablarwinkel tragen bis ${TIEFE_MAX_WINKEL} mm Tiefe (grösster Winkel 250 mm, ⅔ der Tiefe).`, befunde:['TR-16'] },
   { id:'S14', wirkung:'sperren', feld:'mat', werte:c => eingebaut(c) && c.sys === 'brackets' ? Object.keys(MATS).filter(k => MATS[k].boards && !MATS[k].widths.some(w => w <= TIEFE_MAX_WINKEL)) : [],
     grund:() => `Die Bretter sind breiter als ${TIEFE_MAX_WINKEL} mm – zu tief für Tablarwinkel.`, befunde:['TR-16'] },
-  { id:'S15', wirkung:'grenze', felder:['dBack', 'dLeft', 'dRight'], wenn:c => eingebaut(c) && c.sys === 'rails', min:TIEFE_MIN_SCHIENE,
-    grund:() => `Die kürzeste Konsole ist 250 mm – Wandschienen ab ${TIEFE_MIN_SCHIENE} mm Tiefe. Für flachere Tablare Tablarwinkel.`, befunde:['EP-9', 'TR-16'] },
+  { id:'S15', wirkung:'grenze', felder:tiefenFelder, wenn:c => eingebaut(c) && c.sys === 'rails', min:TIEFE_MIN_SCHIENE,
+    grund:() => `Die kürzeste Konsole ist 250 mm, dazu Schiene und Luft vorne – Wandschienen ab ${TIEFE_MIN_SCHIENE} mm Tiefe. Für flachere Tablare Tablarwinkel.`, befunde:['EP-9', 'TR-16'] },
+  { id:'K09', wirkung:'grenze', felder:['gapBottom'], wenn:c => eingebaut(c) && auflageUnten(c) > 0, min:c => Math.ceil((auflageUnten(c) + 10) / 10) * 10,
+    grund:c => `Die unterste Auflage (${{ battens:'Leiste', posts:'Latte', rails:'Schiene', brackets:'Wandschenkel des Tablarwinkels' }[c.sys]}, ${auflageUnten(c)} mm) braucht Platz über dem Boden.`, befunde:['EG-9', 'EP-16', 'RM-10', 'EP-14'] },
+  { id:'K13', wirkung:'grenze', felder:c => tiefenFelder(c).filter(k => k !== 'dBack'), wenn:c => c.kind === 'reduit' && c.shape !== 'I', max:c => c.dBack + SEITE_MEHR,
+    grund:() => `Die Seiten höchstens ${SEITE_MEHR} mm tiefer als hinten – sonst wird die Stossfuge in der Ecke lang und die Ecke hängt durch. Für tiefe Seiten hinten tiefer machen.`, befunde:['EP-8', 'EP-11'] },
   { id:'S16', wirkung:'sperren', feld:'sys', werte:c => eingebaut(c) && c.wall === 'drywall' ? ['rails', 'brackets'] : [],
     grund:() => 'Schienen und Winkel ziehen an den Dübeln – in Gipskarton hält das nur in den Ständern. Pfostenrahmen, Leisten, Wangen oder selbststehend wählen.', befunde:['TR-7', 'RM-13'] },
   { id:'K14', wirkung:'grenze', felder:['dBack'], wenn:c => c.kind === 'reduit' && c.doorIn, max:c => c.rd - c.doorW - 50,
     grund:() => 'Die Tür geht nach innen auf – vor dem hinteren Regal braucht sie ihre Breite und 50 mm Luft.', befunde:['EG-6', 'RM-2'] }
 ];
-const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
+const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBottom:[0, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
 // Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
@@ -107,12 +124,12 @@ function gesperrt(c){
 // Grenzen der Zahlenfelder: { feld: { min, max, regel, grund } }.
 function grenzen(c){
   const g = {};
-  for (const r of REGELN) if (r.wirkung === 'grenze' && r.wenn(c)) for (const f of r.felder) {
+  for (const r of REGELN) if (r.wirkung === 'grenze' && r.wenn(c)) for (const f of regelWert(r, 'felder', c)) {
     const [a, b] = RANGES[f], cur = g[f] || { min:a, max:b, regeln:[] };
     const mn = regelWert(r, 'min', c), mx = regelWert(r, 'max', c);
     if (mn != null && mn > cur.min) cur.min = mn;
     if (mx != null && mx < cur.max) cur.max = mx;
-    cur.regeln.push({ regel:r.id, grund:r.grund(c) });
+    cur.regeln.push({ regel:r.id, grund:r.grund(c), min:mn, max:mx });
     g[f] = cur;
   }
   return g;
@@ -130,7 +147,7 @@ function wertName(feld, w){
   return w;
 }
 const FELDNAME = { joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
-  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts' };
+  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar' };
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
 // dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 12 Runden).
