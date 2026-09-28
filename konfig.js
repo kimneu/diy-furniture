@@ -10,7 +10,7 @@ function cfgFromData(d){
     front:d.front, doorsPer:d.doorsPer, slideN:d.slideN, handle:d.handle, color:d.color, frontMat:d.frontMat, frontT:n('frontT'),
     sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:on('grain'), price:n('price'),
     kind:d.kind,
-    rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorIn:on('doorIn'), hinge:d.hinge, wall:d.wall,
+    rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorPos:d.doorPos, doorOff:n('doorOff'), doorH:n('doorH'), doorIn:on('doorIn'), hinge:d.hinge, wall:d.wall,
     shape:d.shape, corner:d.corner, build:d.build, sys:d.sys,
     dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
     nicheL:on('nicheL'), nicheLW:n('nicheLW'), nicheLH:n('nicheLH'),

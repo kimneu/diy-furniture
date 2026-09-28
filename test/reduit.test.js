@@ -23,10 +23,13 @@ test('hinteres Segment über volle Breite, Seiten stossen davor an', () => {
 });
 
 test('Tür nach innen verkürzt das Seitenregal auf der Bandseite', () => {
-  const l = lay({ shape:'U', rd:1400, doorW:800, doorIn:true, hinge:'L' });
-  assert.strictEqual(seg(l, 'left').u1, 600);
+  const l = lay({ shape:'U', rd:1800, doorW:800, doorIn:true, hinge:'L' });
+  assert.strictEqual(seg(l, 'left').u1, 1000);
   assert.strictEqual(seg(l, 'left').ends[1], 'free');
-  assert.strictEqual(seg(l, 'right').u1, 1400);
+  assert.strictEqual(seg(l, 'right').u1, 1800);
+  // Standard-U: neben der Tür blieben nur 200 mm – das Regal entfällt (K15)
+  const std = lay({ shape:'U', rd:1400, doorW:800, doorIn:true, hinge:'L' });
+  assert.ok(!seg(std, 'left') && std.warn.some(w => w.includes('entfällt')));
 });
 
 test('Seitentiefe grösser als Wandstück neben der Tür gibt Warnung', () => {
@@ -124,7 +127,7 @@ test('Selbststehend: Modul-Aufteilung', () => {
 });
 
 test('Stütze am freien Ende (Tür nach innen)', () => {
-  const Rr = run({ shape:'U', doorIn:true, hinge:'L', sys:'rails' });
+  const Rr = run({ shape:'U', rd:1800, doorIn:true, hinge:'L', sys:'rails' });
   assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
 });
 
@@ -316,7 +319,7 @@ test('Stoss mit Nische: oben und unten korrekt gestossen', () => {
 });
 
 test('Stoss und freies Ende (Tür nach innen): Stütze am freien Ende bleibt', () => {
-  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, doorIn:true, hinge:'L', sys:'rails' });
+  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, doorPos:'L', doorOff:100, doorIn:true, hinge:'L', sys:'rails' });
   assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
   assert.ok(pieceLens(Rr).every(L => L <= 1150));
 });
@@ -556,4 +559,48 @@ test('Selbststehend: Seiten, Böden und Rückwand überschneiden sich nicht', ()
     for (let i = 0; i < Rr.boxes.length; i++) for (let j = i + 1; j < Rr.boxes.length; j++)
       assert.ok(!overlaps(Rr.boxes[i], Rr.boxes[j]), `${shape} ${mat} ${Rr.boxes[i].key} × ${Rr.boxes[j].key}`);
   }
+});
+
+/* ---------- Türlage und Türhöhe ---------- */
+test('Türlage: Wandstücke und Sturz liegen dort, wo die Tür ist', () => {
+  const front = Rr => Rr.extras.filter(e => e.type === 'wall' && e.front);
+  const mid = run({ shape:'I' }), links = run({ shape:'I', doorPos:'L', doorOff:100, doorH:2100 });
+  assert.deepStrictEqual(front(mid).map(e => e.size[0]), [500, 500, 800]);
+  assert.deepStrictEqual(front(links).map(e => e.size[0]), [200, 800, 800]);
+  const sturz = front(links)[2];
+  assert.strictEqual(sturz.pos[0], -800 + 100 + 400);
+  assert.strictEqual(sturz.pos[1] - sturz.size[1] / 2, 2100);
+  assert.strictEqual(run({ shape:'I', doorPos:'R', doorOff:100 }).room.doorX0, 1600 - 100 - 800);
+});
+
+test('Tür nach innen: das Regal auf der Bandseite wird nur gekürzt, wenn das Blatt es trifft', () => {
+  const seite = o => R.layoutReduit(cfg({ shape:'U', rd:1800, doorW:800, doorIn:true, hinge:'L', ...o }).cfg).segs.find(s => s.id === 'left');
+  assert.strictEqual(seite({ dLeft:300 }).u1, 1000);                           // Wandstück 400 − 110 < 300: gekürzt
+  assert.strictEqual(seite({ dLeft:250 }).u1, 1800);                           // 250 ≤ 290: das Blatt steht davor
+  assert.strictEqual(seite({ dLeft:300, doorPos:'R', doorOff:100 }).u1, 1800); // Tür rechts: links 700 mm Wand
+  assert.strictEqual(seite({ dLeft:200, doorPos:'L', doorOff:100 }).u1, 1000); // Tür links: kaum Wand
+  // Nicht gekürzt: ein Türstopper kommt auf die Liste
+  assert.ok(qtyOf(run({ shape:'U', rd:1800, doorIn:true, hinge:'L', dLeft:250 }), 'Türstopper') === 1);
+  assert.strictEqual(qtyOf(run({ shape:'U', rd:1800, doorIn:true, hinge:'L', dLeft:300 }), 'Türstopper'), 0);
+});
+
+test('Türlage: ein Regal neben einer seitlichen Tür ragt in die Öffnung', () => {
+  assert.ok(lay({ shape:'U', doorPos:'R', doorOff:100, dRight:300 }).warn.some(w => w.includes('Türöffnung') && w.includes('rechts')));
+  assert.ok(!lay({ shape:'U', doorPos:'R', doorOff:100, dLeft:300 }).warn.some(w => w.includes('links') && w.includes('Türöffnung')));
+});
+
+test('Türlage: fehlende Werte älterer Entwürfe gelten als mittig, 2000 hoch', () => {
+  const c = cfg({ doorPos:undefined, doorOff:NaN, doorH:NaN }).cfg;
+  assert.strictEqual(c.doorPos, 'M');
+  assert.strictEqual(c.doorH, 2000);
+  assert.strictEqual(c.doorX0, (1600 - 800) / 2);
+});
+
+test('Türhöhe: zu grosse Module werden im Reduit gebaut, Kippmass wird geprüft', () => {
+  const tief = run({ build:'free', shape:'I', doorH:1800, rh:2400 });
+  assert.ok(tief.steps.find(s => s[0] === 'Module bauen')[1].includes('im Reduit zusammenbauen'));
+  assert.ok(!run({ build:'free', shape:'I', doorH:2200, rh:2400, gapTop:500 }).steps.find(s => s[0] === 'Module bauen')[1].includes('im Reduit'));
+  assert.ok(run({ build:'free', shape:'I', rh:2000, gapTop:100, dBack:600 }).warn.some(w => w.includes('Kippmass')));
+  assert.ok(!run({ build:'free', shape:'I' }).warn.some(w => w.includes('Kippmass')));
+  assert.ok(!run({ sys:'cheeks', shape:'I' }).warn.some(w => w.includes('Kippmass')));
 });

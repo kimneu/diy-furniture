@@ -572,6 +572,20 @@ body[data-ort="sammlung"] .layout{display:none}
           <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
           <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
         </div>
+        <div class="dim">
+          <label for="doorH">Türhöhe</label>
+          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
+          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-doorPos">Türlage</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
+        </div>
+        <div class="dim" id="row-doorOff">
+          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
+          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
+          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
+        </div>
         <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
         <div class="field" id="row-hinge">
           <span class="lbl" id="lbl-hinge">Türband</span>
@@ -581,7 +595,7 @@ body[data-ort="sammlung"] .layout{display:none}
           <span class="lbl" id="lbl-wall">Wände</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-wall"><input type="radio" name="wall" id="wall-solid" value="solid" checked><label for="wall-solid">Beton / Backstein</label><input type="radio" name="wall" id="wall-drywall" value="drywall"><label for="wall-drywall">Gipskarton</label></div>
         </div>
-        <p class="hint">Innenmasse von Wand zu Wand. Die Tür liegt mittig in der Vorderwand.</p>
+        <p class="hint">Innenmasse von Wand zu Wand. Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
       </section>
 
       <section class="group" data-kind="reduit" data-lock="bauart">
@@ -1081,6 +1095,11 @@ function syncVisibility(){
   $('#row-corner').hidden = shape !== 'L';
   $('#row-sys').hidden = free;
   $('#row-hinge').hidden = !f.get('doorIn');
+  // Tür seitlich: Abstand zur Wand auf dieser Seite, höchstens so viel, dass auf der anderen Seite 50 mm Wand bleiben.
+  const dPos = f.get('doorPos');
+  $('#row-doorOff').hidden = dPos === 'M';
+  $('#lbl-doorOff').textContent = dPos === 'R' ? 'Abstand zur rechten Wand' : 'Abstand zur linken Wand';
+  $('#doorOff').max = $('#doorOff-r').max = Math.max(50, Number(f.get('rw')) - Number(f.get('doorW')) - 50);
   $('#row-dLeft').hidden = $('#row-nicheL').hidden = !hasL;
   $('#row-dRight').hidden = $('#row-nicheR').hidden = !hasR;
   $('#row-nicheL-dims').hidden = !f.get('nicheL');

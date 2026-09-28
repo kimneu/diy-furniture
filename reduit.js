@@ -2,7 +2,7 @@
 'use strict';
 
 const REDUIT_DEFAULTS = {
-  rw:1600, rd:1400, rh:2400, doorW:800, doorIn:false, hinge:'L', wall:'solid',
+  rw:1600, rd:1400, rh:2400, doorW:800, doorPos:'M', doorOff:200, doorH:2000, doorIn:false, hinge:'L', wall:'solid',
   shape:'U', corner:'L', build:'built', sys:'posts',
   dBack:400, dLeft:300, dRight:300, nShelves:5, gapBottom:150, gapTop:300,
   nicheL:false, nicheLW:450, nicheLH:1300, nicheR:false, nicheRW:450, nicheRH:1300
@@ -12,10 +12,16 @@ const SIDE_NAME = { back:'hinten', left:'links', right:'rechts' };
 /* ---------- Eingaben begrenzen ---------- */
 function normReduit(c0){
   const c = { ...REDUIT_DEFAULTS, ...c0 }, warn = [];
-  const num = (k, a, b) => { c[k] = r0(clamp(Number(c[k]), a, b)); };
+  // Fehlt ein Wert (ältere Entwürfe kennen z. B. die Türlage nicht), gilt der Standard.
+  const num = (k, a, b) => { const v = Number(c[k]); c[k] = r0(clamp(Number.isFinite(v) ? v : REDUIT_DEFAULTS[k], a, b)); };
   num('rw', 600, 4000); num('rd', 600, 4000); num('rh', 1800, 3000);
-  num('doorW', 600, 1200);
+  num('doorW', 600, 1200); num('doorH', 1500, 2600); num('doorOff', 50, 3000);
   if (c.doorW > c.rw - 100) { c.doorW = c.rw - 100; warn.push(`Türbreite auf ${c.doorW} mm verkleinert – neben der Tür braucht es mindestens 50 mm Wand pro Seite.`); }
+  if (c.doorH > c.rh) { c.doorH = c.rh; warn.push(`Türhöhe auf die Raumhöhe (${c.rh} mm) begrenzt.`); }
+  if (!['L', 'M', 'R'].includes(c.doorPos)) c.doorPos = 'M';
+  if (c.doorPos !== 'M' && c.doorOff > c.rw - c.doorW - 50) { c.doorOff = c.rw - c.doorW - 50; warn.push(`Abstand der Tür zur Wand auf ${c.doorOff} mm begrenzt – auf der anderen Seite braucht es mindestens 50 mm Wand.`); }
+  // Linke Kante der Türöffnung ab der linken Wand.
+  c.doorX0 = c.doorPos === 'L' ? c.doorOff : c.doorPos === 'R' ? c.rw - c.doorOff - c.doorW : (c.rw - c.doorW) / 2;
   for (const k of ['dBack', 'dLeft', 'dRight']) num(k, 150, 600);
   // Ganze Bretter (nur ablängen): Tiefe = Brettbreite. Jetzt aufrunden, nach den Begrenzungen unten abrunden.
   const BM = MATS[c.mat] && MATS[c.mat].boards ? MATS[c.mat] : null;
@@ -71,17 +77,29 @@ function shelfLevels(n, gapBottom, gapTop, H){
 
 // Segmente je Form. u = Koordinate entlang der Wand: hinten ab linker Wand, seitlich ab Rückwand.
 // ends: 'wall' (liegt an einer Wand), 'corner' (stösst ans hintere Regal), 'free' (endet im Raum).
+// Tür nach innen: Das offene Blatt steht parallel zur Seitenwand, im Abstand des Wandstücks neben der Tür.
+// Ein Regal auf der Bandseite wird nur gekürzt, wenn es tiefer ist als dieses Wandstück minus Blatt und Drücker.
+const TUER_BLATT = 110;
 function layoutReduit(c){
   const W = c.rw, D = c.rd, warn = [], segs = [];
-  const wf = (W - c.doorW) / 2;
+  const x0 = c.doorX0 != null ? c.doorX0 : (W - c.doorW) / 2;
+  const wand = { left:x0, right:W - x0 - c.doorW };   // Wandstück neben der Tür
+  // Reststücke neben der Tür lohnen sich nicht: unter 400 mm bei Wangen und Modulen, sonst unter 300 mm (Review K15).
+  const restMin = c.build === 'free' || c.sys === 'cheeks' ? 400 : 300;
+  let puffer = false;
   const back = { id:'back', depth:c.dBack, u0:0, u1:W, ends:['wall', 'wall'], niche:null };
   segs.push(back);
   for (const id of ['left', 'right']) {
     if (id === 'left' ? !c.hasL : !c.hasR) continue;
     const depth = id === 'left' ? c.dLeft : c.dRight;
     const s = { id, depth, u0:c.dBack + railsVor(c), u1:D, ends:['corner', 'wall'], niche:null };
-    if (c.doorIn && c.hinge === (id === 'left' ? 'L' : 'R')) { s.u1 = D - c.doorW; s.ends[1] = 'free'; }
-    if (s.u1 - s.u0 < 200) { warn.push(`Das Regal ${SIDE_NAME[id]} entfällt – die nach innen aufgehende Tür braucht den Platz.`); continue; }
+    const wf = wand[id];
+    if (c.doorIn && c.hinge === (id === 'left' ? 'L' : 'R')) {
+      if (depth > wf - TUER_BLATT) { s.u1 = D - c.doorW; s.ends[1] = 'free'; }
+      else puffer = true;   // Das Blatt steht vor dem Regal: ein Türstopper hält die Klinke davon fern.
+    }
+    // Reststücke unter 400 mm lohnen sich nicht (Stummel mit zwei Stützen; Review K15).
+    if (s.u1 - s.u0 < restMin) { warn.push(`Das Regal ${SIDE_NAME[id]} entfällt – neben der nach innen aufgehenden Tür blieben nur ${r0(Math.max(0, s.u1 - s.u0))} mm, zu kurz für ein Regal.`); continue; }
     if (s.ends[1] === 'wall' && depth > wf) warn.push(`Das Regal ${SIDE_NAME[id]} ist ${depth} mm tief, neben der Tür bleiben aber nur ${r0(wf)} mm Wand – es ragt in die Türöffnung.`);
     const on = id === 'left' ? c.nicheL : c.nicheR;
     if (on) s.niche = { at:'end', w: id === 'left' ? c.nicheLW : c.nicheRW, h: id === 'left' ? c.nicheLH : c.nicheRH };
@@ -99,7 +117,7 @@ function layoutReduit(c){
     const pass = W - c.dLeft - c.dRight - posts - 2 * railsVor(c);
     if (pass < 600) warn.push(`Zwischen den Seitenregalen bleiben nur ${pass} mm Durchgang${posts ? ' (zwischen den Pfosten)' : ''} – ab etwa 600 mm lässt es sich bequem hineingehen.`);
   }
-  return { segs, warn, wf };
+  return { segs, warn, wand, x0, puffer };
 }
 
 // Wandkoordinaten (u entlang, v von der Wand in den Raum) in Raumkoordinaten.
@@ -169,6 +187,7 @@ const BUY_INFO = {
   hollow:    { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)' },
   screw5x60: { name:'Holzschrauben 5 × 60 mm' },
   tipguard:  { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)' },
+  doorstop:  { name:'Türstopper zum Anschrauben' },
   // Holzschrauben nach Länge (SCHRAUBEN, screwFor in shared.js)
   ...Object.fromEntries(SCHRAUBEN.map(s => [screwKey(s), { name:`Holzschrauben ${screwText(s)} mm` }]))
 };
@@ -489,6 +508,9 @@ const SUPPORTS = {
       ctx.add('Wange', h, seg.depth, t, ctx.gMain, 'Lochreihen 32er-Raster, oben und unten mit Winkeln an die Wand', 'korpus',
         ctx.box(seg, { u0:u, u1:u + t, y0:0, y1:h, v0:0, v1:seg.depth }, 'u', 'y', ctx.fin, [0, 0, 80]));
     }
+    // Kippmass: Eine liegend vorbereitete Wange muss sich im Raum aufrichten lassen.
+    const kipp = Math.hypot(h, seg.depth);
+    if (kipp > ctx.H - 10) groupWarn(ctx, 'kippWange', SIDE_NAME[seg.id], sides => `Die Wangen ${sides} (${r0(h)} × ${seg.depth} mm) lassen sich im Raum nicht aufrichten – Kippmass ${r0(kipp)} mm bei ${ctx.H} mm Raumhöhe. Deckenabstand vergrössern oder weniger tief.`);
     ctx.buy('angle40', pos.length * 3, 'Wangen an Wand und Boden');
     ctx.dowel(0, pos.length * 3);
     const nicheEdge = seg.niche ? (seg.niche.at === 'end' ? seg.u1 - seg.niche.w : seg.u0 + seg.niche.w) : null;
@@ -627,6 +649,9 @@ function freeModules(ctx, seg){
       } else ctx.buy('angle40', 4, 'ohne Rückwand: hinten in die Ecken');
       ctx.modules++;
       if (top > 1200) { ctx.tall++; ctx.dowel(0, 2); }
+      // Fertig durch die Tür (aufrecht, schmale Seite voran) und im Raum aufrichtbar?
+      if (Math.min(w, dep) > ctx.c.doorW - 20 || top > ctx.c.doorH - 20) ctx.zuGross = true;
+      if (Math.hypot(top, dep) > ctx.H - 10) ctx.kipp = Math.max(ctx.kipp || 0, r0(Math.hypot(top, dep)));
     }
   }
 }
@@ -680,6 +705,7 @@ function computeReduit(c0){
     else SUPPORTS[c.sys](ctx, seg, shelfPieces(seg, levels));
   }
   for (const g of ctx.grouped.values()) warn.push(g.text(joinDe(g.parts)));
+  if (lay.puffer) ctx.buy('doorstop', 1, 'Tür nach innen: hält die Klinke vom Regal fern');
 
   // Aggregieren
   const rowsMap = new Map();
@@ -714,6 +740,7 @@ function computeReduit(c0){
 
   // Beschläge
   const hw = [];
+  if (free && ctx.kipp) warn.push(`Die Module lassen sich liegend zusammengebaut nicht aufrichten – Kippmass ${ctx.kipp} mm bei ${H} mm Raumhöhe. Aufrecht am Platz zusammenbauen oder den Deckenabstand vergrössern.`);
   if (free) {
     hw.push(...jointHardware(c, ctx.lens, t, false, 'für Böden und Deckel'));
     if (ctx.pins) ctx.buy('shelfpin', ctx.pins, '4 pro Einlegeboden');
@@ -761,17 +788,16 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
+  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
 
   // Raumwände und Nischen für die 3D-Ansicht
-  const WT = 100, doorH = Math.min(2000, H - 150);
+  const WT = 100, doorH = c.doorH, { left:wfL, right:wfR } = lay.wand;
   extras.push({ type:'wall', size:[W + 2*WT, H, WT], pos:[0, H/2, -D/2 - WT/2] });
   extras.push({ type:'wall', size:[WT, H, D], pos:[-W/2 - WT/2, H/2, 0] });
   extras.push({ type:'wall', size:[WT, H, D], pos:[W/2 + WT/2, H/2, 0] });
-  const wf = lay.wf;
-  extras.push({ type:'wall', front:true, size:[wf + WT, H, WT], pos:[-W/2 - WT + (wf + WT)/2, H/2, D/2 + WT/2] });
-  extras.push({ type:'wall', front:true, size:[wf + WT, H, WT], pos:[W/2 + WT - (wf + WT)/2, H/2, D/2 + WT/2] });
-  extras.push({ type:'wall', front:true, size:[c.doorW, H - doorH, WT], pos:[0, doorH + (H - doorH)/2, D/2 + WT/2] });
+  extras.push({ type:'wall', front:true, size:[wfL + WT, H, WT], pos:[-W/2 - WT + (wfL + WT)/2, H/2, D/2 + WT/2] });
+  extras.push({ type:'wall', front:true, size:[wfR + WT, H, WT], pos:[W/2 + WT - (wfR + WT)/2, H/2, D/2 + WT/2] });
+  if (H - doorH > 1) extras.push({ type:'wall', front:true, size:[c.doorW, H - doorH, WT], pos:[-W/2 + lay.x0 + c.doorW/2, doorH + (H - doorH)/2, D/2 + WT/2] });
   for (const s of lay.segs) {
     if (!s.niche) continue;
     const a = s.niche.at === 'end' ? s.u1 - s.niche.w : s.u0;
@@ -782,7 +808,7 @@ function computeReduit(c0){
   return {
     kind:'reduit', W, H, D, Dtot:D, t, M, Bk, rows, boxes, doors:[], slides:[], extras, groups, hw, finish,
     tools:[...tools], steps, warn:[...new Set(warn)], carcFin:fin, frontFin:fin, level, joint:c.joint, matShort:M.name,
-    buyCost, solidCost, room:{ W, D, H, doorW:c.doorW, doorH }, build:c.build, sys:c.sys, shape:c.shape, modules:ctx.modules, max
+    buyCost, solidCost, room:{ W, D, H, doorW:c.doorW, doorH, doorX0:lay.x0 }, build:c.build, sys:c.sys, shape:c.shape, modules:ctx.modules, max
   };
 }
 
@@ -796,7 +822,7 @@ function buildReduitSteps(o){
   else st.push(['Zuschnitt organisieren', `Kopier die Materialliste und lass die Platten im Baumarkt zuschneiden.${hasSolid ? ' Kanthölzer und Latten gibt es in Standardlängen – selbst mit der Säge ablängen.' : ''}`, 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
   st.push(['Teile beschriften und schleifen', 'Positionsbuchstabe auf die Unterseite, Kanten mit Körnung 120 und 180 schleifen und leicht brechen.', null]);
   if (free) {
-    st.push(['Module bauen', `Pro Modul Boden und Deckel zwischen die Seiten setzen und mit der gewählten Verbindung (${JOINTS[c.joint].name}) verbinden. Zuerst trocken zusammenstecken, jede Ecke mit dem Winkel prüfen.`, 'Zu zweit geht es deutlich einfacher.']);
+    st.push(['Module bauen', `Pro Modul Boden und Deckel zwischen die Seiten setzen und mit der gewählten Verbindung (${JOINTS[c.joint].name}) verbinden. Zuerst trocken zusammenstecken, jede Ecke mit dem Winkel prüfen.${o.zuGross ? ` Fertig passen die Module nicht durch die Tür (${c.doorW} × ${c.doorH} mm) – darum im Reduit zusammenbauen.` : ''}`, 'Zu zweit geht es deutlich einfacher.']);
     if (Bk) st.push(['Rückwände montieren', 'Diagonalen messen, bis sie gleich lang sind, dann die Rückwand rundum 1 mm zurück alle 15 cm verschrauben.', null]);
     else st.push(['Module aussteifen', 'Diagonalen messen, bis sie gleich lang sind, dann hinten Metallwinkel in alle vier Ecken schrauben.', null]);
     st.push(['Module stellen', 'Zuerst die hinteren Module stellen und ausrichten, dann die seitlichen davor. Nebeneinanderstehende Module mit 2–3 Schrauben pro Seite verbinden.', 'Bei unebenem Boden Unterlegkeile oder Stellfüsse verwenden.']);

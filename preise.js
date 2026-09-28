@@ -53,6 +53,7 @@ const PREISE = {
     "screw4x40": { "price": 0.09, "est": true, "stand": "2026-09-28", "quelle": "Spax Senkkopf Torx 4 x 40 mm" },
     "screw4x45": { "price": 0.1, "est": true, "stand": "2026-09-28", "quelle": "Spax Senkkopf 4 x 45 mm" },
     "screw5x60": { "price": 0.18, "est": true, "stand": "2026-09-28", "quelle": "SPAX 5 x 60 mm (5 x 70 mm: 50 Stück CHF 9.50)" },
+    "doorstop": { "price": 8, "est": true, "stand": "2026-09-28", "quelle": "Türstopper Boden, Edelstahl" },
     "tipguard": { "price": 22.5, "stand": "2026-09-25", "quelle": "Abus TV-Kippsicherung Isa, 2 Stück; eigentliches Möbel-Kippschutz-Set nicht im Sortiment" }
   },
   "bretter": {
