@@ -208,11 +208,11 @@ function computeSideboard(c){
   if (c.base === 'legs') {
     const shape = c.legShape === 'straight' ? 'gerade, Ø 42 mm' : `konisch, Ø 42 → ${r0(42 * (1 - clamp(c.taper, 10, 60) / 100))} mm`;
     hw.push([legs, `Möbelfüsse ${c.legColor === 'black' ? 'schwarz lackiert' : 'Eiche natur'}, ${bh} mm, ${shape}`, 'inkl. Anschraubplatte']);
-    hw.push([legs*4, 'Holzschrauben 4 × 16 mm' + ss, 'für die Anschraubplatten']);
+    hw.push([legs*4, `Holzschrauben ${screwText(screwFor('fuss', t))} mm${ss}`, 'für die Anschraubplatten, nicht länger – sonst kommt die Spitze innen durch']);
   }
   if (c.base === 'plinth') {
-    hw.push([8, 'Holzschrauben 4 × 40 mm', 'Sockelecken verschrauben']);
-    hw.push([4, 'Stahlwinkel 40 × 40 mm + Schrauben 4 × 16', 'Sockel unter den Boden schrauben']);
+    hw.push([8, `Holzschrauben ${screwText(screwFor('kante', t))} mm${ss}`, 'Sockelecken verschrauben, vorbohren']);
+    hw.push([4, `Stahlwinkel 40 × 40 mm + Schrauben ${screwText(screwFor('fuss', t))}`, 'Sockel unter den Boden schrauben']);
   }
   if (c.base === 'none') hw.push([4, 'Filzgleiter Ø 25 mm, 3–5 mm hoch', 'schont den Boden']);
   if (H > 1000 || H > 2.4*D) hw.push([1, 'Kippschutz-Set (Wandbefestigung)', 'Dübel passend zur Wand']);
@@ -290,7 +290,7 @@ function buildSteps(o){
   st.push(['Korpus zusammenbauen', `Zuerst alles trocken zusammenstecken. Dann den Boden zwischen die Seiten setzen, ${topOver ? 'den Deckel oben auflegen' : 'den Deckel zwischen die Seiten setzen'}${n > 1 ? ' und die Mittelwände dazwischen einpassen' : ''}.${glue} Arbeite auf einer ebenen Fläche und kontrollier jede Ecke mit dem Winkel.`, 'Zu zweit geht es deutlich einfacher.']);
   if (Bk) st.push(['Rechtwinklig ausrichten, Rückwand montieren', 'Beide Diagonalen messen – sind sie gleich lang, ist der Korpus rechtwinklig. Rückwand auflegen, rundum 1 mm zurück, und alle 15 cm verschrauben, auch in die Hinterkanten der Mittelwände. Die Rückwand macht den Korpus stabil.', null]);
   else st.push(['Rechtwinklig ausrichten und aussteifen', 'Beide Diagonalen messen, bis sie gleich lang sind. Dann hinten in allen vier Ecken Metallwinkel setzen.', null]);
-  if (c.base === 'legs') st.push(['Füsse montieren', `Korpus auf eine Decke legen. Anschraubplatten ca. 55 mm von den Aussenkanten unter den Boden schrauben und die ${bh} mm hohen Füsse eindrehen.`, 'Schrauben nicht länger als Bodenstärke minus 3 mm.']);
+  if (c.base === 'legs') st.push(['Füsse montieren', `Korpus auf eine Decke legen. Anschraubplatten ca. 55 mm von den Aussenkanten unter den Boden schrauben und die ${bh} mm hohen Füsse eindrehen.`, `Schrauben ${screwText(screwFor('fuss', t))} mm – längere kommen innen durch den Boden.`]);
   if (c.base === 'plinth') st.push(['Sockel bauen und montieren', 'Die vier Sockelteile zu einem Rahmen verschrauben (Blenden aussen, Seitenteile dazwischen). Rahmen 30 mm zurückversetzt unter den Boden stellen und mit den Stahlwinkeln festschrauben.', 'Der zurückgesetzte Sockel lässt das Möbel schweben.']);
   if (bath) { /* bereits vor der Montage versiegelt */ }
   else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.' + frontNote, null]);

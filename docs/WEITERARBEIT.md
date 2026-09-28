@@ -32,7 +32,7 @@ Noch offen: Schwellen Eckfach 350 mm / Durchlauf + 100 mm · Seekiefer beim Side
 Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude/next-steps-9c8hnq` (baut auf `schreiner-review` auf):
 
 - [x] **1. Pfostenrahmen, Variante A:** Pfosten stehen vor der Querlatte (`addPost`, v = Tiefe … Tiefe + 45), Tablare rechteckig. Eckpfosten an jeder Innenecke (beim Seitenregal gesetzt, trägt auch die hintere Querlatte), keine Eckleiste mehr. Pfostenabstand nach der Querlatte (`POST_MAX` 1200) statt nach der Tablar-Spannweite: Standard-U 2 statt 4 Pfosten, unabhängig vom Material. Verbindungen auf der Kaufliste: Winkel je Querlatten-Ende (Wand, Ecke), 5 × 60 durch die Pfosten (Eckpfosten 3 je Ebene), Tablare mit 4 × 40 von oben. Bauablauf: Latten → Tablare einschieben → Pfosten stellen → Tablare verschrauben. Durchgang wird zwischen den Pfosten gemessen (− 90 mm). Stützen an freien Enden und Stössen (Leisten, Schienen, Winkel) stehen ebenfalls vor dem Tablar. Stösse bei ganzen Brettern brauchen beim Pfostenrahmen keinen eigenen Pfosten (das Tablar liegt auf Wand- und Querlatte).
-- [ ] 2. Schraubentabelle `screwFor`
+- [x] **2. Schrauben nach Stärke:** `screwFor(anbau, t)` in `shared.js` (Anwendungen `blech`, `latte`, `streifen`, `oben`, `fuss`, `kante`; längste Schraube mit höchstens 22 mm Biss und mindestens 4 mm Holz über der Spitze). Reduit: Kaufteile je Länge (`screw4x16` …, aus `SCHRAUBEN`), Konsolen/Winkel 4 × 16 statt 4 × 35 bei 18 mm, Leisten von oben verschraubt (Schrauben neu auf der Liste), Eckleiste aus Plattenstreifen 3,5 × 30. Dübelschraube nach Anbauteil (`dowelFor`: Metall und Leisten bis 20 mm 4,5 × 50, Latten 24 → 5 × 60, darüber 5 × 70). Sideboard: Füsse und Sockelwinkel nach Bodenstärke (18 mm → 4 × 12), Sockelecken nach Stärke. Gleiche Kaufteile mit verschiedenen Zwecken führen alle Zwecke in der Notiz. Snapshot neu geschrieben (nur Schraubenzeilen und der Tipp bei den Füssen geändert).
 - [ ] 3. Sofort-Sperren (3.4)
 - [ ] 4. Geometrie
 - [ ] 5. SPAN nach `shared.js`
@@ -55,7 +55,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 |---|---|
 | `index.html` | Formular, Renderer, 3D (three.js r128) |
 | `preise.js` | **Nur Daten:** Preise, Stärken, Plattenformate, Stand und Quelle für Platten, Rückwände, ganze Bretter und Kaufteile (JSON in Script-Hülle, ohne Build ladbar) |
-| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts` |
+| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts`, Schrauben nach Stärke `screwFor` |
 | `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
 | `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
 | `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern), Entwürfe pro Typ (`entwuerfeLaden`, `entwurfSetzen`), `kostenGesamt`, `geaendert`, `sortiere`, `ortAusHash` |
@@ -112,7 +112,7 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
   - Sicher dabei: **go/on Leimholzbrett Fichte** 18 mm (200/400 × 1200/2000).
   - Vorschlag, noch offen: Regalbauplatte weiss 16 mm (1150 × 200…600, Kanten beschichtet), Mood Eiche 18 mm 2000 × 600 (Sideboard-Tiefe, ≈ 76 statt 109/m²), evtl. Mood Fichte A 18 mm. Schaltafel ist schon ein festes Format und gehört ins neue Modell. Nicht: OSB mini, Vielzweckplatte.
   - Reihenfolge: zuerst Preise in die Datendatei auslagern, dann die festen Formate dort mit erfassen.
-- [ ] Kaufteile in `preise.js` → `kaufteile`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel, Schrauben 4 × 35 sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert). Skript um Stückpreise erweitern.
+- [ ] Kaufteile in `preise.js` → `kaufteile`: Wandschienen, Konsolen, Blechkonsolen, Winkelverbinder, Dübel und die Holzschrauben nach Länge sind **Schätzungen** (`est:true`, in der Beschlägeliste als «Preis geschätzt» markiert). Skript um Stückpreise erweitern.
 - [ ] Richtpreise für Sideboard-Beschläge (Scharniere, Schiebetürbeschlag, Füsse) fehlen ganz; ebenso Verbindungsbeschläge und Rückwandschrauben (beide Möbel) und Oberfläche (Öl, Grundierung, Lack).
 - [ ] Ungenau, aber keine Preise: Spannweiten `SPAN` (Daumenregel), Ergiebigkeit von Farbe/Öl (10 bzw. 22 m²/l), Schnittkosten beim Zuschnitt nicht eingerechnet.
 

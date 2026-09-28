@@ -164,11 +164,13 @@ const BUY_INFO = {
   shelfpin:  { name:'Steckbodenträger Ø 5 mm (Hettich)' },
   angle40:   { name:'Winkelverbinder 40 × 40 mm inkl. Schrauben' },
   dowel6:    { name:'Spreizdübel 6 mm + Schraube 4,5 × 50 mm' },
+  dowel6x60: { name:'Spreizdübel 6 mm + Schraube 5 × 60 mm' },
+  dowel6x70: { name:'Spreizdübel 6 mm + Schraube 5 × 70 mm' },
   hollow:    { name:'Hohlraumdübel HM 5 × 52 inkl. Schraube (Fischer)' },
-  screw35:   { name:'Holzschrauben 4 × 35 mm' },
-  screw4x40: { name:'Senkkopfschrauben 4 × 40 mm' },
   screw5x60: { name:'Holzschrauben 5 × 60 mm' },
-  tipguard:  { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)' }
+  tipguard:  { name:'Kippsicherung mit Gurt, 2 Stück (Abus Isa)' },
+  // Holzschrauben nach Länge (SCHRAUBEN, screwFor in shared.js)
+  ...Object.fromEntries(SCHRAUBEN.map(s => [screwKey(s), { name:`Holzschrauben ${screwText(s)} mm` }]))
 };
 const BUY = Object.fromEntries(Object.entries(BUY_INFO).map(([k, b]) => {
   const P = PRICE_DATA.kaufteile[k] || { price:0, est:true };
@@ -245,7 +247,7 @@ function addShelf(ctx, seg, p, note){
 function addCornerBatten(ctx, seg, p){
   addStrip(ctx, 'Eckleiste', seg.depth - 3, 'unter dem Eckstoss, an beide Tablare geschraubt',
     ctx.box(seg, { u0:p.a - 20, u1:p.a + 20, y0:p.y - ctx.t, y1:p.y, v0:3, v1:seg.depth }, 'y', 'v', ctx.stripFin, [0, -60, 0]));
-  ctx.buy('screw35', 4, 'Eckleisten');
+  ctx.screw(ctx.boards ? 'latte' : 'streifen', 4, 'Eckleisten');
 }
 // Kantholz vor der Tablarkante (v = Tiefe … Tiefe + 45), damit die Tablare rechteckig bleiben; at = linke Kante entlang u.
 function addPost(ctx, seg, at, height, note){
@@ -314,7 +316,7 @@ function splitShelf(ctx, seg, p, supports, v1 = seg.depth - 50){
   for (const u of cuts) {
     ctx.add('Stossleiste', v1 - 30, 48, 24, ctx.gSolid, 'unter dem Tablarstoss, an beide Stücke geschraubt', 'solid',
       ctx.box(seg, { u0:u - 24, u1:u + 24, y0:p.y - 24, y1:p.y, v0:30, v1 }, 'y', 'v', SOLID_FIN, [0, -60, 0]), BUY.latte.price);
-    ctx.buy('screw35', 4, 'Stossleisten');
+    ctx.screw('latte', 4, 'Stossleisten');
   }
   return { pieces, supports: added.map(u => u - JOINT_OFF) };
 }
@@ -334,7 +336,11 @@ const SUPPORTS = {
   battens(ctx, seg, shelves){
     const t = ctx.t;
     const split = splitShelves(ctx, seg, shelves, []);
-    for (const q of split.pieces) addShelf(ctx, seg, q, 'liegt auf Leisten');
+    for (const q of split.pieces) {
+      addShelf(ctx, seg, q, 'liegt auf Leisten, von oben verschraubt');
+      ctx.screw('oben', 2 * (1 + q.ends.filter(e => e === 'wall').length), 'Tablare von oben in die Leisten, 2 pro Leiste');
+    }
+    const leiste = ctx.boards ? 24 : t;   // Dicke der Leiste an der Wand
     const jointPosts = new Map();
     for (const q of split.pieces) if (q.ends[1] === 'joint') {
       const u = r0(q.b - JOINT_OFF - 22), cur = jointPosts.get(u) || { h:0, n:0 };
@@ -347,13 +353,13 @@ const SUPPORTS = {
     for (const p of shelves) {
       addStrip(ctx, 'Leiste', p.b - p.a, 'Wandleiste, alle 40 cm an die Wand',
         ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 40, y1:p.y, v0:0, v1:t }, 'v', 'u', ctx.stripFin, [0, -40, 0]));
-      ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
+      ctx.dowel(leiste, Math.max(2, Math.ceil((p.b - p.a) / 400) + 1));
       for (const e of [0, 1]) {
         if (p.ends[e] !== 'wall') continue;
         const u = e === 0 ? p.a - 3 : p.b + 3 - t;
         addStrip(ctx, 'Leiste', seg.depth - 20 - t, 'Endleiste an der Stirnwand',
           ctx.box(seg, { u0:u, u1:u + t, y0:p.y - 40, y1:p.y, v0:t, v1:seg.depth - 20 }, 'u', 'v', ctx.stripFin, [0, -40, 0]));
-        ctx.fix += 2;
+        ctx.dowel(leiste, 2);
       }
       if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     }
@@ -381,7 +387,7 @@ const SUPPORTS = {
       const parts = [];
       for (let rest = need; rest > 0; ) { const l = RAIL_LENS.find(x => x >= rest) || RAIL_LENS[RAIL_LENS.length - 1]; parts.push(l); rest -= l; }
       if (parts.length > 1) groupWarn(ctx, 'rails2', SIDE_NAME[seg.id], sides => `Die Wandschienen ${sides} brauchen ${r0(need)} mm – längste Schiene ist ${RAIL_LENS[RAIL_LENS.length - 1]} mm, darum je zwei Stücke bündig übereinander (eingeplant).`);
-      for (const l of parts) { ctx.buy('rail' + l, 1, 'senkrecht, auf Länge kürzen'); ctx.fix += Math.ceil(l / 300) + 1; }
+      for (const l of parts) { ctx.buy('rail' + l, 1, 'senkrecht, auf Länge kürzen'); ctx.dowel(0, Math.ceil(l / 300) + 1); }
       ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y1, v0:0, v1:12 }, 'v', 'y', null) });
       for (const p of on) {
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 6, u1:u + 6, y0:p.y - 25, y1:p.y, v0:12, v1:12 + kl }, 'u', 'v', null, [0, 0, 120]) });
@@ -389,7 +395,7 @@ const SUPPORTS = {
       }
     }
     ctx.buy('konsole' + kl, konsolen, 'eine pro Tablar und Schiene');
-    ctx.buy('screw35', konsolen * 2, 'Tablare auf die Konsolen');
+    ctx.screw('blech', konsolen * 2, 'Tablare von unten durch die Konsolen');
     for (const p of list) if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     freeEndPosts(ctx, seg, shelves);
     if (n > 2) extraWarn(ctx, seg, 'zusätzliche Schienen');
@@ -414,8 +420,8 @@ const SUPPORTS = {
       if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     }
     ctx.buy('winkel' + size, count, 'unter die Tablare');
-    ctx.fix += count * 2;
-    ctx.buy('screw35', count * 2, 'Tablare auf die Winkel');
+    ctx.dowel(0, count * 2);
+    ctx.screw('blech', count * 2, 'Tablare von unten durch die Winkel');
     freeEndPosts(ctx, seg, shelves);
     if (extra) extraWarn(ctx, seg, 'zusätzliche Winkel');
   },
@@ -428,7 +434,7 @@ const SUPPORTS = {
         ctx.box(seg, { u0:u, u1:u + t, y0:0, y1:h, v0:0, v1:seg.depth }, 'u', 'y', ctx.fin, [0, 0, 80]));
     }
     ctx.buy('angle40', pos.length * 3, 'Wangen an Wand und Boden');
-    ctx.fix += pos.length * 3;
+    ctx.dowel(0, pos.length * 3);
     const nicheEdge = seg.niche ? (seg.niche.at === 'end' ? seg.u1 - seg.niche.w : seg.u0 + seg.niche.w) : null;
     let n = 0;
     for (let i = 0; i < pos.length - 1; i++) {
@@ -475,12 +481,12 @@ const SUPPORTS = {
     const split = splitShelves(ctx, seg, shelves, pts.filter(u => u > seg.u0 && u < seg.u1), seg.depth - 30);
     for (const q of split.pieces) {
       addShelf(ctx, seg, q, 'liegt auf den Latten, von oben verschraubt');
-      ctx.buy('screw4x40', 2 * (2 + q.ends.filter(e => e === 'wall').length), 'Tablare von oben auf die Latten, 2 pro Latte');
+      ctx.screw('oben', 2 * (2 + q.ends.filter(e => e === 'wall').length), 'Tablare von oben auf die Latten, 2 pro Latte');
     }
     for (const p of shelves) {
       ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Wandlatte, alle 40 cm an die Wand', 'solid',
         ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:0, v1:24 }, 'v', 'u', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
-      ctx.fix += Math.max(2, Math.ceil((p.b - p.a) / 400) + 1);
+      ctx.dowel(24, Math.max(2, Math.ceil((p.b - p.a) / 400) + 1));
       ctx.add('Latte 24 × 48', p.b - p.a, 48, 24, ctx.gSolid, 'Querlatte vorne, trägt die Tablare, an Pfosten und Endlatten befestigt', 'solid',
         ctx.box(seg, { u0:p.a, u1:p.b, y0:p.y - 48, y1:p.y, v0:seg.depth - 24, v1:seg.depth }, 'v', 'u', SOLID_FIN, [0, -40, 60]), BUY.latte.price);
       for (const e of [0, 1]) {
@@ -488,7 +494,7 @@ const SUPPORTS = {
         const u = e === 0 ? p.a - 3 : p.b + 3 - 24;
         ctx.add('Latte 24 × 48', seg.depth - 48, 48, 24, ctx.gSolid, 'Endlatte an der Stirnwand', 'solid',
           ctx.box(seg, { u0:u, u1:u + 24, y0:p.y - 48, y1:p.y, v0:24, v1:seg.depth - 24 }, 'u', 'v', SOLID_FIN, [0, -40, 0]), BUY.latte.price);
-        ctx.fix += 2;
+        ctx.dowel(24, 2);
       }
       // Ein Winkel je Querlatten-Ende an der Wand und in der Ecke (seitliche an die hintere Querlatte).
       ctx.buy('angle40', p.ends.filter(e => e === 'wall' || e === 'corner').length, 'Querlatten an Endlatten und in der Ecke');
@@ -503,6 +509,8 @@ const SUPPORTS = {
   }
 };
 const plusTen = x => Math.ceil(x * 1.1);
+// Dübel mit Schraube nach der Dicke des Anbauteils: 4,5 × 50 für Metall und Leisten bis 20 mm, 5 × 60 für Latten 24, 5 × 70 darüber.
+const dowelFor = durch => durch <= 20 ? 'dowel6' : durch <= 24 ? 'dowel6x60' : 'dowel6x70';
 
 /* ---------- Selbststehend ---------- */
 function freeModules(ctx, seg){
@@ -542,7 +550,7 @@ function freeModules(ctx, seg){
         ctx.backScrews += Math.ceil(2 * (w + top) / 150);
       } else ctx.buy('angle40', 4, 'ohne Rückwand: hinten in die Ecken');
       ctx.modules++;
-      if (top > 1200) { ctx.tall++; ctx.fix += 2; }
+      if (top > 1200) { ctx.tall++; ctx.dowel(0, 2); }
     }
   }
 }
@@ -572,7 +580,10 @@ function computeReduit(c0){
       const B = boardWidthFor(BM.widths, seg.depth - 3);
       return B == null ? Infinity : Math.max(...BM.boards.filter(f => f.B === B).map(f => f.L));
     },
-    fix:0, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
+    fix:0, fixBy:new Map(), lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
+    // Wanddübel; durch = Dicke des Anbauteils (0 für Metall)
+    dowel(durch, n){ const k = dowelFor(durch); ctx.fix += n; ctx.fixBy.set(k, (ctx.fixBy.get(k) || 0) + n); },
+    screw(anbau, qty, note){ ctx.buy(screwKey(screwFor(anbau, t)), qty, note); },
     add(name, L, B, th, group, note, kind, box, pm){
       if (BM && kind === 'korpus') { const w = boardWidthFor(BM.widths, B); if (w != null) B = w; }   // ganzes Brett: Teilbreite = Brettbreite
       const key = [name, r0(L), r0(B), th, group, note].join('|');
@@ -583,7 +594,8 @@ function computeReduit(c0){
     buy(key, qty, note){
       if (!qty) return;
       const cur = buys.get(key);
-      if (cur) cur.qty += qty; else buys.set(key, { qty, note });
+      if (!cur) buys.set(key, { qty, notes:[note] });
+      else { cur.qty += qty; if (!cur.notes.includes(note)) cur.notes.push(note); }
     }
   };
 
@@ -634,8 +646,9 @@ function computeReduit(c0){
     else warn.push('Ohne Rückwand verziehen sich die Module leicht. Metallwinkel hinten in die Ecken sind eingeplant – eine Rückwand ist stabiler.');
   }
   const drywall = c.wall === 'drywall';
-  if (ctx.fix) ctx.buy(drywall ? 'hollow' : 'dowel6', plusTen(ctx.fix), drywall ? 'für Gipskarton, wenn möglich in die Ständer' : 'für Beton oder Backstein, +10 % Reserve');
-  for (const [key, { qty, note }] of buys) hw.push([qty, BUY[key].name, BUY[key].est ? `${note} · Preis geschätzt` : note, BUY[key].price]);
+  if (drywall && ctx.fix) ctx.buy('hollow', plusTen(ctx.fix), 'für Gipskarton, wenn möglich in die Ständer');
+  else for (const [k, n] of ctx.fixBy) ctx.buy(k, plusTen(n), 'für Beton oder Backstein, +10 % Reserve');
+  for (const [key, { qty, notes }] of buys) { const note = notes.join('; '); hw.push([qty, BUY[key].name, BUY[key].est ? `${note} · Preis geschätzt` : note, BUY[key].price]); }
   if (drywall && ctx.fix) warn.push('Gipskarton trägt wenig: Leisten, Schienen und Winkel wenn möglich in die Ständer schrauben (meist alle 60 cm) und Hohlraumdübel verwenden. Für schwere Lasten besser selbststehend bauen.');
 
   const buyCost = hw.reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
@@ -700,6 +713,7 @@ function computeReduit(c0){
 /* ---------- Bauablauf ---------- */
 function buildReduitSteps(o){
   const { c, free, Bk, drywall, hasSolid, hasFreeEnds, hasCorner, hasJoints } = o;
+  const sc = anbau => screwText(screwFor(anbau, c.t));
   const st = [];
   st.push(['Raum ausmessen und Wände prüfen', `Breite und Tiefe auf drei Höhen messen – alte Wände sind selten gerade, rechne mit dem kleinsten Mass. Mit dem Leitungssucher Strom- und Wasserleitungen markieren.${drywall ? ' Bei Gipskarton die Ständer suchen (meist alle 60 cm) und anzeichnen.' : ''}`, 'Ein Foto mit Doppelmeter an jeder Wand hilft später beim Zuschnitt.']);
   if (o.boards) st.push(['Bretter einkaufen und ablängen', `Die ganzen Bretter stehen in der Einkaufsliste (Beschläge & Kaufteile). Zuhause mit Kapp- oder Handkreissäge auf die Längen der Materialliste ablängen – die Breite bleibt, wie sie ist.${hasSolid ? ' Kanthölzer und Latten ebenso auf Länge sägen.' : ''}`, 'Zuerst die längsten Teile anzeichnen, dann die kurzen aus den Resten.']);
@@ -725,12 +739,18 @@ function buildReduitSteps(o){
       st.push(['Latten montieren', `Wandlatten und Endlatten auf die Linien schrauben (${ank}, alle 40 cm). Die vorderen Querlatten an den Wänden mit je einem Winkel auf die Endlatte schrauben${corner ? ', in der Ecke die seitliche Querlatte mit einem Winkel an die hintere' : ''}.`, 'Bis die Pfosten stehen, lange Querlatten in der Mitte mit einem Reststück abstützen.']);
       st.push(['Tablare einschieben', `Die Tablare auf ihrer Höhe von vorne auf Wand- und Querlatte schieben${corner ? ', zuerst die hinteren, dann die seitlichen' : ''}. Die Pfosten kommen erst danach.`, null]);
       st.push(['Pfosten stellen', `Pfosten auf Länge sägen, vor die Querlatten stellen und lotrecht ausrichten. Jede Querlatte mit 2 Schrauben 5 × 60 von vorne durch den Pfosten anschrauben, vorbohren mit Ø 3 mm.${corner ? ' Am Eckpfosten die seitliche Querlatte mit einer Schraube von der Gangseite befestigen, 24 mm unter dem Tablar – so treffen sich die Schrauben im Pfosten nicht.' : ''}`, 'Einen Kunststoffgleiter unter jeden Pfosten legen, nicht in den Boden dübeln.']);
-      st.push(['Tablare verschrauben', 'Jedes Tablar von oben mit 2 Senkkopfschrauben 4 × 40 pro Latte an Wand-, End- und Querlatte schrauben, vorbohren. Erst dann belasten.', 'Verschraubt wird das Tablar zur Scheibe und hält den Rahmen an der Wand.']);
+      st.push(['Tablare verschrauben', `Jedes Tablar von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Latte an Wand-, End- und Querlatte schrauben, vorbohren. Erst dann belasten.`, 'Verschraubt wird das Tablar zur Scheibe und hält den Rahmen an der Wand.']);
     }
     if (hasFreeEnds) st.push(['Stützen an den freien Enden', 'Kanthölzer vor die freien Tablar-Enden stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel an die Stütze schrauben.', null]);
-    if (c.sys !== 'posts') st.push(['Tablare auflegen', c.sys === 'cheeks' ? 'Bodenträger stecken und die Tablare auflegen.' : 'Tablare auflegen und von unten mit Schrauben 4 × 35 an Leisten, Konsolen oder Winkeln fixieren.', null]);
-    if (hasCorner) st.push(['Eckstösse verbinden', 'Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben in jedes Tablar.', null]);
-    if (hasJoints) st.push(['Stösse verbinden', 'Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben 4 × 35 in beide Stücke schrauben.', 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
+    const auflegen = {
+      battens: `Tablare auflegen und von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Leiste festschrauben, vorbohren.`,
+      rails: `Tablare auflegen und von unten durch jede Konsole mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus.`,
+      brackets: `Tablare auflegen und von unten durch jeden Winkel mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus.`,
+      cheeks: 'Bodenträger stecken und die Tablare auflegen.'
+    };
+    if (auflegen[c.sys]) st.push(['Tablare auflegen', auflegen[c.sys], null]);
+    if (hasCorner) st.push(['Eckstösse verbinden', `Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben ${sc(o.boards ? 'latte' : 'streifen')} in jedes Tablar.`, null]);
+    if (hasJoints) st.push(['Stösse verbinden', `Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben ${sc('latte')} in beide Stücke schrauben.`, 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
   }
   if (MATS[c.mat] && MATS[c.mat].coated) st.push(['Kanten schützen', c.mat === 'dekorspan' ? 'Sichtbare Kanten mit Kantenband bügeln, Überstand mit dem Cutter abnehmen.' : 'Schnittkanten mit Lack oder Öl streichen, damit sie keine Feuchtigkeit ziehen.', null]);
   else st.push([c.mat === 'mdf' ? 'Lackieren' : 'Oberfläche ölen', c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren – am besten vor der Montage.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal – am einfachsten vor der Montage.', null]);

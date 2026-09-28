@@ -133,6 +133,34 @@ function packBoards(items, boards, kerf){
 }
 
 /* ---------- Verbindungen ---------- */
+/* ---------- Schrauben nach Stärke ---------- */
+// Handelsübliche Holzschrauben [Ø, Länge] in mm.
+const SCHRAUBEN = [[3.5, 10], [4, 12], [4, 16], [4, 20], [4, 25], [3.5, 30], [4, 35], [4, 40], [4, 45]];
+// Längste Schraube, die durch `durch` mm (Blech, Leiste, Tablar) höchstens `biss` mm in `holz` mm Holz greift und
+// mindestens 4 mm Holz über der Spitze lässt (Schreiner-Review, Tabelle im Eck-Urteil).
+function schraube(durch, holz, biss = 22){
+  const max = durch + Math.min(holz - 4, biss);
+  return [...SCHRAUBEN].reverse().find(([, L]) => L <= max) || SCHRAUBEN[0];
+}
+// Schraube je Anwendung bei Bauteilstärke t:
+// blech    = von unten durch Konsole oder Blechwinkel (ca. 2 mm) ins Tablar
+// latte    = von unten durch eine Eck- oder Stossleiste aus Dachlatte (24 mm, flach) ins Tablar
+// streifen = von unten durch eine Leiste aus dem Plattenmaterial (t, flach) ins Tablar
+// oben     = von oben durch das Tablar in Leiste oder Latte
+// fuss     = Anschraubplatte oder Winkel unter dem Boden (Platte nicht mitgerechnet, höchstens 16 mm Biss)
+// kante    = durch ein Bauteil (t) in die Kante eines zweiten, z. B. Sockelecken (höchstens 25 mm Biss)
+function screwFor(anbau, t){
+  if (anbau === 'blech') return schraube(2, t);
+  if (anbau === 'latte') return schraube(24, t);
+  if (anbau === 'streifen') return schraube(t, t);
+  if (anbau === 'oben') return schraube(t, 40);
+  if (anbau === 'fuss') return schraube(0, t, 16);
+  if (anbau === 'kante') return schraube(t, 100, 25);
+  throw new Error('screwFor: unbekannte Anwendung ' + anbau);
+}
+const screwText = ([d, L]) => `${String(d).replace('.', ',')} × ${L}`;
+const screwKey = ([d, L]) => `screw${d}x${L}`;
+
 // Beschläge für die gewählte Korpusverbindung. lens = Längen aller Stösse (mm), what = wofür die Schrauben sind.
 function jointHardware(c, lens, t, bath, what){
   const hw = [];
@@ -210,4 +238,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SCHRAUBEN, schraube, screwFor, screwText, screwKey };

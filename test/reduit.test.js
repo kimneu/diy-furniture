@@ -412,7 +412,7 @@ test('Pfostenrahmen: Verbindungen stehen auf der Kaufliste', () => {
   const Rr = postRun({});
   assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 60'), 2 * Math.ceil(3 * 5 * 1.1));   // 2 Eckpfosten × 3 Schrauben × 5 Ebenen
   assert.strictEqual(qtyOf(Rr, 'Winkelverbinder'), 3 * 2 * 5);                          // je Querlatte 2 Enden (Wand oder Ecke) × 5 Ebenen
-  assert.ok(qtyOf(Rr, 'Senkkopfschrauben 4 × 40') > 0);
+  assert.ok(qtyOf(Rr, 'Holzschrauben 4 × 40') > 0);
   assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 70'), 0);
 });
 
@@ -428,4 +428,41 @@ test('Stützen an freien Enden und Stössen stehen vor dem Tablar', () => {
       const Rr = run({ sys, ...o });
       for (const p of postBoxes(Rr)) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), sys + JSON.stringify(o) + ' ' + b.key);
     }
+});
+
+/* ---------- Schrauben und Dübel nach Stärke (Schreiner-Review K04) ---------- */
+const screwLens = Rr => Rr.hw.filter(h => /^Holzschrauben [\d,]+ × \d+ mm$/.test(h[1])).map(h => ({ n:h[0], L:Number(h[1].match(/× (\d+)/)[1]), note:h[2] }));
+
+test('Schrauben durch Konsolen und Winkel kommen nicht oben aus dem Tablar', () => {
+  for (const sys of ['rails', 'brackets']) for (const [mat, t] of [['birke', 12], ['fichtesp', 15], ['birke', 18], ['mdf', 19], ['birke', 21], ['fichte', 27]]) {
+    const Rr = run({ sys, mat, t, shape:'I' });
+    const s = screwLens(Rr).filter(x => x.note.includes('Konsolen') || x.note.includes('Winkel'));
+    assert.ok(s.length, sys + t);
+    for (const x of s) assert.ok(x.L <= 2 + t - 3, `${sys} ${mat} ${t}: ${x.L} mm`);
+  }
+});
+
+test('Leisten: die Tablare werden von oben verschraubt, die Schrauben stehen auf der Liste', () => {
+  const Rr = run({ sys:'battens', shape:'I' });
+  const s = screwLens(Rr).find(x => x.note.includes('von oben'));
+  assert.ok(s && s.L === 40 && s.n > 0, JSON.stringify(screwLens(Rr)));
+  assert.ok(Rr.steps.some(st => st[0] === 'Tablare auflegen' && st[1].includes('von oben') && st[1].includes('4 × 40')));
+});
+
+test('Eckleiste aus dem Plattenmaterial: die Schraube bricht nicht durch', () => {
+  for (const t of [12, 18, 21]) {
+    const Rr = run({ sys:'battens', shape:'U', mat:'birke', t });
+    const s = screwLens(Rr).find(x => x.note.includes('Eckleisten'));
+    assert.ok(s && s.L <= 2 * t - 3, `${t}: ${JSON.stringify(s)}`);
+  }
+});
+
+test('Dübelschraube nach Anbauteil: 4,5 × 50 für Metall, 5 × 60 für Latten 24', () => {
+  const posts = run({ sys:'posts' }), rails = run({ sys:'rails' });
+  assert.ok(qtyOf(posts, 'Spreizdübel 6 mm + Schraube 5 × 60') > 0);
+  assert.strictEqual(qtyOf(posts, 'Spreizdübel 6 mm + Schraube 4,5 × 50'), 0);
+  assert.ok(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 4,5 × 50') > 0);
+  assert.strictEqual(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 5 × 60'), 0);
+  assert.ok(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 5 × 70') > 0);
+  assert.ok(qtyOf(run({ sys:'posts', wall:'drywall' }), 'Hohlraumdübel') > 0);
 });

@@ -74,3 +74,29 @@ test('Materialnamen: Werkstoff zuerst, eindeutig, Marke in Klammern nur bei ganz
     assert.ok(!M.name.includes('(') || M.boards, `${M.name}: Marke in Klammern nur bei ganzen Brettern`);
   }
 });
+
+/* ---------- Schrauben nach Stärke (Schreiner-Review K04) ---------- */
+test('screwFor: jede Schraube lässt mindestens 3 mm Holz über der Spitze und greift genug', () => {
+  const ts = [...new Set(Object.values(S.MATS).flatMap(M => M.t))];
+  for (const t of ts) {
+    const L = a => S.screwFor(a, t)[1];
+    assert.ok(L('blech') <= 2 + t - 3 && L('blech') - 2 >= 8, `blech ${t}: ${L('blech')}`);
+    assert.ok(L('latte') <= 24 + t - 3 && L('latte') - 24 >= 6, `latte ${t}: ${L('latte')}`);
+    assert.ok(L('streifen') <= 2 * t - 3 && L('streifen') - t >= 6, `streifen ${t}: ${L('streifen')}`);
+    assert.ok(L('oben') - t >= 15 && L('oben') - t <= 22, `oben ${t}: ${L('oben')}`);
+    // Füsse unter einem 12-mm-Boden gehen nicht (Regel S01 sperrt den 12-mm-Korpus beim Sideboard).
+    if (t >= 15) assert.ok(L('fuss') <= t - 3, `fuss ${t}: ${L('fuss')}`);
+    assert.ok(L('kante') - t >= 15, `kante ${t}: ${L('kante')}`);
+  }
+});
+
+test('screwFor: Werte aus der Tabelle im Eck-Urteil', () => {
+  const s = (a, t) => S.screwText(S.screwFor(a, t));
+  assert.strictEqual(s('blech', 18), '4 × 16');
+  assert.strictEqual(s('blech', 15), '4 × 12');
+  assert.strictEqual(s('blech', 12), '3,5 × 10');
+  assert.strictEqual(s('latte', 18), '4 × 35');
+  assert.strictEqual(s('latte', 27), '4 × 45');
+  assert.strictEqual(s('oben', 18), '4 × 40');
+  assert.strictEqual(s('fuss', 18), '4 × 12');
+});
