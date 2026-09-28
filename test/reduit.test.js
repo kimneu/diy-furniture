@@ -549,3 +549,11 @@ test('Eckfach: MDF 19 lässt das Eckquadrat leer und sagt es', () => {
   assert.strictEqual(eckOffen(M, 300, 400), Infinity);
   assert.ok(M.steps.some(s => s[0] === 'Ecke leer lassen'));
 });
+
+test('Selbststehend: Seiten, Böden und Rückwand überschneiden sich nicht', () => {
+  for (const shape of ['I', 'L', 'U']) for (const [mat, t, back] of [['birke', 18, 'hdf3'], ['mdf', 19, 'ply6'], ['birke', 18, 'none']]) {
+    const Rr = run({ build:'free', shape, mat, t, back });
+    for (let i = 0; i < Rr.boxes.length; i++) for (let j = i + 1; j < Rr.boxes.length; j++)
+      assert.ok(!overlaps(Rr.boxes[i], Rr.boxes[j]), `${shape} ${mat} ${Rr.boxes[i].key} × ${Rr.boxes[j].key}`);
+  }
+});

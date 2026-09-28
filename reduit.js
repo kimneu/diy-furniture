@@ -606,9 +606,10 @@ function freeModules(ctx, seg){
       const lv = ctx.levels.filter(y => y >= minY);
       if (!lv.length) { ctx.warn.push(`Über der Nische ${SIDE_NAME[seg.id]} hat es kein Tablar mehr – Modul weggelassen.`); continue; }
       const top = Math.max(...lv) + t;
+      // Die Rückwand ist hinten auf die Seiten geschraubt: Seiten um ihre Stärke weniger tief (wie beim Sideboard).
       for (const side of [ma, mb - t]) {
-        ctx.add('Seite', top, dep, t, ctx.gMain, 'Lochreihe innen, steht auf dem Boden', 'korpus',
-          ctx.box(seg, { u0:side, u1:side + t, y0:0, y1:top, v0, v1 }, 'u', 'y', ctx.fin, [side === ma ? -60 : 60, 0, 0]));
+        ctx.add('Seite', top, dep - bt, t, ctx.gMain, 'Lochreihe innen, steht auf dem Boden', 'korpus',
+          ctx.box(seg, { u0:side, u1:side + t, y0:0, y1:top, v0:v0 + bt, v1 }, 'u', 'y', ctx.fin, [side === ma ? -60 : 60, 0, 0]));
       }
       const iw = w - 2*t;
       lv.forEach((y, i) => {
