@@ -27,13 +27,22 @@ Entschieden am 28.09.2026:
 - **Eingrenzung: Bauweisen vorne, Regeln dahinter.** Der Filter folgt aus der Konstruktion, nicht aus der Optik (der frühere Entscheid gegen einen Materialfilter unter «Ideen» betraf die Optik).
 - **Exzenter bei 15 mm: warnen**, nicht sperren (Minifix 15 ist vom Hersteller zugelassen, rund 3 mm Rest).
 
-Noch offen: Schwellen Eckfach 350 mm / Durchlauf + 100 mm · Seekiefer beim Sideboard · neue Eingaben Türlage/Türhöhe · neuer Reduit-Standard.
+Entschieden am 28.09.2026 (zweite Runde):
+
+- **Eckfach** bei Wangen und selbststehenden Modulen: ab 350 mm Öffnung nutzen (Eckfach zuerst bestücken), darunter bleibt das Eckquadrat leer.
+- **Ecke:** Seiten höchstens 100 mm tiefer als hinten (Grenze mit Grund), hinten läuft weiter durch.
+- **Tür:** neue Eingaben Türlage (links, mittig, rechts mit Abstand) und Türhöhe (Standard 2000).
+- **Reduit-Standard:** Pfostenrahmen mit Sperrholz Fichte 18 (keine Warnung, ca. CHF 547 statt 674).
+- **Sideboard-Korpus ab 18 mm** (Seekiefer nur noch als Front und im Reduit), **Wangen und Module über 1,2 m ab 18 mm**.
+- **Lack auf beschichteter Spanplatte:** warnen (anschleifen, Haftgrund), nicht sperren.
+- Pull Request später, alles zusammen.
 
 Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude/next-steps-9c8hnq` (baut auf `schreiner-review` auf):
 
 - [x] **1. Pfostenrahmen, Variante A:** Pfosten stehen vor der Querlatte (`addPost`, v = Tiefe … Tiefe + 45), Tablare rechteckig. Eckpfosten an jeder Innenecke (beim Seitenregal gesetzt, trägt auch die hintere Querlatte), keine Eckleiste mehr. Pfostenabstand nach der Querlatte (`POST_MAX` 1200) statt nach der Tablar-Spannweite: Standard-U 2 statt 4 Pfosten, unabhängig vom Material. Verbindungen auf der Kaufliste: Winkel je Querlatten-Ende (Wand, Ecke), 5 × 60 durch die Pfosten (Eckpfosten 3 je Ebene), Tablare mit 4 × 40 von oben. Bauablauf: Latten → Tablare einschieben → Pfosten stellen → Tablare verschrauben. Durchgang wird zwischen den Pfosten gemessen (− 90 mm). Stützen an freien Enden und Stössen (Leisten, Schienen, Winkel) stehen ebenfalls vor dem Tablar. Stösse bei ganzen Brettern brauchen beim Pfostenrahmen keinen eigenen Pfosten (das Tablar liegt auf Wand- und Querlatte).
 - [x] **2. Schrauben nach Stärke:** `screwFor(anbau, t)` in `shared.js` (Anwendungen `blech`, `latte`, `streifen`, `oben`, `fuss`, `kante`; längste Schraube mit höchstens 22 mm Biss und mindestens 4 mm Holz über der Spitze). Reduit: Kaufteile je Länge (`screw4x16` …, aus `SCHRAUBEN`), Konsolen/Winkel 4 × 16 statt 4 × 35 bei 18 mm, Leisten von oben verschraubt (Schrauben neu auf der Liste), Eckleiste aus Plattenstreifen 3,5 × 30. Dübelschraube nach Anbauteil (`dowelFor`: Metall und Leisten bis 20 mm 4,5 × 50, Latten 24 → 5 × 60, darüber 5 × 70). Sideboard: Füsse und Sockelwinkel nach Bodenstärke (18 mm → 4 × 12), Sockelecken nach Stärke. Gleiche Kaufteile mit verschiedenen Zwecken führen alle Zwecke in der Notiz. Snapshot neu geschrieben (nur Schraubenzeilen und der Tipp bei den Füssen geändert).
 - [x] **3. Sofort-Sperren (3.4):** Regeltabelle `REGELN` in `konfig.js` mit `pruefeRegeln(d, fest)` (Fixpunkt, höchstens 5 Runden), `gesperrt(c)`, `grenzen(c)`. Drei Wirkungen: `sperren` (Option im Formular aus, Grund als `.hint.sperre` beim Feld; ein gesetzter Wert weicht nach `AUSWEICH` aus), `grenze` (min/max der Tiefenfelder, bei ganzen Brettern nur erlaubte Brettbreiten), `warnen`. Umgesetzt: S01 (Sideboard-Korpus ab 15 mm), S04 (Exzenter 15–22 mm, Dübel/Schrauben ab 15 mm) mit W03 (Exzenter bei 15 mm warnt), S05/S06 (Verschraubt nicht mit OSB/Leimholz), S07/S08 (Rückwand bei Türen und Modulen über 1,2 m), S09 (Bad: keine Spanplatte, keine MDF-/Hartfaser-Rückwand), S10 (Drehtüren bis 21 mm Korpus), S13 (Leimholz: Maserung immer), S14/S15 (Tiefe Tablarwinkel ≤ 375, Wandschienen ≥ 260; zu breite Bretter bei Tablarwinkeln gesperrt), S16 (Gipskarton: keine Schienen/Winkel – es gibt noch kein Feld für das Ständerraster), K14 (Tür nach innen: Tiefe hinten ≤ Raumtiefe − Türbreite − 50). `render()` in `index.html` schreibt Anpassungen zurück ins Formular und meldet sie kurz («Angepasst – …»). `computeData` und `zufall()` laufen über dieselben Regeln (Schloss: festgehaltene Felder werden gewarnt statt korrigiert). `HARMLOS` bleibt bis zur Bauweisen-Schicht. Tests: `test/regeln.test.js`.
+- [x] **Regeln nach der zweiten Runde:** S01 und S03 mit `KORPUS_MIN` 18 (Stärken und Materialien ohne 18 mm gesperrt), W06 (Lack auf beschichteter Front). `pruefeRegeln` korrigiert je Runde nur das erste gesperrte Feld nach `REIHENFOLGE` und prüft die Grenzen erst danach.
 - [ ] 4. Geometrie
 - [ ] 5. SPAN nach `shared.js`
 - [ ] 6. Anleitung

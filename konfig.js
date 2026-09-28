@@ -41,15 +41,26 @@ const AUSWEICH = {
   sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true']
 };
 const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 260;
+// Korpus beim Sideboard sowie Wangen und hohe Module im Reduit: mindestens 18 mm (Entscheid 28.09.2026).
+const KORPUS_MIN = 18;
+const hoheSeiten = c => c.kind === 'reduit' && (c.build === 'free' ? c.rh - c.gapTop > 1200 : c.sys === 'cheeks');
 // Brettbreiten, die in [a, b] liegen (ganze Bretter); bei Plattenmaterial null.
 const breitenIn = (c, a, b) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.filter(w => w >= a && w <= b) : null; };
 const REGELN = [
-  { id:'S01', wirkung:'sperren', feld:'t', werte:c => istSideboard(c) ? MATS[c.mat].t.filter(t => t < 15) : [],
-    grund:() => 'Nur für Fronten – der Korpus braucht mindestens 15 mm, sonst brechen Bohrungen und Schrauben durch.', befunde:['SK-6', 'MX-2', 'MX-1', 'DY-2'] },
+  { id:'S01', wirkung:'sperren', feld:'t', werte:c => istSideboard(c) ? MATS[c.mat].t.filter(t => t < KORPUS_MIN) : [],
+    grund:() => `Nur für Fronten – der Korpus braucht mindestens ${KORPUS_MIN} mm, darauf sind Verbindungen, Scharniere und Schrauben ausgelegt.`, befunde:['SK-6', 'MX-2', 'MX-1', 'DY-2'] },
+  { id:'S01', wirkung:'sperren', feld:'mat', werte:c => istSideboard(c) ? Object.keys(MATS).filter(k => !MATS[k].boards && !MATS[k].t.some(t => t >= KORPUS_MIN)) : [],
+    grund:() => `Gibt es nur dünner als ${KORPUS_MIN} mm – für den Korpus zu dünn, als Front wählbar.`, befunde:['SK-6', 'MX-2'] },
+  { id:'S03', wirkung:'sperren', feld:'t', werte:c => hoheSeiten(c) ? MATS[c.mat].t.filter(t => t < KORPUS_MIN) : [],
+    grund:() => `Hohe Seiten (Wangen, Module über 1,2 m) brauchen mindestens ${KORPUS_MIN} mm.`, befunde:['MX-2', 'TR-16', 'TR-8'] },
+  { id:'S03', wirkung:'sperren', feld:'mat', werte:c => hoheSeiten(c) ? Object.keys(MATS).filter(k => !MATS[k].t.some(t => t >= KORPUS_MIN)) : [],
+    grund:() => `Gibt es nur dünner als ${KORPUS_MIN} mm – zu dünn für hohe Seiten (Wangen, Module über 1,2 m).`, befunde:['MX-2', 'TR-16'] },
   { id:'S04', wirkung:'sperren', feld:'joint', werte:c => !mitVerbindung(c) ? [] : [...(c.t < 15 || c.t > 22 ? ['cam'] : []), ...(c.t < 15 ? ['dowels', 'screws'] : [])],
     grund:(c, w) => w === 'cam' ? 'Die Beschläge gibt es nur für 15–22 mm Platten.' : 'Dübel und Schrauben erst ab 15 mm – in dünneren Platten brechen sie durch.', befunde:['SK-2', 'MX-1', 'DY-2', 'SK-10'] },
   { id:'W03', wirkung:'warnen', wenn:c => mitVerbindung(c) && c.joint === 'cam' && c.t === 15,
     text:() => 'Exzenter in 15 mm: nur mit Minifix 15, der für 15 mm zugelassen ist. Das Gehäuse lässt rund 3 mm Holz stehen – mit Tiefenanschlag bohren.', befunde:['MX-1', 'SK-2'] },
+  { id:'W06', wirkung:'warnen', wenn:c => istSideboard(c) && c.front !== 'open' && c.color !== 'korpus' && (MATS[c.frontMat] || MATS[c.mat]).coated,
+    text:() => 'Lack auf beschichteter Spanplatte: die Fronten mit Körnung 240 anschleifen und einen Haftgrund für Melamin verwenden, sonst blättert der Lack ab.', befunde:['SF-9', 'MX-14'] },
   { id:'S05', wirkung:'sperren', feld:'joint', werte:c => mitVerbindung(c) && c.mat === 'osb' ? ['screws'] : [],
     grund:() => 'OSB-Kanten reissen zwischen den Spänen aus – Taschenloch oder Dübel.', befunde:['SK-10'] },
   { id:'S06', wirkung:'sperren', feld:'joint', werte:c => mitVerbindung(c) && LEIMHOLZ(c.mat) ? ['screws'] : [],
@@ -82,6 +93,8 @@ const REGELN = [
 const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
+// Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
+const REIHENFOLGE = ['room', 'wall', 'build', 'sys', 'shape', 'mat', 't', 'frontMat', 'frontT', 'front', 'back', 'joint', 'grain'];
 // Gesperrte Werte je Feld: { feld: { wert: { regel, grund } } } (Werte als Text, wie im Formular).
 function gesperrt(c){
   const g = {};
@@ -120,17 +133,19 @@ const FELDNAME = { joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Ei
   dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts' };
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
-// dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 5 Runden).
+// dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 12 Runden).
 // Ergebnis: d (angepasste Werte), gesperrt, grenzen, korrekturen und warnungen (Texte).
 function pruefeRegeln(d, fest = new Set()){
   let x = { ...d };
   const korrekturen = [], warnungen = [];
   const setzeKatalog = () => { if (x.katalog) x.katalog = { price:matPrice(MATS[x.mat], Number(x.t)), sheetL:MATS[x.mat].sheet[0], sheetB:MATS[x.mat].sheet[1] }; };
-  for (let runde = 0; runde < 5; runde++) {
+  for (let runde = 0; runde < 12; runde++) {
     const c = cfgFromData(x), g = gesperrt(c);
     let neu = false;
-    for (const [feld, werte] of Object.entries(g)) {
-      const cur = String(x[feld]), hit = werte[cur];
+    // Je Runde nur das erste gesperrte Feld in der Reihenfolge ändern, die späteren danach neu prüfen.
+    for (const feld of REIHENFOLGE.filter(f => g[f])) {
+      if (neu) break;
+      const werte = g[feld], cur = String(x[feld]), hit = werte[cur];
       if (!hit) continue;
       if (fest.has(feld)) { warnungen.push(`${FELDNAME[feld]} ${wertName(feld, cur)}: ${hit.grund}`); continue; }
       let alt;
@@ -149,6 +164,7 @@ function pruefeRegeln(d, fest = new Set()){
       else x = { ...x, [feld]:alt };
       neu = true;
     }
+    if (neu) continue;   // erst die Sperren, dann die Grenzen mit den neuen Werten
     for (const [feld, gr] of Object.entries(grenzen(c))) {
       const v = Number(x[feld]);
       if (v >= gr.min && v <= gr.max) continue;
@@ -204,7 +220,7 @@ const SB_TYPES = [
   ['Highboard',  [800, 1200],  [1100, 1400],[350, 450], ['plinth', 'none']],
   ['Regal',      [600, 1200],  [900, 1400], [280, 350], ['none', 'plinth']]
 ];
-const SB_MATS = ['birke', 'birke', 'birkesi', 'eiche', 'seekiefer', 'fichtesp', 'dreischicht', 'fichte', 'mdf', 'dekorspan'];
+const SB_MATS = ['birke', 'birke', 'birkesi', 'eiche', 'fichtesp', 'dreischicht', 'fichte', 'mdf', 'dekorspan'];
 const RD_MATS = ['fichtesp', 'dreischicht', 'birkesi', 'osb', 'osb', 'schaltafel', 'dekorspan', 'seekiefer'];
 const TIEFEN = ['dBack', 'dLeft', 'dRight'];
 
@@ -242,7 +258,7 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const [typ, rw, rh, rdp, bases] = pick(fits.length ? fits : SB_TYPES);
   const regal = typ === 'Regal';
   const mat = val('mat', () => pick(SB_MATS.filter(k => MATS[k]))), M = MATS[mat];
-  const t = Number(val('t', () => chance(0.75) ? M.tDef : pick(M.t.filter(v => v >= 15 && v <= 22).concat(M.tDef))));
+  const t = Number(val('t', () => chance(0.75) ? M.tDef : pick(M.t.filter(v => v >= KORPUS_MIN && v <= 21).concat(M.tDef))));
   const W = Number(val('w', () => range(rw, 50))), H = Number(val('h', () => range(rh, 10))), D = Number(val('d', () => range(rdp, 10)));
   const b = val('base', () => pick(bases));
   const baseH = Number(val('baseH', () => b === 'legs' ? range([100, 220], 10) : b === 'plinth' ? range([60, 100], 10) : base.baseH));

@@ -40,10 +40,17 @@ test('Standardformulare: nichts gesperrt, was gewählt ist, und keine Korrektur'
   }
 });
 
-test('S01: Sideboard-Korpus erst ab 15 mm', () => {
+test('S01: Sideboard-Korpus erst ab 18 mm, Seekiefer nur als Front', () => {
   assert.strictEqual(sperre(FORM, 't', '12').regel, 'S01');
   assert.ok(!sperre(FORM, 't', '18'));
-  assert.ok(!sperre({ ...RD, build:'free' }, 't', '12'));      // Reduit: nicht Teil von S01
+  assert.strictEqual(sperre({ ...FORM, mat:'mdf', t:'19' }, 't', '16').regel, 'S01');
+  assert.strictEqual(sperre({ ...FORM, mat:'fichtesp', t:'18' }, 't', '15').regel, 'S01');
+  assert.strictEqual(sperre(FORM, 'mat', 'seekiefer').regel, 'S01');
+  assert.ok(!sperre(FORM, 'frontMat', 'seekiefer'));
+  const sk = K.pruefeRegeln({ ...FORM, mat:'seekiefer', t:'15' });
+  assert.strictEqual(sk.d.mat, 'birke');
+  assert.deepStrictEqual(sk.warnungen, []);
+  assert.ok(!sperre({ ...RD, build:'free', rh:'1800', gapTop:'700' }, 't', '12'));      // niedrige Reduit-Module: nicht Teil von S01
   const P = K.pruefeRegeln({ ...FORM, t:'12' });
   assert.strictEqual(P.d.t, '18');
   assert.strictEqual(Number(P.d.price), matPrice(MATS.birke, 18));
@@ -53,13 +60,31 @@ test('S01: Sideboard-Korpus erst ab 15 mm', () => {
 test('S04/W03: Exzenter nur 15–22 mm, bei 15 mm eine Warnung; Dübel und Schrauben ab 15 mm', () => {
   assert.strictEqual(sperre({ ...FORM, mat:'fichtesp', t:'24' }, 'joint', 'cam').regel, 'S04');
   assert.ok(!sperre({ ...FORM, mat:'fichtesp', t:'21' }, 'joint', 'cam'));
-  const w15 = K.pruefeRegeln({ ...FORM, mat:'seekiefer', t:'15', joint:'cam' });
+  const w15 = K.pruefeRegeln({ ...RD, build:'free', rh:'1800', gapTop:'700', mat:'fichtesp', t:'15', joint:'cam' });
   assert.strictEqual(w15.d.joint, 'cam');
   assert.ok(w15.warnungen.some(w => w.includes('Minifix 15')));
-  const frei12 = { ...RD, build:'free', mat:'birke', t:'12' };
+  const frei12 = { ...RD, build:'free', rh:'1800', gapTop:'700', mat:'birke', t:'12' };   // niedrige Module: S03 greift nicht
   for (const j of ['cam', 'dowels', 'screws']) assert.strictEqual(sperre(frei12, 'joint', j).regel, 'S04', j);
   assert.ok(!sperre(frei12, 'joint', 'pocket'));
   assert.ok(!sperre({ ...RD, t:'12' }, 'joint', 'cam'), 'eingebaut hat keine Korpusverbindung');
+});
+
+test('S03: Wangen und Module über 1,2 m erst ab 18 mm', () => {
+  const wangen = { ...RD, sys:'cheeks', mat:'fichtesp', t:'15' };
+  assert.strictEqual(sperre(wangen, 't', '15').regel, 'S03');
+  assert.strictEqual(sperre(wangen, 'mat', 'seekiefer').regel, 'S03');
+  assert.strictEqual(sperre(wangen, 'mat', 'regalbau').regel, 'S03');
+  assert.strictEqual(K.pruefeRegeln(wangen).d.t, '18');
+  assert.strictEqual(sperre({ ...RD, build:'free', mat:'fichtesp' }, 't', '15').regel, 'S03');
+  assert.ok(!sperre({ ...RD, build:'free', rh:'1800', gapTop:'700', mat:'fichtesp' }, 't', '15'), 'niedrige Module');
+  assert.ok(!sperre({ ...RD, sys:'battens' }, 'mat', 'seekiefer'), 'Tablare dürfen dünner sein');
+});
+
+test('W06: Lack auf beschichteter Spanplatte gibt einen Hinweis', () => {
+  const P = K.pruefeRegeln({ ...FORM, mat:'dekorspan', t:'19', color:'salbei' });
+  assert.ok(P.warnungen.some(w => w.includes('Haftgrund')));
+  assert.deepStrictEqual(K.pruefeRegeln({ ...FORM, mat:'dekorspan', t:'19', color:'korpus' }).warnungen, []);
+  assert.deepStrictEqual(K.pruefeRegeln({ ...FORM, color:'salbei' }).warnungen, []);
 });
 
 test('S05/S06: Verschraubt nicht mit OSB und Leimholz', () => {
