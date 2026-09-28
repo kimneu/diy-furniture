@@ -68,7 +68,7 @@ test('Sammlungseintrag beschreibt das Möbel mit Kosten', () => {
   const e = K.sammlungEintrag(d, K.computeData(d), new Date('2026-09-25T10:00:00Z'));
   assert.strictEqual(e.name, 'Sideboard 1200 mm');
   assert.strictEqual(e.gespeichert, '2026-09-25');
-  assert.strictEqual(e.info.material, 'Birke-Multiplex 18 mm');
+  assert.strictEqual(e.info.material, 'Sperrholz Birke Premium 18 mm');
   assert.ok(e.info.kosten > 0);
   const r = K.sammlungEintrag({ ...FORM, kind:'reduit' }, K.computeData({ ...FORM, kind:'reduit' }));
   assert.strictEqual(r.info.typ, 'Reduit U-Form');

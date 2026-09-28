@@ -161,6 +161,13 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
 .boardlist{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 12px;font-size:12.5px;font-variant-numeric:tabular-nums}
 .boardlist li{color:var(--ink)}
+.matinfo{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--raise)}
+.matinfo .sw{width:26px;height:26px;border-radius:6px;border:1px solid var(--line-strong);margin-top:1px}
+.matprice{margin:0;font-size:13px;font-variant-numeric:tabular-nums}
+.matprice b{font-weight:600}
+.matprice small{display:block;font-size:12px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 5px;padding:0;list-style:none}
+.tags li{font-size:11.5px;line-height:1.5;padding:0 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
 .seg{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:var(--raise)}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg label{flex:1;text-align:center;padding:6px 4px;cursor:pointer;font-size:13px;border-left:1px solid var(--line);user-select:none;white-space:nowrap}
@@ -773,18 +780,17 @@ body[data-ort="sammlung"] .layout{display:none}
           <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
           <select id="mat" name="mat"></select>
         </div>
-        <div class="row2">
-          <div class="field"><label for="t">Stärke</label><select id="t" name="t"></select></div>
-          <div class="field" id="row-back"><label for="back">Rückwand</label>
-            <select id="back" name="back">
-              <option value="hdf3">MDF weiss 3 mm</option>
-              <option value="hf3">Hartfaser roh 3 mm</option>
-              <option value="ply6">Sperrholz Pappel 5 mm</option>
-              <option value="none">keine</option>
-            </select>
-          </div>
+        <div class="field" id="row-t">
+          <span class="lbl" id="lbl-t">Stärke<span class="lbl-note">mm</span></span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-t" id="t"></div>
         </div>
-        <p class="hint" id="matNote"></p>
+        <div class="field" id="row-back"><label for="back">Rückwand</label>
+          <select id="back" name="back"></select>
+        </div>
+        <div class="matinfo" id="matInfo" aria-live="polite">
+          <span class="sw" id="matSw" aria-hidden="true"></span>
+          <div><p class="matprice" id="matPrice"></p><ul class="tags" id="matTags"></ul><p class="hint" id="matNote"></p></div>
+        </div>
       </section>
 
       <section class="group" id="grp-joint" data-lock="verbindung">
@@ -926,18 +932,51 @@ const STORE = 'sideboard-werkbank-v2';
 const ENTW = STORE + '-entwuerfe';
 let entwuerfe = null;   // { kind, sideboard, reduit } – siehe entwuerfeLaden in konfig.js
 let DEFAULTS = null;    // Formularwerte beim Laden der Seite, Start für einen Typ ohne Entwurf
-// Plattenmaterial nach Preis sortiert, mit m²-Preis in der Auswahl. Ganze Bretter nur beim Reduit (kind leer = alle).
-const MAT_LABEL = { mdf:'MDF (zum Lackieren)' };
+const m2 = v => `CHF ${v.toFixed(2)}/m²`;
+// Plattenmaterial in zwei Gruppen (Zuschnitt, ganze Bretter), je nach m²-Preis der Standardstärke sortiert.
+// Nur Namen in der Auswahl – im schmalen Formular würde ein Preis abgeschnitten; er steht im Kasten darunter.
+// Ganze Bretter nur beim Reduit (kind leer = alle).
 function fillMaterials(kind){
-  $('#mat').innerHTML = Object.entries(MATS).filter(([, M]) => !M.boards || !kind || kind === 'reduit')
-    .sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef))
-    .map(([k, M]) => `<option value="${k}">${MAT_LABEL[k] || M.name}${M.boards ? ' · ganze Bretter' : ''}</option>`).join('');
+  const list = Object.entries(MATS).filter(([, M]) => !M.boards || !kind || kind === 'reduit')
+    .sort((a, b) => matPrice(a[1], a[1].tDef) - matPrice(b[1], b[1].tDef));
+  const opt = ([k, M]) => `<option value="${k}">${esc(M.name)}</option>`;
+  const groups = [['Zuschnitt ab Platte', list.filter(([, M]) => !M.boards)], ['Ganze Bretter, nur ablängen', list.filter(([, M]) => M.boards)]];
+  $('#mat').innerHTML = groups.filter(([, l]) => l.length).map(([label, l]) => `<optgroup label="${label}">${l.map(opt).join('')}</optgroup>`).join('');
+}
+// Rückwände aus dem Katalog; «keine» zuletzt.
+function fillBacks(){
+  $('#back').innerHTML = Object.entries(BACKS).filter(([, B]) => B)
+    .map(([k, B]) => `<option value="${k}">${esc(B.name)} ${B.t} mm</option>`).join('') + '<option value="none">keine</option>';
+}
+// Eigenschaften als kurze Merkmale unter dem Preis.
+function matTags(M, k){
+  return [
+    M.boards ? 'ganze Bretter' : 'Zuschnitt',
+    M.coated ? 'fertig beschichtet' : k === 'mdf' ? 'zum Lackieren' : 'zum Ölen oder Lackieren',
+    M.ply ? 'Schichtkanten sichtbar' : null
+  ].filter(Boolean);
+}
+// Preiszeile im Materialkasten: Richtpreis der gewählten Stärke, darunter die anderen Stärken zum Vergleich.
+function matPricePlate(M, t, own){
+  const cat = matPrice(M, t);
+  const nb = s => s.replace(/ /g, '&nbsp;');   // Masse und Preise nicht umbrechen
+  const others = M.t.filter(v => v !== t).map(v => nb(`${v} mm: ${matPrice(M, v).toFixed(2)}`));
+  const sub = [
+    own > 0 && own !== cat ? `mit deinem Preis ${nb(m2(own))}` : null,
+    others.length ? others.join(' · ') : null,
+    `Zuschnitt bis ${nb(`${M.sheet[0]} × ${M.sheet[1]} mm`)}`
+  ].filter(Boolean).join(' · ');
+  return `<b>${m2(cat)}</b> bei ${t}&nbsp;mm<small>${sub}</small>`;
+}
+function matPriceBoards(M){
+  return `<b>ab ${m2(M.price)}</b> · ${M.tDef} mm<small>${M.boards.length} Formate zum Stückpreis, siehe «Platten &amp; Preise»</small>`;
 }
 // Preis und Plattenformat des Katalogs ins Formular.
 function applyCatalog(mat){
-  const cat = catalogValues(mat, $('#t').value);
+  const cat = catalogValues(mat, curT());
   for (const k in cat) $('#' + k).value = cat[k];
 }
+function curT(){ const r = form.querySelector('input[name=t]:checked'); return r ? r.value : ''; }
 // Nach einem Typwechsel: Liste neu füllen; ist das Material nicht mehr wählbar, das günstigste Plattenmaterial nehmen.
 function syncMaterials(){
   const kind = new FormData(form).get('kind'), cur = $('#mat').value;
@@ -946,10 +985,11 @@ function syncMaterials(){
   const k = $('#mat').options[0].value;
   $('#mat').value = k; fillThickness(k); applyCatalog(k);
 }
+// Stärken als Knöpfe; gibt es nur eine (ganze Bretter), bleibt sie gewählt, aber ausgeblendet – sie steht im Materialkasten.
 function fillThickness(mat, keep){
-  const sel = $('#t'), M = MATS[mat];
-  sel.innerHTML = M.t.map(v => `<option value="${v}">${v} mm</option>`).join('');
-  sel.value = M.t.includes(Number(keep)) ? keep : M.tDef;
+  const M = MATS[mat], v = M.t.includes(Number(keep)) ? Number(keep) : M.tDef;
+  $('#t').innerHTML = M.t.map(x => `<input type="radio" name="t" id="t-${x}" value="${x}"${x === v ? ' checked' : ''}><label for="t-${x}">${x}</label>`).join('');
+  $('#row-t').hidden = M.t.length < 2;
 }
 function fillHandles(front, keep){
   const sel = $('#handle');
@@ -975,8 +1015,10 @@ function syncVisibility(){
   $('#sw-korpus').style.background = mat === 'mdf' ? COLORS.weiss : MATS[mat].color;
   $('#sw-korpus').parentElement.lastChild.textContent = mat === 'mdf' || mat === 'dekorspan' ? 'Weiss' : mat === 'schaltafel' ? 'Gelb' : 'Holz';
   const BM = MATS[mat].boards;
-  const priceNote = BM ? `ganze Bretter ab CHF ${MATS[mat].price.toFixed(2)}/m²` : `CHF ${matPrice(MATS[mat], Number(f.get('t')))}/m² bei ${f.get('t')} mm`;
-  $('#matNote').textContent = `${priceNote} · ${MATS[mat].note}`;
+  $('#matSw').style.background = MATS[mat].color;
+  $('#matPrice').innerHTML = BM ? matPriceBoards(MATS[mat]) : matPricePlate(MATS[mat], Number(f.get('t')), Number(f.get('price')));
+  $('#matTags').innerHTML = matTags(MATS[mat], mat).map(t => `<li>${t}</li>`).join('');
+  $('#matNote').textContent = MATS[mat].note;
   $('#row-sheet').hidden = $('#row-price').hidden = $('#row-grain').hidden = !!BM;
   $('#row-boards').hidden = !BM;
   if (BM) $('#boardList').innerHTML = BM.map(f => `<li>${f.L} × ${f.B} mm · CHF ${f.price.toFixed(2)}</li>`).join('');
@@ -1060,7 +1102,7 @@ function restore(data){
   fillThickness(mat, data && data.t);
   const front = data && data.front || 'hinged';
   fillHandles(front, data && data.handle);
-  const cat = catalogValues(mat, $('#t').value);
+  const cat = catalogValues(mat, curT());
   applyCatalog(mat);
   if (!data) return;
   for (const [k, v] of Object.entries(data)) {
@@ -1541,7 +1583,7 @@ function onInput(e){
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
-    fillThickness(el.value, $('#t').value);
+    fillThickness(el.value, curT());
     applyCatalog(el.value);
   }
   if (el.name === 't') $('#price').value = matPrice(MATS[$('#mat').value], Number(el.value));
@@ -1930,6 +1972,7 @@ $('#collMsg').addEventListener('click', ev => {
 
 /* ---------- Start ---------- */
 fillMaterials();
+fillBacks();
 restore(null);
 DEFAULTS = formData();
 try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'), stored()); } catch (e) { entwuerfe = entwuerfeLaden(null, stored()); }

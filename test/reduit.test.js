@@ -238,10 +238,10 @@ test('Brett-Material: Teilbreite = Brettbreite, Bretter statt Platten, Kosten = 
   assert.ok(g.sheets.length > 0 && g.sheets.every(s => s.B === 400 && [1200, 2000].includes(s.L)));
   const { whole } = sheetCosts(Rr.groups);
   assert.strictEqual(Math.round(whole * 100), Math.round(g.sheets.reduce((a, s) => a + s.price, 0) * 100));
-  const lines = Rr.hw.filter(h => h[1].startsWith('go/on Leimholz Fichte'));
+  const lines = Rr.hw.filter(h => h[1].startsWith('Leimholz Fichte (go/on)'));
   assert.strictEqual(lines.reduce((a, h) => a + h[0], 0), g.sheets.length);
   // Bretter zählen nicht als Kaufteile
-  const buyWithout = Rr.hw.filter(h => !h[1].startsWith('go/on')).reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
+  const buyWithout = Rr.hw.filter(h => !h[1].includes('(go/on)')).reduce((a, h) => a + (h[3] ? h[0] * h[3] : 0), 0);
   assert.strictEqual(Math.round(Rr.buyCost * 100), Math.round(buyWithout * 100));
 });
 
@@ -255,7 +255,7 @@ test('Brett-Material: Leisten werden Dachlatten, keine 40er-Teile aus dem Brett'
 test('Brett-Material: zu lange Wangen → Warnung mit Alternativen, keine NaN', () => {
   const Rr = run({ mat:'regalbau', t:16, shape:'I', rw:1600, rh:2400, sys:'cheeks' });
   const w = Rr.warn.find(x => x.includes('länger als das längste Brett'));
-  assert.ok(w && w.includes('Mood Leimholz Fichte A'), JSON.stringify(Rr.warn));
+  assert.ok(w && w.includes('Leimholz Fichte A (Mood)'), JSON.stringify(Rr.warn));
   const { whole } = sheetCosts(Rr.groups);
   assert.ok(Number.isFinite(whole) && Number.isFinite(Rr.buyCost));
 });

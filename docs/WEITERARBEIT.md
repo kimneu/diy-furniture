@@ -30,7 +30,7 @@ Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit
 | `test/reduit.test.js`, `test/shared.test.js`, `test/einkauf.test.js` | Reduit-Geometrie, Bauarten, Randfälle, Preise; Einkaufsliste und Haken |
 | `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json`, `tools/preise-datei.cjs` | Jumbo-Preise lesen, mit `preise.js` vergleichen und nachführen (siehe «Preise nachführen») |
 
-Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet, und die Fixture neu schreiben (siehe Commit `b424766`).
+Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet (bei einem neuen Namen auch Gruppen, Schlüssel und `matShort`), und die Fixture neu schreiben (siehe Commit `b424766`).
 
 ## Orte und Speicher
 
@@ -85,6 +85,8 @@ node jumbo-preise.mjs --schreiben [osb …]               # lesen und preise.js 
 - Möbeltyp-Umschalter steht im Kopf (Radios mit `form="cfg"`, Ereignisse laufen über `#kindBar` in dieselben Handler). «In Sammlung»: Handy in der Leiste unten («Sammeln» neben «Ergebnis»), Desktop im Kopf neben dem Preis (`.js-sammeln`, Meldung `.js-sammelmsg`).
 - Schloss pro Gruppe (`data-lock` an der `section`, Felder in `SPERREN` in `konfig.js`): Gesperrte, sichtbare Gruppen bleiben bei «Zufall», wie sie sind; `zufall(base, rnd, tries, locks)` richtet den Rest danach (feste Nische → Form mit Regal an dieser Seite, feste Tablartiefen → kein Brettmaterial, das sie verschiebt). Gemerkt pro Browser in `sideboard-werkbank-v2-schloss`.
 - Tablartiefe bei ganzen Brettern: Regler und Zahlenfeld rasten auf die Brettbreiten ein (`snapBreite`), Pfeiltasten springen eine Breite weiter, darunter Markierungen und ein Hinweis (`syncDepths` in `index.html`).
+- Gruppe «Material»: Auswahl in zwei Gruppen («Zuschnitt ab Platte», «Ganze Bretter, nur ablängen»), je nach m²-Preis sortiert, nur Namen (ein Preis würde im schmalen Formular abgeschnitten). Stärke als Knöpfe, ausgeblendet bei nur einer Stärke (ganze Bretter). Rückwände aus `BACKS`. Darunter ein Kasten mit Farbmuster, Richtpreis der gewählten Stärke, den anderen Stärken zum Vergleich, eigenem Preis (falls geändert), max. Zuschnitt, Merkmalen und Beschreibung.
+- Materialnamen einheitlich (`MAT_INFO` in `shared.js`, Test in `test/shared.test.js`): Werkstoff, dann Holzart oder Farbe, dann Qualität, Marke ganzer Bretter in Klammern – «Sperrholz Birke Premium», «Leimholz Eiche», «MDF roh», «Spanplatte weiss», «Leimholz Fichte (go/on)». Es gibt nur noch `name` (kein `short`); Einkaufsliste, Plattenplan und Sammlung zeigen denselben Namen wie die Auswahl.
 - Reihenfolge im Formular, von Rahmen über Form zu Material und Technik: Zufall · Masse / Raum · Bauart · Form · Tablare · Nische · Aufbau · Front · Material · Verbindung · Platten & Preise · Niveau.
 
 ## Ideen (noch nicht entschieden)

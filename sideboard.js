@@ -23,7 +23,7 @@ function computeSideboard(c){
   const frontFin = paint ? { color:paint, ply:M.ply, grain:false, plyColor:M.color, painted:true } : carcFin;
   const backFin = Bk ? { color:Bk.color, ply:Bk.ply, grain:false, plyColor:Bk.color } : null;
   const bath = c.room === 'bath';
-  const matShort = bath && c.mat === 'mdf' ? 'MDF MR' : M.short;
+  const matShort = bath && c.mat === 'mdf' ? 'MDF MR feuchtfest' : M.name;
   const ss = bath ? ', Edelstahl A2' : '';
   const glueName = bath ? 'Holzleim D4 (wasserfest)' : 'Holzleim D3';
   const gMain = `${matShort} ${t} mm`, gBack = Bk ? `${Bk.name} ${Bk.t} mm` : null;
