@@ -162,9 +162,11 @@ function computeSideboard(c){
   rows.forEach((r, i) => { r.pos = String.fromCharCode(65 + i); });
 
   // Warnungen Statik & Sicherheit
-  const span = t <= 16 ? 700 : t <= 19 ? 800 : 900;
-  if (c.shelves && s > span) warn.push(`Die Einlegeböden sind ${r0(s)} mm breit. Bei ${t} mm Stärke biegen sie sich ab ca. ${span} mm unter Last durch – mehr Fächer wählen oder dickere Platte.`);
-  if (!c.shelves && n === 1 && Wi > span + 200) warn.push(`Der Boden spannt ${r0(Wi)} mm frei. Eine Mittelwand macht den Korpus deutlich steifer.`);
+  // Spannweite je Material und Stärke wie beim Reduit (SPAN in shared.js). Deckel und Boden sind mit den Seiten
+  // verbunden und dürfen etwas weiter spannen; geprüft bei jeder Fachzahl (Review W01, W02).
+  const span = maxSpan(c.mat, t);
+  if (c.shelves && s > span) warn.push(`Die Einlegeböden aus ${M.name} ${t} mm sind ${r0(s)} mm breit – sie biegen sich ab ca. ${span} mm unter Last durch. Mehr Fächer wählen oder dickere Platte.`);
+  if (!c.shelves && s > span + 200) warn.push(`${n === 1 ? 'Der Boden spannt' : 'Deckel und Boden spannen'} ${r0(s)} mm frei – bei ${M.name} ${t} mm biegen sie sich ab ca. ${span + 200} mm durch. ${n === 1 ? 'Eine Mittelwand' : 'Eine weitere Mittelwand'} macht den Korpus deutlich steifer.`);
   if (s < 180) warn.push(`Die Fächer sind nur ${r0(s)} mm breit – weniger Fächer wählen oder breiter bauen.`);
   if (!Bk) warn.push('Ohne Rückwand kann sich der Korpus verziehen. Setz hinten Metallwinkel in die Ecken oder wähle eine Rückwand.');
   if (c.joint === 'screws' && topOver) warn.push('Beim aufgesetzten Deckel sieht man die Schraubenköpfe auf der Oberseite. Tipp: Deckel mit Taschenlöchern oder Dübeln befestigen, oder Abdeckkappen verwenden.');

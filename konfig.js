@@ -280,7 +280,9 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const b = val('base', () => pick(bases));
   const baseH = Number(val('baseH', () => b === 'legs' ? range([100, 220], 10) : b === 'plinth' ? range([60, 100], 10) : base.baseH));
   const Hi = H - (b === 'none' ? 0 : baseH) - 2 * t;
-  const sections = Number(val('sections', () => Math.max(1, Math.min(4, Math.round((W - 2 * t) / range([450, 650], 10))))));
+  // Fachbreite höchstens so gross, wie das Material spannt (SPAN in shared.js).
+  const fach = Math.min(range([450, 650], 10), maxSpan(mat, t));
+  const sections = Number(val('sections', () => Math.max(1, Math.min(4, Math.ceil((W - 2 * t) / fach - 0.15)))));
   const shelves = Math.max(0, Math.min(3, Math.floor(Hi / range([300, 400], 10)) - 1));
   const front = val('front', () => regal ? pick(['open', 'open', 'hinged']) : pick(sections >= 2 ? ['hinged', 'hinged', 'sliding', 'sliding', 'open'] : ['hinged', 'hinged', 'open']));
   const handle = front === 'sliding' ? pick(['shell', 'hole']) : pick(['hole', 'knob', 'push']);

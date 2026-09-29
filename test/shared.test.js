@@ -100,3 +100,14 @@ test('screwFor: Werte aus der Tabelle im Eck-Urteil', () => {
   assert.strictEqual(s('oben', 18), '4 × 40');
   assert.strictEqual(s('fuss', 18), '4 × 12');
 });
+
+/* ---------- Spannweiten (Sideboard und Reduit) ---------- */
+test('Spannweiten-Tabelle', () => {
+  assert.strictEqual(S.maxSpan('birke', 18), 800);
+  assert.strictEqual(S.maxSpan('mdf', 19), 550);
+  assert.strictEqual(S.maxSpan('unbekannt', 18), 700);
+});
+
+test('jede Material-Stärke hat einen Spannweiten-Wert', () => {
+  for (const [k, M] of Object.entries(S.MATS)) for (const t of M.t) assert.ok(S.SPAN[k] && S.SPAN[k][t], `${k} ${t} mm fehlt in SPAN`);
+});

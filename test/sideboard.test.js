@@ -109,3 +109,13 @@ test('Schiebetüren: vordere Lochreihe liegt unter dem Einlegeboden (SK-1)', () 
   assert.ok(vorn >= seite.B - boden.B, `${vorn} < ${seite.B - boden.B}`);   // Loch hinter der Vorderkante des Bodens
   assert.ok(R.steps.find(s => s[0].startsWith('Löcher für Bodenträger'))[1].includes(`${vorn} mm von vorne`));
 });
+
+test('Spannweite je Material: Einlegeböden (W01) und Deckel/Boden bei jeder Fachzahl (W02)', () => {
+  const span = R => R.warn.filter(w => w.includes('biegen sich'));
+  // Spanplatte 19 spannt ca. 500 mm: 750 breit, 1 Fach → Warnung; Birke 18 (800) nicht
+  assert.ok(span(run({ mat:'dekorspan', t:19, W:750, sections:1, shelves:1 })).some(w => w.includes('Spanplatte weiss 19 mm') && w.includes('500 mm')));
+  assert.deepStrictEqual(span(run({ W:750, sections:1, shelves:1 })), []);
+  // Deckel und Boden ohne Einlegeböden: auch bei 2 Fächern geprüft
+  assert.ok(run({ mat:'dekorspan', t:16, W:2000, sections:2, shelves:0 }).warn.some(w => w.startsWith('Deckel und Boden spannen')));
+  assert.ok(!run({ W:1200, sections:2, shelves:0 }).warn.some(w => w.includes('spannen')));
+});

@@ -94,12 +94,6 @@ const run = over => R.computeReduit({ ...R.REDUIT_DEFAULTS, ...base, ...over });
 const qtyOf = (Rr, text) => Rr.hw.filter(h => h[1].startsWith(text)).reduce((a, h) => a + h[0], 0);
 const rowsNamed = (Rr, name) => Rr.rows.filter(r => r.name === name);
 
-test('Spannweiten-Tabelle', () => {
-  assert.strictEqual(R.maxSpan('birke', 18), 800);
-  assert.strictEqual(R.maxSpan('mdf', 19), 550);
-  assert.strictEqual(R.maxSpan('unbekannt', 18), 700);
-});
-
 test('Schienen: Anzahl aus Spannweite (1600 mm, 50 mm eingerückt, max 800 → 3 Schienen à 750 mm)', () => {
   const Rr = run({ shape:'I', rw:1600, rh:2000, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 3);
@@ -179,10 +173,6 @@ test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt', () 
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 200'), 3);
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 100'), 3);
   assert.ok(Rr.warn.some(w => w.includes('zwei Stücke')));
-});
-
-test('jede Material-Stärke hat einen Spannweiten-Wert', () => {
-  for (const [k, M] of Object.entries(MATS)) for (const t of M.t) assert.ok(R.SPAN[k] && R.SPAN[k][t], `${k} ${t} mm fehlt in SPAN`);
 });
 
 test('beschichtete Platten werden nicht geölt', () => {

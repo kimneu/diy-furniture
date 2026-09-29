@@ -133,6 +133,29 @@ function packBoards(items, boards, kerf){
 }
 
 /* ---------- Verbindungen ---------- */
+/* ---------- Spannweiten ---------- */
+// Maximale freie Spannweite (mm) eines belasteten Tablars (ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200).
+// Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
+const SPAN = {
+  birke:     { 12:500, 15:650, 18:800, 21:950 },
+  birkesi:   { 12:500, 15:650, 18:800, 21:950 },
+  eiche:     { 18:700, 20:800, 26:1000, 27:1050 },
+  fichte:    { 18:600, 21:720, 27:900, 28:950 },
+  seekiefer: { 12:450, 15:550 },
+  fichtesp:  { 12:450, 15:600, 18:700, 21:800, 24:900 },
+  mdf:       { 16:450, 19:550, 22:650 },
+  schaltafel:{ 27:1000 },
+  osb:       { 12:450, 15:550, 18:650, 22:800 },
+  dreischicht:{ 19:650, 27:950 },
+  dekorspan: { 16:400, 19:500 },
+  gon_fichte:{ 18:600 },
+  gon_3s:    { 19:650 },
+  mood_fichte:{ 18:600 },
+  regalbau:  { 16:400 },
+  moebel_weiss:{ 18:470 }
+};
+function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
+
 /* ---------- Schrauben nach Stärke ---------- */
 // Handelsübliche Holzschrauben [Ø, Länge] in mm.
 const SCHRAUBEN = [[3.5, 10], [4, 12], [4, 16], [4, 20], [4, 25], [3.5, 30], [4, 35], [4, 40], [4, 45]];
@@ -238,4 +261,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SCHRAUBEN, schraube, screwFor, screwText, screwKey };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SPAN, maxSpan, SCHRAUBEN, schraube, screwFor, screwText, screwKey };

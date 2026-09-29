@@ -49,7 +49,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 - [x] **4c. Türlage und Türhöhe:** Neue Eingaben `doorPos` (links, mittig, rechts), `doorOff` (Abstand zur Seitenwand, nur bei seitlicher Tür) und `doorH` (Standard 2000); ältere Entwürfe ohne diese Felder gelten als mittig und 2000 hoch. `normReduit` rechnet `doorX0` (linke Kante der Öffnung), `layoutReduit` die Wandstücke links und rechts, die 3D-Wände liegen entsprechend. Tür nach innen: Das Regal auf der Bandseite wird nur gekürzt, wenn das offene Blatt es trifft (Tiefe > Wandstück − 110 mm), sonst kommt ein Türstopper auf die Liste. Reststücke unter 300 mm (Wangen und Module unter 400) entfallen (K15). Module, die fertig nicht durch die Tür passen, werden im Reduit gebaut (Bauablauf); Wangen und Module warnen, wenn sie sich wegen des Kippmasses nicht aufrichten lassen.
 - [x] **Vorgezogen, SK-1 (kritisch):** Schiebetüren – vordere Lochreihe der Seiten slideSet + 40 mm von vorne (bei 18-mm-Türen 92 mm), vermerkt an der Seite und im Bauablauf.
 - [x] **Modulseiten:** um die Rückwand weniger tief (wie beim Sideboard), keine Überschneidung mehr mit der Rückwand.
-- [ ] 5. SPAN nach `shared.js`
+- [x] **5. Spannweiten:** `SPAN` und `maxSpan` stehen in `shared.js`; das Sideboard rechnet damit statt pauschal 700/800/900 nach Stärke (W01) und prüft Deckel und Boden ohne Einlegeböden bei jeder Fachzahl (maxSpan + 200, W02). Die Warnungen nennen das Material. Zufall wählt die Fachbreite höchstens so gross, wie das Material spannt. Die Werte selbst sind unverändert (TR-14: bei Leimholz und Dreischicht eher vorsichtig, noch offen).
 - [ ] 6. Anleitung
 - [ ] 7. Bauweisen-Schicht
 - [ ] 8. Tests quer über alle Kombinationen
@@ -69,9 +69,9 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 |---|---|
 | `index.html` | Formular, Renderer, 3D (three.js r128) |
 | `preise.js` | **Nur Daten:** Preise, Stärken, Plattenformate, Stand und Quelle für Platten, Rückwände, ganze Bretter und Kaufteile (JSON in Script-Hülle, ohne Build ladbar) |
-| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts`, Schrauben nach Stärke `screwFor` |
-| `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben) |
-| `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Spannweiten-Tabelle `SPAN`, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
+| `shared.js` | Produktbeschreibungen `MAT_INFO`/`BACK_INFO`, daraus mit `preise.js` die Kataloge `MATS`/`BACKS`; Zuschnitt-Packer `pack`, Brett-Packer `packBoards`, Verbindungsbeschläge, `matPrice`, `sheetCosts`, Spannweiten `SPAN`/`maxSpan`, Schrauben nach Stärke `screwFor` |
+| `sideboard.js` | Sideboard-Berechnung (1:1 aus der alten `index.html` verschoben, seit dem Schreiner-Review mit Spannweiten je Material) |
+| `reduit.js` | Reduit: Raumlayout, 5 Einbau-Arten + selbststehend, Nischen, Kaufteile `BUY` (Namen hier, Preise in `preise.js`) |
 | `konfig.js` | Formularwerte → Berechnung (`cfgFromData`), «Zufall» (würfelt, bis keine Warnung ausser Kippschutz/Bad bleibt; Reduit behält den Raum), Einträge der «Sammlung» (localStorage `sideboard-werkbank-v2-sammlung`, Kosten beim Speichern), Entwürfe pro Typ (`entwuerfeLaden`, `entwurfSetzen`), `kostenGesamt`, `geaendert`, `sortiere`, `ortAusHash` |
 | `einkauf.js` | Einkaufsliste aus dem Ergebnis: Zuschnitt je Platte, ganze Bretter nach Format, Latten, Beschläge/Kaufteile, Oberfläche, Werkzeug; Haken hängen am Zeileninhalt (`hakenFiltern`) |
 | `test/sideboard.snapshot.test.js` | Snapshot: Sideboard rechnet wie vor dem Umbau (mit eingefrorenen Preisen `test/fixtures/preise.json`) |

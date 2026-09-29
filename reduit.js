@@ -141,27 +141,8 @@ function boxOf(seg, W, D, b, thin, grain, fin, ex){
 }
 
 /* ---------- Statik & Kaufteile ---------- */
-// Maximale freie Spannweite (mm) eines belasteten Tablars (ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200).
-// Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
-const SPAN = {
-  birke:     { 12:500, 15:650, 18:800, 21:950 },
-  birkesi:   { 12:500, 15:650, 18:800, 21:950 },
-  eiche:     { 18:700, 20:800, 26:1000, 27:1050 },
-  fichte:    { 18:600, 21:720, 27:900, 28:950 },
-  seekiefer: { 12:450, 15:550 },
-  fichtesp:  { 12:450, 15:600, 18:700, 21:800, 24:900 },
-  mdf:       { 16:450, 19:550, 22:650 },
-  schaltafel:{ 27:1000 },
-  osb:       { 12:450, 15:550, 18:650, 22:800 },
-  dreischicht:{ 19:650, 27:950 },
-  dekorspan: { 16:400, 19:500 },
-  gon_fichte:{ 18:600 },
-  gon_3s:    { 19:650 },
-  mood_fichte:{ 18:600 },
-  regalbau:  { 16:400 },
-  moebel_weiss:{ 18:470 }
-};
-function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
+// Spannweiten SPAN und maxSpan stehen in shared.js (Sideboard und Reduit rechnen gleich).
+
 
 // Kaufteile bei Jumbo. Preise (CHF pro Stück bzw. pro Laufmeter bei unit 'm') und Quellen in preise.js → kaufteile.
 // est:true = Jumbo führt das Produkt, der Preis war aber nicht abrufbar (Bot-Schutz) – Schätzung, im Laden prüfen.
@@ -869,6 +850,6 @@ function buildReduitSteps(o){
 
 if (typeof module !== 'undefined') module.exports = {
   REDUIT_DEFAULTS, normReduit, shelfLevels, layoutReduit, toWorld, boxOf,
-  SPAN, BUY, SYS, maxSpan, cheekPositions, moduleSplit, computeReduit, shelfJoints,
+  BUY, SYS, cheekPositions, moduleSplit, computeReduit, shelfJoints,
   RAIL_T, RAIL_V0, WINKEL_WAND, winkelFuer, railsVor
 };
