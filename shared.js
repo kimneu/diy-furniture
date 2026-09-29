@@ -213,6 +213,17 @@ function jointHardware(c, lens, t, bath, what){
   }
   return hw;
 }
+// Bohrschritte für die Korpusverbindung (Sideboard und selbststehende Module). mittel = Mittelwände vorhanden,
+// topOver = Deckel liegt auf den Seiten; between = was zwischen die Seiten kommt.
+function jointSteps(c, t, { topOver = false, mittel = false, between = topOver ? 'den Boden' : 'Deckel und Boden' } = {}){
+  const st = [], mdf = c.mat === 'mdf';
+  if (c.joint === 'pocket') st.push(['Taschenlöcher bohren', `Bohrlehre auf ${t} mm Plattenstärke einstellen. Taschenlöcher an beiden Enden von ${between}${mittel ? ' und der Mittelwände' : ''} bohren, alle ca. 15 cm und 40 mm von vorne und hinten.${topOver ? ' Für den aufgesetzten Deckel die Taschenlöcher oben innen in die Seiten bohren.' : ''} Die Löcher kommen immer auf Innen- oder Unterseiten – beim Boden auf die Unterseite.`, null]);
+  if (c.joint === 'screws') st.push(['Schraublöcher vorbohren', `Schraubpositionen anreissen: ${t/2} mm von der Plattenkante, alle ca. 15 cm, 40 mm von vorne und hinten. In ${topOver ? 'Deckel (von oben) und Seiten' : 'die Seiten'} Ø ${mdf ? '5' : '4'} mm durchbohren und ansenken. In die Stirnkante des Gegenstücks Ø ${mdf ? '5 mm mit Stufenbohrer (Konfirmat)' : '2,5–3 mm'} vorbohren.`, mdf ? 'MDF reisst ohne Vorbohren an den Kanten auf.' : 'Mittig in die Kante bohren – ein Anschlag an der Bohrmaschine hilft.']);
+  if (c.joint === 'dowels') st.push(['Dübellöcher bohren', `Dübel alle ca. 12 cm setzen, 40 mm von vorne und hinten. Mit Dübellehre oder Dübelmarkierern die Positionen übertragen. In der Plattenfläche ${t <= 16 ? '10' : '12'} mm tief bohren (nie durch!), in der Stirnkante ${t <= 16 ? '20' : '28'} mm.`, 'Erst eine Probeverbindung mit Reststücken machen.']);
+  if (c.joint === 'cam') st.push(['Bohrungen für Exzenter', `Exzentergehäuse Ø 15 mm mit dem Forstnerbohrer in die Innenseiten von ${between}${mittel ? ' und die Mittelwände' : ''} bohren, Tiefe und Randabstand gemäss Hersteller (meist 12,5 mm tief, 24 oder 34 mm von der Kante). Passende Löcher für die Bolzen in die Gegenstücke.`, 'Eine Bohrschablone spart viel Anreissen und Fehler.']);
+  return st;
+}
+
 function jointTools(c, t, tools){
   if (c.joint === 'pocket') tools.add('Taschenloch-Bohrlehre mit Stufenbohrer');
   if (c.joint === 'screws') { tools.add('Kegelsenker'); if (c.mat === 'mdf') tools.add('Stufenbohrer für Konfirmat'); }
@@ -261,4 +272,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SPAN, maxSpan, SCHRAUBEN, schraube, screwFor, screwText, screwKey };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointSteps, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SPAN, maxSpan, SCHRAUBEN, schraube, screwFor, screwText, screwKey };

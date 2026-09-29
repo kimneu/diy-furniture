@@ -260,7 +260,7 @@ function computeSideboard(c){
   tools.add(paintArea || bath ? 'Schaumstoffrolle und Lackpinsel' : 'Baumwolllappen oder Pinsel für Öl');
 
   // Bauablauf
-  const steps = buildSteps({ c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, dd, slideSet, paint, paintArea, ns, MF, cup });
+  const steps = buildSteps({ kipp: H > 1000 || H > 2.4*D, c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, dd, slideSet, paint, paintArea, ns, MF, cup });
 
   const level = Math.min(3, JOINTS[c.joint].level + (c.front === 'open' ? 0 : 1));
   const Dtot = hinged ? D + tf + 1 : D;
@@ -268,7 +268,7 @@ function computeSideboard(c){
 }
 
 function buildSteps(o){
-  const { c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, slideSet, paint, paintArea, ns, MF, cup } = o;
+  const { c, bath, glueName, t, n, topOver, hinged, sliding, Bk, bh, slideSet, paint, paintArea, ns, MF, cup, kipp } = o;
   const st = [];
   const mdf = c.mat === 'mdf';
   // Fronten mit anderer Oberfläche als der Korpus: ein Satz mehr beim Oberflächen-Schritt.
@@ -284,20 +284,18 @@ function buildSteps(o){
   // Schiebetüren: Die Einlegeböden liegen hinter den Schienen, die vordere Lochreihe der Seiten darum um slideSet weiter hinten (SK-1).
   const vorn = sliding ? slideSet + 40 : 40;
   if (c.shelves) st.push(['Löcher für Bodenträger bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Seiten${n > 1 ? ' und in beide Seiten der Mittelwände' : ''} bohren, je ca. ${sliding ? `${vorn} mm von vorne und 40 mm von hinten` : '40 mm von vorne und hinten'}, 10 mm tief.${sliding ? ` Vorne so weit hinten, weil die Einlegeböden hinter den Schiebetüren liegen${n > 1 ? ' – bei den zurückversetzten Mittelwänden sind es 40 mm von ihrer Kante' : ''}.` : ''}${n > 1 ? ' Bei den Mittelwänden nur 8 mm tief und die zweite Seite um 16 mm versetzt bohren, damit nichts durchbricht.' : ''}`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
-  const between = topOver ? 'den Boden' : 'Deckel und Boden';
-  if (c.joint === 'pocket') st.push(['Taschenlöcher bohren', `Bohrlehre auf ${t} mm Plattenstärke einstellen. Taschenlöcher an beiden Enden von ${between}${n > 1 ? ' und der Mittelwände' : ''} bohren, alle ca. 15 cm und 40 mm von vorne und hinten.${topOver ? ' Für den aufgesetzten Deckel die Taschenlöcher oben innen in die Seiten bohren.' : ''} Die Löcher kommen immer auf Innen- oder Unterseiten – beim Boden auf die Unterseite.`, null]);
-  if (c.joint === 'screws') st.push(['Schraublöcher vorbohren', `Schraubpositionen anreissen: ${t/2} mm von der Plattenkante, alle ca. 15 cm, 40 mm von vorne und hinten. In ${topOver ? 'Deckel (von oben) und Seiten' : 'die Seiten'} Ø ${mdf ? '5' : '4'} mm durchbohren und ansenken. In die Stirnkante des Gegenstücks Ø ${mdf ? '5 mm mit Stufenbohrer (Konfirmat)' : '2,5–3 mm'} vorbohren.`, mdf ? 'MDF reisst ohne Vorbohren an den Kanten auf.' : 'Mittig in die Kante bohren – ein Anschlag an der Bohrmaschine hilft.']);
-  if (c.joint === 'dowels') st.push(['Dübellöcher bohren', `Dübel alle ca. 12 cm setzen, 40 mm von vorne und hinten. Mit Dübellehre oder Dübelmarkierern die Positionen übertragen. In der Plattenfläche ${t <= 16 ? '10' : '12'} mm tief bohren (nie durch!), in der Stirnkante ${t <= 16 ? '20' : '28'} mm.`, 'Erst eine Probeverbindung mit Reststücken machen.']);
-  if (c.joint === 'cam') st.push(['Bohrungen für Exzenter', `Exzentergehäuse Ø 15 mm mit dem Forstnerbohrer in die Innenseiten von ${between}${n > 1 ? ' und die Mittelwände' : ''} bohren, Tiefe und Randabstand gemäss Hersteller (meist 12,5 mm tief, 24 oder 34 mm von der Kante). Passende Löcher für die Bolzen in die Gegenstücke.`, 'Eine Bohrschablone spart viel Anreissen und Fehler.']);
+  st.push(...jointSteps(c, t, { topOver, mittel:n > 1 }));
   const glue = c.joint === 'dowels' ? ` Dübel und Kontaktflächen dünn mit ${glueName} bestreichen, zusammenschieben und mit Zwingen pressen. Austretenden Leim sofort feucht abwischen.` : '';
   if (bath) st.push(['Alle Teile rundum versiegeln – vor der Montage', `Im Bad muss jedes Teil von allen Seiten geschützt sein, auch Innenseiten, Unterseite und Rückwand. ${hinged || (c.front !== 'open' && (c.handle === 'hole' || c.handle === 'shell')) ? 'Bohr die Topfbohrungen und Grifflöcher schon jetzt, damit auch sie versiegelt werden. ' : ''}${mdf ? 'Isoliergrund auftragen, Kanten zweimal, dann ' : 'Dann '}${mdf || paint ? 'PU-Lack' : 'wasserbasierten PU-Klarlack'} in 3 dünnen Schichten auftragen, mit Zwischenschliff Körnung 240. Alle Kanten und Bohrlöcher bekommen eine Schicht extra. Die Verbindungsflächen für den Leim frei lassen.`, 'Leg die Teile auf Leisten oder Nägel, dann kannst du beide Seiten nacheinander streichen.']);
+  // MDF vor dem Zusammenbau lackieren: sonst kommt man in die Innenecken nur durch die Front (Review DY-18).
+  if (mdf && !bath) st.push(['Grundieren und lackieren – vor dem Zusammenbau', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alle Teile mit Körnung 240 zwischenschleifen und zweimal lackieren. Leimflächen und Verbindungsstellen frei lassen – nach der Montage nur noch ausbessern.' + frontNote, 'Leg die Teile auf Leisten oder Nägel, dann kannst du beide Seiten nacheinander streichen.']);
   st.push(['Korpus zusammenbauen', `Zuerst alles trocken zusammenstecken. Dann den Boden zwischen die Seiten setzen, ${topOver ? 'den Deckel oben auflegen' : 'den Deckel zwischen die Seiten setzen'}${n > 1 ? ' und die Mittelwände dazwischen einpassen' : ''}.${glue} Arbeite auf einer ebenen Fläche und kontrollier jede Ecke mit dem Winkel.`, 'Zu zweit geht es deutlich einfacher.']);
   if (Bk) st.push(['Rechtwinklig ausrichten, Rückwand montieren', 'Beide Diagonalen messen – sind sie gleich lang, ist der Korpus rechtwinklig. Rückwand auflegen, rundum 1 mm zurück, und alle 15 cm verschrauben, auch in die Hinterkanten der Mittelwände. Die Rückwand macht den Korpus stabil.', null]);
   else st.push(['Rechtwinklig ausrichten und aussteifen', 'Beide Diagonalen messen, bis sie gleich lang sind. Dann hinten in allen vier Ecken Metallwinkel setzen.', null]);
   if (c.base === 'legs') st.push(['Füsse montieren', `Korpus auf eine Decke legen. Anschraubplatten ca. 55 mm von den Aussenkanten unter den Boden schrauben und die ${bh} mm hohen Füsse eindrehen.`, `Schrauben ${screwText(screwFor('fuss', t))} mm – längere kommen innen durch den Boden.`]);
   if (c.base === 'plinth') st.push(['Sockel bauen und montieren', 'Die vier Sockelteile zu einem Rahmen verschrauben (Blenden aussen, Seitenteile dazwischen). Rahmen 30 mm zurückversetzt unter den Boden stellen und mit den Stahlwinkeln festschrauben.', 'Der zurückgesetzte Sockel lässt das Möbel schweben.']);
   if (bath) { /* bereits vor der Montage versiegelt */ }
-  else if (mdf) st.push(['Grundieren und lackieren', 'MDF-Kanten saugen stark: Kanten zweimal grundieren, dann alles mit Körnung 240 zwischenschleifen und zweimal lackieren.' + frontNote, null]);
+  else if (mdf) { /* vor dem Zusammenbau lackiert */ }
   else if (MATS[c.mat].coated) st.push(['Kanten versäubern', 'Die Flächen sind fertig beschichtet. Sichtbare Kanten mit dem Bügeleisen und Kantenband bekleben, Überstand mit dem Kantenfräser oder Cutter abnehmen.' + frontNote, null]);
   else st.push(['Oberfläche ölen', `Staub entfernen und Hartwachsöl dünn mit Lappen oder Pinsel auftragen, nach 15 Minuten Überschuss abnehmen. Nach dem Trocknen ein zweites Mal.${paint ? ' Die Fronten vorher grundieren und zweimal lackieren.' : frontNote}`, 'Weiss pigmentiertes Öl gibt den hellen, nordischen Ton.']);
   if (hinged) st.push(['Türen anschlagen', `In jede Tür Topfbohrungen Ø ${cup} mm, ${cup === 35 ? 'ca. 12 mm tief' : 'Tiefe laut Datenblatt (die Tür ist dünn – nie durchbohren)'}, Randabstand meist 3–5 mm (Datenblatt!), ca. 100 mm von oben und unten. Montageplatten an die Seiten bzw. Mittelwände schrauben, Scharniere einklipsen und mit den Stellschrauben auf gleichmässige 3-mm-Fugen einstellen.`, 'Eine Scharnier-Bohrlehre sorgt für gerade, gleich tiefe Löcher.']);
@@ -308,6 +306,8 @@ function buildSteps(o){
     if (c.handle === 'push') st.push(['Push-to-open einbauen', 'Beschlag innen an die Seite bzw. Mittelwand auf der Griffseite schrauben, Türen so einstellen, dass etwa 2 mm Luft zum Drücken bleibt.', null]);
     if (c.handle === 'shell') st.push(['Griffmuscheln einsetzen', 'Mit dem Forstnerbohrer Ø 35 mm nach Herstellerangabe tief bohren (nicht durch) und die Griffmuscheln einpressen.', null]);
   }
+  // Kippschutz: steht in der Warnung und auf der Liste, braucht auch einen Schritt – vor dem Einräumen (Review DY-6).
+  if (kipp) st.push(['Aufstellen und gegen Kippen sichern', `Den Korpus an seinen Platz stellen, ausrichten und oben an der Rückseite mit dem Kippschutz an die Wand schrauben – 1–2 Punkte, Dübel passend zur Wand. Die Schrauben in den Korpus höchstens ${t - 3} mm lang.`, 'Erst sichern, dann einräumen.']);
   if (c.shelves) st.push(['Einlegeböden einlegen', 'Bodenträger in die gewünschte Höhe stecken und die Einlegeböden auflegen.', null]);
   return st;
 }

@@ -94,7 +94,7 @@ test('Lackierte MDF-Fronten am geölten Korpus: Öl nur für den Korpus, Lack f�
 test('Geölte Fronten an einem MDF-Korpus: eigener Satz im Bauablauf', () => {
   const R = run({ mat:'mdf', t:19, frontMat:'eiche', frontT:18 });
   assert.strictEqual(R.frontFin.color, MATS.eiche.color);
-  assert.ok(R.steps.some(([titel, text]) => titel === 'Grundieren und lackieren' && text.includes('Die Fronten mit Hartwachsöl')));
+  assert.ok(R.steps.some(([titel, text]) => titel.startsWith('Grundieren und lackieren') && text.includes('Die Fronten mit Hartwachsöl')));
 });
 
 test('Bad: Hinweise auch für das Frontmaterial', () => {
@@ -118,4 +118,13 @@ test('Spannweite je Material: Einlegeböden (W01) und Deckel/Boden bei jeder Fac
   // Deckel und Boden ohne Einlegeböden: auch bei 2 Fächern geprüft
   assert.ok(run({ mat:'dekorspan', t:16, W:2000, sections:2, shelves:0 }).warn.some(w => w.startsWith('Deckel und Boden spannen')));
   assert.ok(!run({ W:1200, sections:2, shelves:0 }).warn.some(w => w.includes('spannen')));
+});
+
+test('Anleitung Sideboard: Kippschutz vor dem Einräumen, MDF vor dem Zusammenbau lackieren', () => {
+  const hoch = run({ H:1300, D:350 }).steps.map(s => s[0]);
+  assert.ok(hoch.includes('Aufstellen und gegen Kippen sichern'));
+  assert.ok(hoch.indexOf('Aufstellen und gegen Kippen sichern') < hoch.indexOf('Einlegeböden einlegen'));
+  assert.ok(!run({}).steps.some(s => s[0] === 'Aufstellen und gegen Kippen sichern'));
+  const mdf = run({ mat:'mdf', t:19 }).steps.map(s => s[0]);
+  assert.ok(mdf.indexOf('Grundieren und lackieren – vor dem Zusammenbau') < mdf.indexOf('Korpus zusammenbauen'), mdf.join(' → '));
 });

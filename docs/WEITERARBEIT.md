@@ -50,7 +50,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 - [x] **Vorgezogen, SK-1 (kritisch):** Schiebetüren – vordere Lochreihe der Seiten slideSet + 40 mm von vorne (bei 18-mm-Türen 92 mm), vermerkt an der Seite und im Bauablauf.
 - [x] **Modulseiten:** um die Rückwand weniger tief (wie beim Sideboard), keine Überschneidung mehr mit der Rückwand.
 - [x] **5. Spannweiten:** `SPAN` und `maxSpan` stehen in `shared.js`; das Sideboard rechnet damit statt pauschal 700/800/900 nach Stärke (W01) und prüft Deckel und Boden ohne Einlegeböden bei jeder Fachzahl (maxSpan + 200, W02). Die Warnungen nennen das Material. Zufall wählt die Fachbreite höchstens so gross, wie das Material spannt. Die Werte selbst sind unverändert (TR-14: bei Leimholz und Dreischicht eher vorsichtig, noch offen).
-- [ ] 6. Anleitung
+- [x] **6. Anleitung:** Bohrschritte der Verbindung als `jointSteps` in `shared.js` (Sideboard und Module). Reduit: Oberfläche direkt nach dem Schleifen, vor der Montage; Höhen vom Meterriss an der höchsten Bodenstelle; Wangen bei unebenem Boden unterlegen. Module: Lochreihen und Verbindung vor «Module bauen», Leim bei Dübeln, jedes hohe Modul sofort beim Aufstellen sichern, 3 Schrauben je Modulstoss auf der Liste. Eingebaut: Eck- und Stossleisten an der Werkbank vormontieren, beim Auflegen verschrauben; ein Schritt «Stützen stellen» für freie Enden, Stösse und Innenecken. Sideboard: Schritt «Aufstellen und gegen Kippen sichern» vor dem Einräumen, MDF vor dem Zusammenbau lackieren. Snapshot neu geschrieben (nur der Bauablauf).
 - [ ] 7. Bauweisen-Schicht
 - [ ] 8. Tests quer über alle Kombinationen
 

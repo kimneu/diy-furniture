@@ -319,9 +319,10 @@ test('Plattenmaterial: keine Stösse', () => {
   assert.ok(!Rr.rows.some(r => r.name === 'Stossleiste'));
 });
 
-test('Bauablauf: Schritt «Stösse verbinden» nur mit Stössen', () => {
-  assert.ok(run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
-  assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
+test('Bauablauf: Stossleisten nur mit Stössen, vor dem Auflegen', () => {
+  const names = run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.map(s => s[0]);
+  assert.ok(names.indexOf('Stossleisten vormontieren') >= 0 && names.indexOf('Stossleisten vormontieren') < names.indexOf('Tablare auflegen'), names.join(' → '));
+  assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stossleisten vormontieren'));
 });
 
 /* ---------- Review-Befunde ---------- */
@@ -499,7 +500,7 @@ test('Leisten: Eckstütze vor jeder Innenecke, Warnung misst das freie Feld', ()
   const U = run({ sys:'battens', shape:'U' });
   const w = U.warn.find(x => x.includes('vorne frei'));
   assert.ok(w && w.includes('hinten (955 mm)') && !w.includes('1594'), w);
-  assert.ok(U.steps.some(s => s[0] === 'Eckstützen stellen'));
+  assert.ok(U.steps.some(s => s[0] === 'Stützen stellen' && s[1].includes('an den Innenecken')));
   // Stoss mit Stütze: das freie Feld ist rund die halbe Wand, nicht die ganze Tablarlänge
   const J = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).warn.find(x => x.includes('vorne frei'));
   assert.ok(J && !J.includes('2394'), J);
@@ -593,4 +594,38 @@ test('Türhöhe: zu grosse Module werden im Reduit gebaut, Kippmass wird geprüf
   assert.ok(run({ build:'free', shape:'I', rh:2000, gapTop:100, dBack:600 }).warn.some(w => w.includes('Kippmass')));
   assert.ok(!run({ build:'free', shape:'I' }).warn.some(w => w.includes('Kippmass')));
   assert.ok(!run({ sys:'cheeks', shape:'I' }).warn.some(w => w.includes('Kippmass')));
+});
+
+/* ---------- Anleitung (Schreiner-Review Schritt 6) ---------- */
+const stepNames = Rr => Rr.steps.map(s => s[0]);
+const vor = (Rr, a, b) => { const n = stepNames(Rr); return n.indexOf(a) >= 0 && n.indexOf(a) < n.indexOf(b); };
+
+test('Anleitung Module: Lochreihen und Verbindung vor dem Bauen, Kippschutz sofort, Schrauben auf der Liste', () => {
+  for (const [joint, name] of [['pocket', 'Taschenlöcher bohren'], ['dowels', 'Dübellöcher bohren'], ['cam', 'Bohrungen für Exzenter'], ['screws', 'Schraublöcher vorbohren']]) {
+    const Rr = run({ build:'free', shape:'U', joint });
+    assert.ok(vor(Rr, 'Lochreihen bohren', 'Module bauen') && vor(Rr, name, 'Module bauen'), joint + ': ' + stepNames(Rr).join(' → '));
+  }
+  const Rr = run({ build:'free', shape:'U' });
+  assert.ok(Rr.steps.find(s => s[0] === 'Module stellen')[1].includes('sofort nach dem Aufstellen'));
+  assert.ok(!stepNames(Rr).includes('Kippschutz montieren'));
+  assert.ok(Rr.hw.some(h => h[2].includes('Module untereinander verbinden') && h[0] > 0));
+  assert.ok(run({ build:'free', shape:'I', dowels:true, joint:'dowels' }).steps.find(s => s[0] === 'Module bauen')[1].includes('Leim'));
+});
+
+test('Anleitung: Oberfläche vor der Montage, Höhen vom Meterriss', () => {
+  for (const o of [{ sys:'battens' }, { mat:'mdf', t:19, sys:'rails' }, { build:'free' }, { mat:'dekorspan', t:19, sys:'cheeks' }]) {
+    const Rr = run(o), n = stepNames(Rr);
+    const i = n.findIndex(x => x.endsWith('– vor der Montage'));
+    assert.ok(i > 0 && i === n.indexOf('Teile beschriften und schleifen') + 1, JSON.stringify(o) + ' ' + n.join(' → '));
+  }
+  assert.ok(run({ sys:'battens' }).steps.find(s => s[0] === 'Tablarhöhen anzeichnen')[1].includes('Meterriss'));
+});
+
+test('Anleitung: ein Schritt für alle Stützen (freie Enden, Stösse, Innenecken)', () => {
+  const stoss = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).steps.find(s => s[0] === 'Stützen stellen');
+  assert.ok(stoss && stoss[1].includes('Tablarstössen'), JSON.stringify(stoss));
+  const frei = run({ sys:'rails', shape:'U', rd:1800, doorIn:true, hinge:'L' }).steps.find(s => s[0] === 'Stützen stellen');
+  assert.ok(frei && frei[1].includes('freien Enden'));
+  assert.ok(!stepNames(run({ sys:'rails', shape:'I' })).includes('Stützen stellen'));
+  assert.ok(!stepNames(run({ sys:'posts', shape:'U' })).includes('Stützen stellen'), 'Pfosten haben ihren eigenen Schritt');
 });

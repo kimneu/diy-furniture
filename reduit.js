@@ -602,6 +602,7 @@ function freeModules(ctx, seg){
     if (seg.niche.at === 'end') zones.push([u0, u1 - nw - 2, 0], [u1 - nw, u1, seg.niche.h]);
     else zones.push([u0, u0 + nw, seg.niche.h], [u0 + nw + 2, u1, 0]);
   } else zones.push([u0, u1, 0]);
+  let imSegment = 0;
   for (const [a, b, minY] of zones) {
     const { m, w } = moduleSplit(b - a, ctx.max, t);
     for (let k = 0; k < m; k++) {
@@ -628,13 +629,15 @@ function freeModules(ctx, seg){
           ctx.box(seg, { u0:ma + 1, u1:mb - 1, y0:1, y1:top - 1, v0, v1:v0 + bt }, 'v', 'u', ctx.backFin, [0, 0, -120]));
         ctx.backScrews += Math.ceil(2 * (w + top) / 150);
       } else ctx.buy('angle40', 4, 'ohne Rückwand: hinten in die Ecken');
-      ctx.modules++;
+      ctx.modules++; imSegment++;
       if (top > 1200) { ctx.tall++; ctx.dowel(0, 2); }
       // Fertig durch die Tür (aufrecht, schmale Seite voran) und im Raum aufrichtbar?
       if (Math.min(w, dep) > ctx.c.doorW - 20 || top > ctx.c.doorH - 20) ctx.zuGross = true;
       if (Math.hypot(top, dep) > ctx.H - 10) ctx.kipp = Math.max(ctx.kipp || 0, r0(Math.hypot(top, dep)));
     }
   }
+  // Nebeneinanderstehende Module: 3 Schrauben pro Stoss, Seite an Seite (Review DY-23).
+  if (imSegment > 1) ctx.screw('streifen', 3 * (imSegment - 1), 'Module untereinander verbinden, 3 pro Stoss');
 }
 
 /* ---------- Berechnung ---------- */
@@ -769,7 +772,8 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasFreeEnds: rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')), hasCorner: rows.some(r => r.name === 'Eckleiste') });
+  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasCorner: rows.some(r => r.name === 'Eckleiste'),
+    pins: ctx.pins, stuetzen: { frei: rows.some(r => r.note.includes('freien Ende')), stoss: rows.some(r => r.note.includes('Tablarstoss')), ecke: rows.some(r => r.note.startsWith('Eckstütze')) } });
 
   // Raumwände und Nischen für die 3D-Ansicht
   const WT = 100, doorH = c.doorH, { left:wfL, right:wfR } = lay.wand;
@@ -795,56 +799,66 @@ function computeReduit(c0){
 
 /* ---------- Bauablauf ---------- */
 function buildReduitSteps(o){
-  const { c, free, Bk, drywall, hasSolid, hasFreeEnds, hasCorner, hasJoints } = o;
+  const { c, free, Bk, drywall, hasSolid, hasCorner, hasJoints, stuetzen } = o;
   const sc = anbau => screwText(screwFor(anbau, c.t));
   const st = [];
   st.push(['Raum ausmessen und Wände prüfen', `Breite und Tiefe auf drei Höhen messen – alte Wände sind selten gerade, rechne mit dem kleinsten Mass. Mit dem Leitungssucher Strom- und Wasserleitungen markieren.${drywall ? ' Bei Gipskarton die Ständer suchen (meist alle 60 cm) und anzeichnen.' : ''}`, 'Ein Foto mit Doppelmeter an jeder Wand hilft später beim Zuschnitt.']);
   if (o.boards) st.push(['Bretter einkaufen und ablängen', `Die ganzen Bretter stehen in der Einkaufsliste (Beschläge & Kaufteile). Zuhause mit Kapp- oder Handkreissäge auf die Längen der Materialliste ablängen – die Breite bleibt, wie sie ist.${hasSolid ? ' Kanthölzer und Latten ebenso auf Länge sägen.' : ''}`, 'Zuerst die längsten Teile anzeichnen, dann die kurzen aus den Resten.']);
   else st.push(['Zuschnitt organisieren', `Kopier die Materialliste und lass die Platten im Baumarkt zuschneiden.${hasSolid ? ' Kanthölzer und Latten gibt es in Standardlängen – selbst mit der Säge ablängen.' : ''}`, 'Frag nach dem Zuschnitt, ob die Teile beschriftet werden können.']);
   st.push(['Teile beschriften und schleifen', 'Positionsbuchstabe auf die Unterseite, Kanten mit Körnung 120 und 180 schleifen und leicht brechen.', null]);
+  // Oberfläche vor der Montage: danach kommt man an Rück- und Unterseiten nicht mehr heran (Review DY-18, RM-19).
+  if (MATS[c.mat] && MATS[c.mat].coated) st.push(['Kanten schützen – vor der Montage', c.mat === 'dekorspan' ? 'Sichtbare Kanten mit Kantenband bügeln, Überstand mit dem Cutter abnehmen.' : 'Schnittkanten mit Lack oder Öl streichen, damit sie keine Feuchtigkeit ziehen.', null]);
+  else st.push([c.mat === 'mdf' ? 'Lackieren – vor der Montage' : 'Oberfläche ölen – vor der Montage', `${c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal.'} Leim- und Verbindungsflächen frei lassen.`, 'Über Nacht trocknen lassen, bevor montiert wird.']);
   if (free) {
-    st.push(['Module bauen', `Pro Modul Boden und Deckel zwischen die Seiten setzen und mit der gewählten Verbindung (${JOINTS[c.joint].name}) verbinden. Zuerst trocken zusammenstecken, jede Ecke mit dem Winkel prüfen.${o.zuGross ? ` Fertig passen die Module nicht durch die Tür (${c.doorW} × ${c.doorH} mm) – darum im Reduit zusammenbauen.` : ''}`, 'Zu zweit geht es deutlich einfacher.']);
+    // Lochreihen und Verbindung vor dem Zusammenbau bohren (Review DY-5, MX-12, MX-E3).
+    if (o.pins) st.push(['Lochreihen bohren', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Innenseiten der Modulseiten bohren, je ca. 40 mm von vorne und hinten, ${Math.min(10, c.t - 5)} mm tief. Die Schablone immer an der Unterkante anlegen – nebeneinanderstehende Seiten spiegelbildlich bohren.`, 'Tiefenstopp auf dem Bohrer setzen – ein Stück Klebeband tut es auch.']);
+    st.push(...jointSteps(c, c.t, { between:'Boden und Deckel' }));
+    const glue = c.joint === 'dowels' ? ' Dübel und Kontaktflächen dünn mit Leim bestreichen, zusammenschieben und mit 2 Korpuszwingen (Modulbreite + 100 mm) pressen.' : '';
+    st.push(['Module bauen', `Pro Modul Boden und Deckel zwischen die Seiten setzen und mit der gewählten Verbindung (${JOINTS[c.joint].name}) verbinden. Zuerst trocken zusammenstecken, jede Ecke mit dem Winkel prüfen.${glue}${o.zuGross ? ` Fertig passen die Module nicht durch die Tür (${c.doorW} × ${c.doorH} mm) – darum im Reduit zusammenbauen.` : ''}`, 'Zu zweit geht es deutlich einfacher.']);
     if (Bk) st.push(['Rückwände montieren', 'Diagonalen messen, bis sie gleich lang sind, dann die Rückwand rundum 1 mm zurück alle 15 cm verschrauben.', null]);
     else st.push(['Module aussteifen', 'Diagonalen messen, bis sie gleich lang sind, dann hinten Metallwinkel in alle vier Ecken schrauben.', null]);
-    st.push(['Module stellen', 'Zuerst die hinteren Module stellen und ausrichten, dann die seitlichen davor. Nebeneinanderstehende Module mit 2–3 Schrauben pro Seite verbinden.', 'Bei unebenem Boden Unterlegkeile oder Stellfüsse verwenden.']);
+    // Hohe Module kippen leicht: jedes sofort sichern, nicht erst am Schluss (Review RM-17).
+    const hoch = c.rh - c.gapTop > 1200;
+    st.push(['Module stellen', `Zuerst die hinteren Module stellen und ausrichten, dann die seitlichen davor.${hoch ? ` Jedes Modul sofort nach dem Aufstellen oben mit dem Kippschutz an die Wand schrauben${drywall ? ' (bei Gipskarton in einen Ständer oder mit Hohlraumdübeln)' : ''}, erst dann das nächste stellen.` : ''} Nebeneinanderstehende Module mit 3 Schrauben ${sc('streifen')} pro Stoss verbinden.`, 'Bei unebenem Boden Unterlegkeile oder Stellfüsse verwenden.']);
     if (o.eck.fach) st.push(['Eckfach zuerst einrichten', `Hinten ${joinDe(o.eck.fach)}: Das hintere Eckmodul stellen, sofort oben sichern und seine Einlegeböden einlegen – erst dann das Seitenmodul davor stellen, danach kommt man kaum noch hinein. Das Seitenmodul mit 3 Schrauben ${sc('kante')} von innen durch seine Stirnseite in die Vorderkante der hinteren Modulseite schrauben (oben, Mitte, unten, vorbohren Ø 2,5 mm).`, null]);
     if (o.eck.leer) st.push(['Ecke leer lassen', `Hinten ${joinDe(o.eck.leer)} bleibt das Eckquadrat hinter dem Seitenmodul leer – dort käme man nicht an die Böden.`, null]);
-    if (c.rh - c.gapTop > 1200) st.push(['Kippschutz montieren', `Jedes Modul oben mit dem Kippschutz an die Wand schrauben${drywall ? ' – bei Gipskarton in einen Ständer oder mit Hohlraumdübeln' : ''}.`, null]);
     st.push(['Einlegeböden einlegen', 'Bodenträger in die gewünschte Höhe stecken und die Einlegeböden auflegen.', null]);
-  } else {
-    const ank = drywall ? 'Hohlraumdübel' : 'Dübel 6 mm';
-    st.push(['Tablarhöhen anzeichnen', `Die Unterkanten der Tablare auf ${o.levels.join(', ')} mm ab Boden an allen Wänden mit Wasserwaage anzeichnen.`, 'Ein Laser spart hier viel Zeit.']);
-    if (c.sys === 'battens') st.push(['Leisten montieren', `Wandleisten und Endleisten auf die Linien halten, alle 40 cm vorbohren und mit ${ank} befestigen. Die Oberkante der Leiste ist die Unterkante des Tablars.`, 'Erst die Enden befestigen, dann mit der Wasserwaage die Mitte ausrichten.']);
-    if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
-    if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
-    if (c.sys === 'cheeks') {
-      const eck = o.eck.fach || o.eck.leer;
-      st.push(['Lochreihen bohren, Wangen stellen', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Wangen bohren (10 mm tief). Wangen senkrecht stellen und mit je 3 Winkeln an Wand und Boden befestigen (${ank})${eck ? ' – die Eckwangen der Seitenregale erst im nächsten Schritt' : ''}.`, 'Zwischenwangen bohren beidseitig – dort nur 8 mm tief und um 16 mm versetzt.']);
-      if (o.eck.fach) st.push(['Eckfach zuerst einrichten', `Hinten ${joinDe(o.eck.fach)}: Bodenträger und Tablare ins hintere Eckfach einsetzen, solange die Eckwange noch nicht steht. Dann die Eckwange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in die Vorderkante der hinteren Wange schrauben (oben, Mitte, unten, vorbohren Ø 2,5 mm).`, null]);
-      if (o.eck.leer) st.push(['Ecke schliessen', `Hinten ${joinDe(o.eck.leer)} bleibt das Eckquadrat leer: Die Eckwange vor die hintere Wange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in deren Vorderkante schrauben (vorbohren Ø 2,5 mm).`, null]);
-    }
-    if (c.sys === 'posts') {
-      // Reihenfolge: Latten, Tablare einschieben, dann erst die Pfosten davor – sonst kommen die Tablare nicht mehr hinein.
-      const corner = o.segs.some(s => s.ends[0] === 'corner');
-      st.push(['Latten montieren', `Wandlatten und Endlatten auf die Linien schrauben (${ank}, alle 40 cm). Die vorderen Querlatten an den Wänden mit je einem Winkel auf die Endlatte schrauben${corner ? ', in der Ecke die seitliche Querlatte mit einem Winkel an die hintere' : ''}.`, 'Bis die Pfosten stehen, lange Querlatten in der Mitte mit einem Reststück abstützen.']);
-      st.push(['Tablare einschieben', `Die Tablare auf ihrer Höhe von vorne auf Wand- und Querlatte schieben${corner ? ', zuerst die hinteren, dann die seitlichen' : ''}. Die Pfosten kommen erst danach.`, null]);
-      st.push(['Pfosten stellen', `Pfosten auf Länge sägen, vor die Querlatten stellen und lotrecht ausrichten. Jede Querlatte mit 2 Schrauben 5 × 60 von vorne durch den Pfosten anschrauben, vorbohren mit Ø 3 mm.${corner ? ' Am Eckpfosten die seitliche Querlatte mit einer Schraube von der Gangseite befestigen, 24 mm unter dem Tablar – so treffen sich die Schrauben im Pfosten nicht.' : ''}`, 'Einen Kunststoffgleiter unter jeden Pfosten legen, nicht in den Boden dübeln.']);
-      st.push(['Tablare verschrauben', `Jedes Tablar von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Latte an Wand-, End- und Querlatte schrauben, vorbohren. Erst dann belasten.`, 'Verschraubt wird das Tablar zur Scheibe und hält den Rahmen an der Wand.']);
-    }
-    if (hasFreeEnds) st.push(['Stützen an den freien Enden', 'Kanthölzer vor die freien Tablar-Enden stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel an die Stütze schrauben.', null]);
-    const auflegen = {
-      battens: `Tablare auflegen und von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Leiste festschrauben, vorbohren.`,
-      rails: `Tablare auflegen und von unten durch jede Konsole mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus.`,
-      brackets: `Tablare auflegen und von unten durch jeden Winkel mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus.`,
-      cheeks: 'Bodenträger stecken und die Tablare auflegen.'
-    };
-    if (auflegen[c.sys]) st.push(['Tablare auflegen', auflegen[c.sys], null]);
-    if (c.sys === 'battens' && hasCorner) st.push(['Eckstützen stellen', 'An jeder Innenecke ein Kantholz vor beide Tablarkanten stellen, lotrecht ausrichten und jedes Tablar mit einem Winkel daran schrauben – je Ebene 2 Winkel.', 'Einen Kunststoffgleiter unter die Stütze legen, nicht in den Boden dübeln.']);
-    if (hasCorner) st.push(['Eckstösse verbinden', `Unter jedem Stoss zwischen hinterem und seitlichem Tablar eine Eckleiste anschrauben – je 2 Schrauben ${sc(o.boards ? 'latte' : 'streifen')} in jedes Tablar.`, null]);
-    if (hasJoints) st.push(['Stösse verbinden', `Wo ein Tablar aus zwei Brettern besteht, liegt das eine Stück auf der Stütze, das andere stösst 45 mm daneben an. Unter den Stoss eine Stossleiste legen und mit je 2 Schrauben ${sc('latte')} in beide Stücke schrauben.`, 'Die Stossleiste zuerst am aufliegenden Stück festschrauben, dann das zweite Stück bündig anlegen.']);
+    return st;
   }
-  if (MATS[c.mat] && MATS[c.mat].coated) st.push(['Kanten schützen', c.mat === 'dekorspan' ? 'Sichtbare Kanten mit Kantenband bügeln, Überstand mit dem Cutter abnehmen.' : 'Schnittkanten mit Lack oder Öl streichen, damit sie keine Feuchtigkeit ziehen.', null]);
-  else st.push([c.mat === 'mdf' ? 'Lackieren' : 'Oberfläche ölen', c.mat === 'mdf' ? 'Kanten zweimal grundieren, zwischenschleifen, zweimal lackieren – am besten vor der Montage.' : 'Hartwachsöl dünn auftragen, nach 15 Minuten Überschuss abnehmen, nach dem Trocknen ein zweites Mal – am einfachsten vor der Montage.', null]);
+  const ank = drywall ? 'Hohlraumdübel' : 'Dübel 6 mm';
+  const corner = o.segs.some(s => s.ends[0] === 'corner');
+  // Waagrecht statt parallel zum Boden: Höhen von einem Meterriss aus messen (Review RM-17).
+  st.push(['Tablarhöhen anzeichnen', `Die höchste Stelle des Bodens suchen und von dort einen waagrechten Meterriss rundum anzeichnen, mit Laser oder Schlauchwaage. Die Unterkanten der Tablare liegen ${o.levels.join(', ')} mm über dieser Stelle – alle Höhen vom Meterriss aus messen.`, 'Ein Laser spart hier viel Zeit.']);
+  if (c.sys === 'battens') st.push(['Leisten montieren', `Wandleisten und Endleisten auf die Linien halten, alle 40 cm vorbohren und mit ${ank} befestigen. Die Oberkante der Leiste ist die Unterkante des Tablars.`, 'Erst die Enden befestigen, dann mit der Wasserwaage die Mitte ausrichten.']);
+  if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
+  if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
+  if (c.sys === 'cheeks') {
+    const eck = o.eck.fach || o.eck.leer;
+    st.push(['Lochreihen bohren, Wangen stellen', `Mit der Lochreihen-Schablone Löcher Ø 5 mm in die Wangen bohren (10 mm tief). Wangen senkrecht stellen – bei unebenem Boden unterlegen, bis die Lochreihen mit der Wasserwaage auf gleicher Höhe liegen – und mit je 3 Winkeln an Wand und Boden befestigen (${ank})${eck ? '. Die Eckwangen der Seitenregale erst im nächsten Schritt' : ''}.`, 'Zwischenwangen bohren beidseitig – dort nur 8 mm tief und um 16 mm versetzt.']);
+    if (o.eck.fach) st.push(['Eckfach zuerst einrichten', `Hinten ${joinDe(o.eck.fach)}: Bodenträger und Tablare ins hintere Eckfach einsetzen, solange die Eckwange noch nicht steht. Dann die Eckwange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in die Vorderkante der hinteren Wange schrauben (oben, Mitte, unten, vorbohren Ø 2,5 mm).`, null]);
+    if (o.eck.leer) st.push(['Ecke schliessen', `Hinten ${joinDe(o.eck.leer)} bleibt das Eckquadrat leer: Die Eckwange vor die hintere Wange stellen und mit 3 Schrauben ${sc('kante')} durch die Eckwange in deren Vorderkante schrauben (vorbohren Ø 2,5 mm).`, null]);
+  }
+  if (c.sys === 'posts') st.push(['Latten montieren', `Wandlatten und Endlatten auf die Linien schrauben (${ank}, alle 40 cm). Die vorderen Querlatten an den Wänden mit je einem Winkel auf die Endlatte schrauben${corner ? ', in der Ecke die seitliche Querlatte mit einem Winkel an die hintere' : ''}.`, 'Bis die Pfosten stehen, lange Querlatten in der Mitte mit einem Reststück abstützen.']);
+  // Vormontage an der Werkbank, damit Eck- und Stossleisten beim Auflegen schon sitzen (Review EP-10, DY-22).
+  if (hasCorner) st.push(['Eckleisten vormontieren', `An der Werkbank unter das Stirnende jedes Seitentablars eine Eckleiste schrauben (2 Schrauben ${sc(o.boards ? 'latte' : 'streifen')}), so dass sie rund 20 mm vorsteht – beim Auflegen greift sie unter das hintere Tablar.`, null]);
+  if (hasJoints) st.push(['Stossleisten vormontieren', `Wo ein Tablar aus zwei Brettern besteht: an der Werkbank die Stossleiste unter das Ende des einen Stücks schrauben (2 Schrauben ${sc('latte')}), so dass sie zur Hälfte vorsteht.`, null]);
+  if (c.sys === 'posts') {
+    // Reihenfolge: Tablare einschieben, dann erst die Pfosten davor – sonst kommen die Tablare nicht mehr hinein.
+    st.push(['Tablare einschieben', `Die Tablare auf ihrer Höhe von vorne auf Wand- und Querlatte schieben${corner ? ', zuerst die hinteren, dann die seitlichen' : ''}${hasJoints ? '; das zweite Stück bündig an den Stoss legen und von unten durch die Stossleiste festschrauben' : ''}. Die Pfosten kommen erst danach.`, null]);
+    st.push(['Pfosten stellen', `Pfosten auf Länge sägen, vor die Querlatten stellen und lotrecht ausrichten. Jede Querlatte mit 2 Schrauben 5 × 60 von vorne durch den Pfosten anschrauben, vorbohren mit Ø 3 mm.${corner ? ' Am Eckpfosten die seitliche Querlatte mit einer Schraube von der Gangseite befestigen, 24 mm unter dem Tablar – so treffen sich die Schrauben im Pfosten nicht.' : ''}`, 'Einen Kunststoffgleiter unter jeden Pfosten legen, nicht in den Boden dübeln.']);
+    st.push(['Tablare verschrauben', `Jedes Tablar von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Latte an Wand-, End- und Querlatte schrauben, vorbohren. Erst dann belasten.`, 'Verschraubt wird das Tablar zur Scheibe und hält den Rahmen an der Wand.']);
+    return st;
+  }
+  const befestigen = {
+    battens: `von oben mit 2 Senkkopfschrauben ${sc('oben')} pro Leiste festschrauben, vorbohren`,
+    rails: `von unten durch jede Konsole mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus`,
+    brackets: `von unten durch jeden Winkel mit 2 Schrauben ${sc('blech')} festschrauben – länger nicht, sonst kommt die Spitze oben heraus`
+  }[c.sys];
+  if (c.sys === 'cheeks') st.push(['Tablare auflegen', 'Bodenträger stecken und die Tablare auflegen.', null]);
+  else st.push(['Tablare auflegen', `Tablare auflegen${corner ? ', zuerst die hinteren, dann die seitlichen' : ''} und ${befestigen}.${hasCorner ? ` An der Ecke das Seitentablar mit 2 Schrauben ${sc(o.boards ? 'latte' : 'streifen')} von unten durch die Eckleiste ins hintere Tablar schrauben.` : ''}${hasJoints ? ` Am Stoss das zweite Stück bündig anlegen und von unten durch die Stossleiste festschrauben.` : ''}`, null]);
+  // Alle Kanthölzer vor den Tablaren in einem Schritt: freie Enden, Stösse, Innenecken (Review DY-22).
+  const wo = [stuetzen.frei && 'an den freien Enden', stuetzen.stoss && 'unter den Tablarstössen', stuetzen.ecke && 'an den Innenecken'].filter(Boolean);
+  if (wo.length) st.push(['Stützen stellen', `Kanthölzer vor die Tablare stellen – ${joinDe(wo)} –, lotrecht ausrichten und jedes Tablar mit einem Winkel daran schrauben${stuetzen.ecke ? ' (an den Innenecken je Ebene 2 Winkel)' : ''}.`, 'Einen Kunststoffgleiter unter jede Stütze legen, nicht in den Boden dübeln.']);
   return st;
 }
 
