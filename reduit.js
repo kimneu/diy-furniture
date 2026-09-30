@@ -399,6 +399,7 @@ const SUPPORTS = {
       pts.sort((x, y) => x - y);
       for (let i = 1; i < pts.length; i++) longest = Math.max(longest, pts[i] - pts[i - 1]);
     }
+    ctx.frei = Math.max(ctx.frei || 0, r0(longest));   // für die Sperre der Bauweise «Leisten»
     if (longest >= ctx.max) spanWarn(ctx, seg, longest, `liegen vorne frei – bei ${ctx.matShort} ${ctx.t} mm biegen sie sich ab ca. ${ctx.max} mm Spannweite durch. Pfostenrahmen, Wandschienen oder dickeres Material wählen.`);
   },
 
@@ -793,7 +794,7 @@ function computeReduit(c0){
   return {
     kind:'reduit', W, H, D, Dtot:D, t, M, Bk, rows, boxes, doors:[], slides:[], extras, groups, hw, finish,
     tools:[...tools], steps, warn:[...new Set(warn)], carcFin:fin, frontFin:fin, level, joint:c.joint, matShort:M.name,
-    buyCost, solidCost, room:{ W, D, H, doorW:c.doorW, doorH, doorX0:lay.x0 }, build:c.build, sys:c.sys, shape:c.shape, modules:ctx.modules, max
+    buyCost, solidCost, room:{ W, D, H, doorW:c.doorW, doorH, doorX0:lay.x0 }, frei:ctx.frei || 0, build:c.build, sys:c.sys, shape:c.shape, modules:ctx.modules, max
   };
 }
 

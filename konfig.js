@@ -9,7 +9,7 @@ function cfgFromData(d){
     sections:n('sections'), shelves:n('shelves'), base:d.base, baseH:n('baseH'), legShape:d.legShape, taper:n('taper'), legColor:d.legColor, joint:d.joint,
     front:d.front, doorsPer:d.doorsPer, slideN:d.slideN, handle:d.handle, color:d.color, frontMat:d.frontMat, frontT:n('frontT'),
     sheetL:n('sheetL'), sheetB:n('sheetB'), kerf:n('kerf'), grain:on('grain'), price:n('price'),
-    kind:d.kind,
+    kind:d.kind, bw:d.bw,
     rw:n('rw'), rd:n('rd'), rh:n('rh'), doorW:n('doorW'), doorPos:d.doorPos, doorOff:n('doorOff'), doorH:n('doorH'), doorIn:on('doorIn'), hinge:d.hinge, wall:d.wall,
     shape:d.shape, corner:d.corner, build:d.build, sys:d.sys,
     dBack:n('dBack'), dLeft:n('dLeft'), dRight:n('dRight'), nShelves:n('nShelves'), gapBottom:n('gapBottom'), gapTop:n('gapTop'),
@@ -38,7 +38,9 @@ const mitVerbindung = c => istSideboard(c) || freiStehend(c);   // Korpusverbind
 // Ausweichreihenfolge, wenn der gesetzte Wert gesperrt ist (Stärke: nächste erlaubte Stärke des Materials).
 const AUSWEICH = {
   joint:['pocket', 'dowels', 'cam', 'screws'], front:['hinged', 'sliding', 'open'], back:['hdf3', 'ply6', 'hf3', 'none'],
-  sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true']
+  sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true'],
+  top:['over', 'between'], build:['built', 'free'],
+  bw:{ sideboard:['S1', 'S2', 'S4', 'S6', 'S5', 'S3'], reduit:['R2', 'R6', 'R5', 'R3', 'R4', 'R1'] }
 };
 // Wandschienen: kürzeste Konsole 250 mm + Schiene 12 mm + 10 mm Luft vorne, gerundet.
 const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 280;
@@ -59,6 +61,120 @@ const KORPUS_MIN = 18;
 const hoheSeiten = c => c.kind === 'reduit' && (c.build === 'free' ? c.rh - c.gapTop > 1200 : c.sys === 'cheeks');
 // Brettbreiten, die in [a, b] liegen (ganze Bretter); bei Plattenmaterial null.
 const breitenIn = (c, a, b) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.filter(w => w >= a && w <= b) : null; };
+/* ---------- Bauweisen ---------- */
+// Eine Bauweise bündelt Material, Stärke, Verbindung, Rückwand und Oberfläche zu einer geprüften Kombination
+// (docs/review/2026-09-28-eingrenzung-bauweisen.md; Entscheide 28. und 30.09.2026). Frei bleiben Masse, Aufteilung
+// und die Optik innerhalb der Bauweise. mats: Material → erlaubte Stärken; bad: Materialien im Bad (fehlt: nicht
+// im Bad); front: Frontmaterialien (korpus = wie Korpus); Reduit: build und sys legen die Bauart fest.
+const SPERRHOLZ = { birke:[18], birkesi:[18], fichtesp:[18], dreischicht:[19] };
+// Tablare für Leisten, Pfosten, Schienen, Winkel: Platten und ganze Bretter ab 15 mm; MDF nur beim Pfostenrahmen (19 mm).
+const tablarMats = mitMdf => Object.fromEntries(Object.entries(MATS)
+  .map(([k, M]) => [k, k === 'mdf' ? (mitMdf ? [19] : []) : M.t.filter(t => t >= 15)]).filter(([, ts]) => ts.length));
+const BAUWEISEN = {
+  sideboard: [
+    { id:'S1', name:'Sperrholz geölt', desc:'Für den Einstieg, heller Skandi-Look mit sichtbaren Schichtkanten.', niveau:[1, 2],
+      mats:SPERRHOLZ, bad:['birke', 'birkesi'], joint:'pocket', backs:['hdf3', 'hf3', 'ply6'], front:['korpus', 'mdf'],
+      oberflaeche:'Hartwachsöl – Farbe nur mit Isoliergrund' },
+    { id:'S2', name:'MDF lackiert', desc:'Glatte Flächen in Farbe. Gedübelt und verleimt, vor dem Zusammenbau lackiert.', niveau:[2, 3],
+      mats:{ mdf:[19] }, bad:['mdf'], joint:'dowels', backs:['hdf3'], front:['korpus', 'mdf'],
+      oberflaeche:'Grundierung und Möbellack' },
+    { id:'S3', name:'Weiss beschichtet, zerlegbar', desc:'Günstig und zerlegbar wie ein Fertigmöbel. Exzenter, Kanten mit Kantenband.', niveau:[2, 3],
+      mats:{ dekorspan:[19] }, joint:'cam', backs:['hdf3', 'hf3'], front:['korpus', 'mdf'],
+      oberflaeche:'Kantenband, nicht schleifen' },
+    { id:'S4', name:'Massivholz geölt', desc:'Leimholz Eiche oder Fichte, gedübelt – ein Möbel fürs Leben.', niveau:[2, 3],
+      mats:{ eiche:[18], fichte:[18] }, bad:['eiche'], joint:'dowels', backs:['ply6', 'hdf3'], front:['korpus', 'dreischicht'],
+      oberflaeche:'Hartwachsöl, Eiche nie lackieren' },
+    { id:'S5', name:'Sperrholz verschraubt', desc:'Ohne Spezialwerkzeug, die Schraubenköpfe sind Teil der Gestaltung.', niveau:[1, 2],
+      mats:{ birke:[18], fichtesp:[18], dreischicht:[19] }, joint:'screws', top:'between', backs:['hdf3', 'hf3', 'ply6'], front:['korpus', 'mdf'],
+      oberflaeche:'Hartwachsöl' },
+    { id:'S6', name:'Sperrholz zerlegbar', desc:'Sperrholz mit Exzentern – lässt sich für den Umzug zerlegen und wieder aufbauen.', niveau:[2, 3],
+      mats:SPERRHOLZ, joint:'cam', backs:['hdf3', 'hf3', 'ply6'], front:['korpus', 'mdf'],
+      oberflaeche:'Hartwachsöl – Farbe nur mit Isoliergrund' }
+  ],
+  reduit: [
+    { id:'R2', name:'Pfostenrahmen', desc:'Latten rundum als Auflage, Kanthölzer vor den Tablaren – das klassische Kellerregal.', niveau:[1],
+      build:'built', sys:'posts', mats:tablarMats(true), walls:['solid', 'drywall'],
+      tragwerk:'Latten rundum, Pfosten höchstens 1200 mm auseinander, Eckpfosten an jeder Innenecke' },
+    { id:'R1', name:'Leisten', desc:'Leisten an der Wand, vorne frei – für kurze Wände und Nischen.', niveau:[1],
+      build:'built', sys:'battens', mats:tablarMats(false), walls:['solid', 'drywall'],
+      tragwerk:'Wand- und Endleisten, Eckstütze an jeder Innenecke' },
+    { id:'R3', name:'Wandschienen', desc:'Tablare auf Konsolen, Höhen jederzeit verstellbar.', niveau:[1],
+      build:'built', sys:'rails', mats:tablarMats(false), walls:['solid'], tragwerk:'Schienen mit Konsolen, Tablar vor der Schiene' },
+    { id:'R4', name:'Tablarwinkel', desc:'Blechkonsolen für flache Tablare bis 375 mm Tiefe.', niveau:[1],
+      build:'built', sys:'brackets', mats:tablarMats(false), walls:['solid'], tragwerk:'Blechkonsolen, langer Schenkel an der Wand' },
+    { id:'R5', name:'Wangen mit Lochreihe', desc:'Alles aus Holz, Tablare auf Bodenträgern verstellbar.', niveau:[2],
+      build:'built', sys:'cheeks', mats:SPERRHOLZ, walls:['solid', 'drywall'], tragwerk:'Wangen mit 32er-Lochreihe, oben an die Wand' },
+    { id:'R6', name:'Selbststehende Module', desc:'Korpusse mit Rückwand, tragen sich selbst – zügelbar, gut für Mietwohnung und Gipskarton.', niveau:[2],
+      build:'free', mats:{ ...SPERRHOLZ, dekorspan:[19], mdf:[19] }, joint:c => ['dekorspan', 'mdf'].includes(c.mat) ? 'cam' : 'pocket',
+      backs:['hdf3', 'hf3', 'ply6'], walls:['solid', 'drywall'], tragwerk:'Korpusmodule mit Rückwand, Kippsicherung' }
+  ]
+};
+const BW = Object.fromEntries([...BAUWEISEN.sideboard, ...BAUWEISEN.reduit].map(b => [b.id, b]));
+const bwKind = c => BAUWEISEN[c.kind === 'reduit' ? 'reduit' : 'sideboard'];
+const bwVon = c => c.bw && BW[c.bw] && bwKind(c).includes(BW[c.bw]) ? BW[c.bw] : null;
+const bwJoint = (b, c) => typeof b.joint === 'function' ? b.joint(c) : b.joint;
+// Materialien der Bauweise, im Bad beim Sideboard nur die dafür vorgesehenen.
+const bwMats = (b, c) => istSideboard(c) && c.room === 'bath' ? (b.bad || []) : Object.keys(b.mats);
+// Welche Bauweise passt zu älteren Formularwerten am besten? Einsatzort, dann Material, dann Verbindung (Review, Abschnitt 6).
+function bauweiseVon(d){
+  const c = cfgFromData(d);
+  if (c.kind === 'reduit') return c.build === 'free' ? 'R6' : ({ battens:'R1', posts:'R2', rails:'R3', brackets:'R4', cheeks:'R5' })[c.sys] || 'R2';
+  if (c.mat === 'mdf') return 'S2';
+  if (c.mat === 'dekorspan') return c.room === 'bath' ? 'S2' : 'S3';
+  if (c.mat === 'eiche' || c.mat === 'fichte') return 'S4';
+  if (c.room === 'bath') return 'S1';
+  return c.joint === 'screws' ? 'S5' : c.joint === 'cam' ? 'S6' : 'S1';
+}
+// Leisten: Wie weit liegen die Tablare vorne frei, und was trägt das Material? (gerechnet wie mit Leisten gebaut)
+const leistenCache = new Map();
+function leistenFrei(c){
+  const R1 = BW.R1, mat = R1.mats[c.mat] ? c.mat : 'fichtesp';
+  const t = R1.mats[mat].includes(c.t) ? c.t : R1.mats[mat][0];
+  const key = JSON.stringify([c.rw, c.rd, c.rh, c.shape, c.corner, c.dBack, c.dLeft, c.dRight, c.doorW, c.doorIn, c.hinge, c.doorPos, c.doorOff,
+    c.nShelves, c.gapBottom, c.gapTop, c.nicheL, c.nicheLW, c.nicheLH, c.nicheR, c.nicheRW, c.nicheRH, mat, t]);
+  if (!leistenCache.has(key)) {
+    if (leistenCache.size > 200) leistenCache.clear();
+    const R = computeReduit({ ...c, build:'built', sys:'battens', mat, t });
+    leistenCache.set(key, { frei:R.frei, max:R.max, name:MATS[mat].name, t });
+  }
+  return leistenCache.get(key);
+}
+// Warum ist eine Bauweise hier nicht möglich? null = möglich.
+function bwSperre(b, c){
+  if (istSideboard(c)) return c.room === 'bath' && !b.bad ? 'Nicht fürs Bad vorgesehen.' : null;
+  if (c.wall === 'drywall' && !b.walls.includes('drywall')) return `Nicht auf Gipskarton: ${b.sys === 'rails' ? 'Schienen ziehen' : 'Winkel ziehen'} an den Dübeln.`;
+  if (b.id === 'R1') {
+    const L = leistenFrei(c);
+    if (L.frei >= L.max) return `Die Tablare liegen vorne bis ${L.frei} mm frei – ${L.name} ${L.t} mm trägt ca. ${L.max} mm. Pfostenrahmen nehmen.`;
+  }
+  return null;
+}
+// Regeln der gewählten Bauweise: Was nicht zu ihr gehört, ist gesperrt; das Regelwerk weicht dann auf ihre Werte aus.
+const nichtIn = (alle, ok) => alle.filter(w => !ok.includes(w));
+const BW_REGELN = [
+  { id:'BW', wirkung:'sperren', feld:'bw', werte:c => c.bw == null ? [] : [...Object.keys(BW).filter(k => !bwKind(c).includes(BW[k])), ...bwKind(c).filter(b => bwSperre(b, c)).map(b => b.id)],
+    grund:(c, w) => BW[w] && bwKind(c).includes(BW[w]) ? bwSperre(BW[w], c) : 'Gehört zum anderen Möbeltyp.', befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'mat', werte:c => { const b = bwVon(c); return b ? nichtIn(Object.keys(MATS), bwMats(b, c)) : []; },
+    grund:c => istSideboard(c) && c.room === 'bath' ? `Im Bad gehört dieses Material nicht zur Bauweise «${bwVon(c).name}».` : `Gehört nicht zur Bauweise «${bwVon(c).name}».`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'t', werte:c => { const b = bwVon(c); return b && b.mats[c.mat] ? nichtIn(MATS[c.mat].t, b.mats[c.mat]) : []; },
+    grund:c => `Die Bauweise «${bwVon(c).name}» nimmt ${MATS[c.mat].name} in ${bwVon(c).mats[c.mat].map(t => t + ' mm').join(' oder ')}.`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'joint', werte:c => { const b = bwVon(c); return b && b.joint && mitVerbindung(c) ? nichtIn(Object.keys(JOINTS), [bwJoint(b, c)]) : []; },
+    grund:c => `Die Bauweise «${bwVon(c).name}» verbindet mit ${JOINTS[bwJoint(bwVon(c), c)].name}.`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'build', werte:c => { const b = bwVon(c); return b && b.build ? nichtIn(['built', 'free'], [b.build]) : []; },
+    grund:c => `Folgt aus der Bauweise «${bwVon(c).name}».`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'sys', werte:c => { const b = bwVon(c); return b && b.sys ? nichtIn(Object.keys(SYS), [b.sys]) : []; },
+    grund:c => `Folgt aus der Bauweise «${bwVon(c).name}».`, befunde:['Bauweisen'] },
+  // Im Bad gilt für jede Bauweise die Pappel-Rückwand, beidseitig lackiert (Review, Zusatz «Bad»).
+  { id:'BW', wirkung:'sperren', feld:'back', werte:c => { const b = bwVon(c); return b && b.backs && (istSideboard(c) || freiStehend(c)) ? nichtIn(['hdf3', 'hf3', 'ply6', 'none'], istSideboard(c) && c.room === 'bath' ? ['ply6'] : b.backs) : []; },
+    grund:c => `Gehört nicht zur Bauweise «${bwVon(c).name}».`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'frontMat', werte:c => { const b = bwVon(c); return b && b.front ? nichtIn(['korpus', ...Object.keys(MATS)], b.front) : []; },
+    grund:c => `Gehört nicht zur Bauweise «${bwVon(c).name}».`, befunde:['Bauweisen'] },
+  { id:'BW', wirkung:'sperren', feld:'frontT', werte:c => { const b = bwVon(c), M = MATS[c.frontMat]; return b && b.front && M ? frontTs(M).filter(t => t < 16) : []; },
+    grund:() => 'Fronten ab 16 mm – dünnere Türen verziehen sich und brauchen Spezialscharniere.', befunde:['SF-3', 'SF-10'] },
+  { id:'BW', wirkung:'sperren', feld:'top', werte:c => { const b = bwVon(c); return b && b.top ? nichtIn(['over', 'between'], [b.top]) : []; },
+    grund:c => `Bei «${bwVon(c).name}» sitzt der Deckel zwischen den Seiten – sonst sieht man die Schraubenköpfe oben.`, befunde:['SK-14'] }
+];
+
 const REGELN = [
   { id:'S01', wirkung:'sperren', feld:'t', werte:c => istSideboard(c) ? MATS[c.mat].t.filter(t => t < KORPUS_MIN) : [],
     grund:() => `Nur für Fronten – der Korpus braucht mindestens ${KORPUS_MIN} mm, darauf sind Verbindungen, Scharniere und Schrauben ausgelegt.`, befunde:['SK-6', 'MX-2', 'MX-1', 'DY-2'] },
@@ -107,11 +223,12 @@ const REGELN = [
   { id:'K14', wirkung:'grenze', felder:['dBack'], wenn:c => c.kind === 'reduit' && c.doorIn, max:c => c.rd - c.doorW - 50,
     grund:() => 'Die Tür geht nach innen auf – vor dem hinteren Regal braucht sie ihre Breite und 50 mm Luft.', befunde:['EG-6', 'RM-2'] }
 ];
+REGELN.push(...BW_REGELN);
 const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBottom:[0, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
 // Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
-const REIHENFOLGE = ['room', 'wall', 'build', 'sys', 'shape', 'mat', 't', 'frontMat', 'frontT', 'front', 'back', 'joint', 'grain'];
+const REIHENFOLGE = ['room', 'wall', 'bw', 'build', 'sys', 'shape', 'top', 'mat', 't', 'frontMat', 'frontT', 'front', 'back', 'joint', 'grain'];
 // Gesperrte Werte je Feld: { feld: { wert: { regel, grund } } } (Werte als Text, wie im Formular).
 function gesperrt(c){
   const g = {};
@@ -144,9 +261,13 @@ function wertName(feld, w){
   if (feld === 'frontMat') return w === 'korpus' ? 'wie Korpus' : MATS[w] ? MATS[w].name : w;
   if (feld === 't') return `${w} mm`;
   if (feld === 'grain') return w === 'true' ? 'Maserung einhalten' : 'Maserung frei';
+  if (feld === 'bw') return BW[w] ? BW[w].name : w;
+  if (feld === 'build') return w === 'free' ? 'selbststehend' : 'eingebaut';
+  if (feld === 'top') return w === 'between' ? 'Deckel zwischen den Seiten' : 'Deckel aufgesetzt';
+  if (feld === 'frontT') return `${w} mm`;
   return w;
 }
-const FELDNAME = { joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
+const FELDNAME = { bw:'Bauweise', build:'Regal', top:'Deckel', frontT:'Frontstärke', joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
   dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar' };
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
@@ -169,14 +290,21 @@ function pruefeRegeln(d, fest = new Set()){
       if (feld === 't') {
         const ts = MATS[c.mat].t.filter(t => !werte[String(t)]);
         alt = ts.find(t => t >= c.t) ?? ts[ts.length - 1];
+      } else if (feld === 'frontT') {
+        const ts = frontTs(MATS[c.frontMat]).filter(t => !werte[String(t)]);
+        alt = ts.find(t => t >= c.frontT) ?? ts[ts.length - 1];
       } else if (feld === 'mat') {
         const ok = k => MATS[k] && !werte[k] && (!MATS[k].boards || c.kind === 'reduit');
-        alt = AUSWEICH.mat.find(ok) ?? Object.keys(MATS).find(ok);
-      } else alt = (AUSWEICH[feld] || []).find(w => !werte[w]);
+        const b = bwVon(c);   // mit Bauweise: ihr erstes Material, sonst die übliche Reihenfolge
+        alt = (b ? bwMats(b, c) : AUSWEICH.mat).find(ok) ?? Object.keys(MATS).find(ok);
+      } else if (feld === 'bw') alt = AUSWEICH.bw[c.kind === 'reduit' ? 'reduit' : 'sideboard'].find(w => !werte[w]);
+      else if (feld === 'back' && bwVon(c) && bwVon(c).backs) alt = [...bwVon(c).backs, ...AUSWEICH.back].find(w => !werte[w]);   // Reihenfolge der Bauweise
+      else alt = (AUSWEICH[feld] || []).find(w => !werte[w]);
       if (alt == null) { warnungen.push(`${FELDNAME[feld]} ${wertName(feld, cur)}: ${hit.grund}`); continue; }
       korrekturen.push(`${FELDNAME[feld]}: ${wertName(feld, String(alt))} statt ${wertName(feld, cur)} – ${hit.grund}`);
       if (feld === 'mat') { x = withCatalog({ ...x, mat:alt }); setzeKatalog(); }
       else if (feld === 't') { x = { ...x, t:typeof x.t === 'number' ? alt : String(alt), price:matPrice(MATS[x.mat], alt) }; setzeKatalog(); }
+      else if (feld === 'frontT') x = { ...x, frontT:typeof x.frontT === 'number' ? alt : String(alt) };
       else if (feld === 'grain') x = { ...x, grain:true };
       else x = { ...x, [feld]:alt };
       neu = true;
@@ -209,6 +337,37 @@ function computeData(d, fest){
   R.warn = [...P.warnungen, ...R.warn];
   R.form = P.d; R.gesperrt = P.gesperrt; R.grenzen = P.grenzen; R.korrekturen = P.korrekturen;
   return R;
+}
+
+/* ---------- Karten der Bauweisen ---------- */
+// Preis je Bauweise für die aktuellen Masse: mit den Werten, die die Bauweise daraus macht (Material, das zu ihr
+// gehört, sonst ihr erstes). null = hier nicht möglich.
+function kartenPreise(d){
+  const c = cfgFromData(d), out = {};
+  for (const b of bwKind(c)) out[b.id] = bwSperre(b, c) ? null : Math.round(kostenGesamt(computeData({ ...d, bw:b.id })));
+  return out;
+}
+// Zeilen für die gewählte Karte: [Bezeichnung, Text].
+function bwDetails(b, c){
+  const mats = bwMats(b, c), name = k => MATS[k].name;
+  // Stärke: die häufigste für alle, abweichende mit Materialnamen (z. B. «18 mm, Dreischicht Fichte 19 mm»)
+  const ts = mats.map(k => b.mats[k]), haupt = ts.map(String).sort((x, y) => ts.filter(v => String(v) === y).length - ts.filter(v => String(v) === x).length)[0];
+  const staerke = istSideboard(c) || b.id === 'R5' || b.id === 'R6'
+    ? [haupt.split(',').join('/') + ' mm', ...mats.filter(k => String(b.mats[k]) !== haupt).map(k => `${name(k)} ${b.mats[k].join('/')} mm`)].join(', ')
+    : 'ab 15 mm';
+  const rows = [['Material', mats.map(name).join(' · ')], ['Stärke', staerke]];
+  const backs = istSideboard(c) && c.room === 'bath' ? ['ply6'] : b.backs;
+  if (istSideboard(c)) {
+    rows.push(['Verbindung', JOINTS[bwJoint(b, c)].name + (b.top === 'between' ? ', Deckel zwischen den Seiten' : '')]);
+    rows.push(['Rückwand', backs.map(k => BACKS[k].name).join(', ')]);
+    rows.push(['Oberfläche', c.room === 'bath' ? 'PU-Lack, 3 Schichten, vor der Montage' : b.oberflaeche]);
+    if (c.room === 'bath') rows.push(['Im Bad', 'Leim D4, Schrauben Edelstahl A2, Rückwand beidseitig lackiert']);
+  } else {
+    rows.push(['Tragwerk', b.tragwerk]);
+    if (b.build === 'free') rows.push(['Verbindung', 'Taschenloch, bei Spanplatte und MDF Exzenter'], ['Rückwand', backs.map(k => BACKS[k].name).join(', ')]);
+    rows.push(['Wand', b.walls.includes('drywall') ? 'Beton, Backstein oder Gipskarton' : 'nur Beton oder Backstein']);
+  }
+  return rows;
 }
 
 /* ---------- Zufall ---------- */
@@ -409,4 +568,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
