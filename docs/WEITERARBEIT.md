@@ -37,6 +37,13 @@ Entschieden am 28.09.2026 (zweite Runde):
 - **Lack auf beschichteter Spanplatte:** warnen (anschleifen, Haftgrund), nicht sperren.
 - Pull Request später, alles zusammen.
 
+Entschieden am 30.09.2026 (Bauweisen, nach dem Entwurf):
+
+- **Auswahl:** 6 Sideboard-Bauweisen – die 5 aus dem Review plus **«Sperrholz zerlegbar»** (Sperrholz mit Exzenter) – und 6 fürs Reduit.
+- **Leisten:** gesperrt, wenn die Tablare vorne weiter frei liegen, als das Material trägt; der Grund verweist auf den Pfostenrahmen.
+- **Preis auf den Karten:** live für die aktuellen Masse.
+- **Ältere Einträge der Sammlung:** beim Laden fragen – «An Bauweise anpassen» oder «Unverändert ansehen».
+
 Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude/next-steps-9c8hnq` (baut auf `schreiner-review` auf):
 
 - [x] **1. Pfostenrahmen, Variante A:** Pfosten stehen vor der Querlatte (`addPost`, v = Tiefe … Tiefe + 45), Tablare rechteckig. Eckpfosten an jeder Innenecke (beim Seitenregal gesetzt, trägt auch die hintere Querlatte), keine Eckleiste mehr. Pfostenabstand nach der Querlatte (`POST_MAX` 1200) statt nach der Tablar-Spannweite: Standard-U 2 statt 4 Pfosten, unabhängig vom Material. Verbindungen auf der Kaufliste: Winkel je Querlatten-Ende (Wand, Ecke), 5 × 60 durch die Pfosten (Eckpfosten 3 je Ebene), Tablare mit 4 × 40 von oben. Bauablauf: Latten → Tablare einschieben → Pfosten stellen → Tablare verschrauben. Durchgang wird zwischen den Pfosten gemessen (− 90 mm). Stützen an freien Enden und Stössen (Leisten, Schienen, Winkel) stehen ebenfalls vor dem Tablar. Stösse bei ganzen Brettern brauchen beim Pfostenrahmen keinen eigenen Pfosten (das Tablar liegt auf Wand- und Querlatte).
