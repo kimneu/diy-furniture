@@ -168,11 +168,21 @@ test('Randfall: Tür breiter als Raum erlaubt wird mit Warnung verkleinert', () 
   assert.ok(!ok.warn.some(w => w.includes('Türbreite')));
 });
 
-test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt', () => {
+test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt, jedes mindestens 500 mm', () => {
   const Rr = run({ shape:'I', rw:1600, rh:2400, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 200'), 3);
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 100'), 3);
-  assert.ok(Rr.warn.some(w => w.includes('zwei Stücke')));
+  assert.ok(Rr.warn.some(w => w.includes('zwei Stücke') && w.includes('500 mm')));
+  // 2050 mm: 1550 + 500 statt 2000 + 50; Dübel nach genutzter Länge (7 + 3 statt 8 + 5 je Schiene)
+  assert.deepStrictEqual(R.railParts(2050), [1550, 500]);
+  assert.deepStrictEqual(R.railParts(2700), [2000, 700]);
+  assert.deepStrictEqual(R.railParts(1800), [1800]);
+  assert.strictEqual(qtyOf(Rr, 'Spreizdübel'), Math.ceil(3 * (7 + 3) * 1.1), '+10 % Reserve');
+  assert.ok(Rr.steps.some(s => s[0] === 'Wandschienen montieren' && s[1].includes('nur am freien Ende kürzen')));
+  // Eine Schiene reicht: kein Hinweis zum Stoss
+  const eins = run({ shape:'I', rw:1600, rh:2400, sys:'rails', gapTop:350 });
+  assert.strictEqual(qtyOf(eins, 'Wandschiene Element System, 100'), 0);
+  assert.ok(!eins.steps.some(s => s[1].includes('nur am freien Ende kürzen')));
 });
 
 test('beschichtete Platten werden nicht geölt', () => {

@@ -226,6 +226,29 @@ test('K09: unterstes Tablar über der untersten Auflage', () => {
   assert.ok(!K.pruefeRegeln({ ...RD, sys:'cheeks', gapBottom:'0' }).grenzen.gapBottom);
 });
 
+test('K08: Wandschienen – Deckenabstand, bis eine 2-m-Schiene reicht, statt eines kurzen zweiten Stücks', () => {
+  const qty = (R, n) => R.hw.filter(h => h[1].startsWith(n)).reduce((a, h) => a + h[0], 0);
+  // Standard-U: 5 Tablare 150 … 2100 brauchen 2050 mm Schiene → oberstes Tablar 50 mm tiefer
+  const P = K.pruefeRegeln({ ...RD, sys:'rails', mat:'birke', t:'18' });
+  assert.strictEqual(P.d.gapTop, '350');
+  assert.ok(P.korrekturen.some(k => k.startsWith('Oberstes Tablar bis Decke: 350 statt 300 mm')));
+  const R = K.computeData({ ...RD, sys:'rails', mat:'birke', t:'18' });
+  assert.strictEqual(qty(R, 'Wandschiene Element System, 100'), 0);
+  assert.ok(!R.warn.some(w => w.includes('zwei Stücke')));
+  // Grenze erscheint im Formular als min, auch wenn der Wert schon passt
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'rails', gapTop:'400' }).grenzen.gapTop.min, 350);
+  // Hoher Raum: das oberste Tablar käme mehr als 300 mm tiefer → zwei Stücke, keine Grenze
+  const hoch = K.pruefeRegeln({ ...RD, sys:'rails', rh:'2800' });
+  assert.strictEqual(hoch.d.gapTop, '300');
+  assert.ok(!hoch.grenzen.gapTop);
+  // Andere Bauarten, selbststehend und ein einzelnes Tablar sind nicht betroffen
+  for (const d of [{ sys:'posts' }, { sys:'rails', build:'free' }, { sys:'rails', nShelves:'1' }]) assert.strictEqual(K.pruefeRegeln({ ...RD, ...d }).d.gapTop, '300', JSON.stringify(d));
+  // Festgehalten: Warnung statt Korrektur
+  const fest = K.pruefeRegeln({ ...RD, sys:'rails' }, new Set(['gapTop']));
+  assert.strictEqual(fest.d.gapTop, '300');
+  assert.ok(fest.warnungen.some(w => w.includes('Wandschiene')));
+});
+
 test('K13: Seiten höchstens 100 mm tiefer als hinten, nur sichtbare Seiten', () => {
   const P = K.pruefeRegeln({ ...RD, shape:'U', dBack:'300', dLeft:'500', dRight:'350' });
   assert.strictEqual(P.d.dLeft, '400');

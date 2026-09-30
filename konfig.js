@@ -56,6 +56,12 @@ function auflageUnten(c){
   if (c.sys === 'brackets') return WINKEL_WAND[winkelFuer(Math.max(...tiefenFelder(c).map(k => c[k])))];
   return 0;
 }
+// Wandschienen: Jede Schiene reicht 60 mm unter das unterste bis 40 mm über das oberste Tablar. Die kleinste Deckenlücke,
+// bei der eine Schiene 2000 mm reicht; liegt sie höchstens 300 mm über dem Standard (300 mm), gilt sie als Grenze,
+// statt für einen kleinen Rest ein zweites Stück zu kaufen (Review K08, TR-13). Darüber: zwei Stücke je ≥ 500 mm.
+const DECKE_STANDARD = 300, SCHIENE_TIEFER = 300;
+const deckeFuerSchiene = c => Math.ceil((c.rh - c.gapBottom + 100 - RAIL_MAX) / 10) * 10;
+const schieneReicht = c => eingebaut(c) && c.sys === 'rails' && c.nShelves > 1 && deckeFuerSchiene(c) <= DECKE_STANDARD + SCHIENE_TIEFER;
 // Korpus beim Sideboard sowie Wangen und hohe Module im Reduit: mindestens 18 mm (Entscheid 28.09.2026).
 const KORPUS_MIN = 18;
 const fachSpan = c => maxSpan(c.mat, c.t) + (c.shelves ? 0 : 200);
@@ -224,6 +230,8 @@ const REGELN = [
     grund:() => `Die kürzeste Konsole ist 250 mm, dazu Schiene und Luft vorne – Wandschienen ab ${TIEFE_MIN_SCHIENE} mm Tiefe. Für flachere Tablare Tablarwinkel.`, befunde:['EP-9', 'TR-16'] },
   { id:'K09', wirkung:'grenze', felder:['gapBottom'], wenn:c => eingebaut(c) && auflageUnten(c) > 0, min:c => Math.ceil((auflageUnten(c) + 10) / 10) * 10,
     grund:c => `Die unterste Auflage (${{ battens:'Leiste', posts:'Latte', rails:'Schiene', brackets:'Wandschenkel des Tablarwinkels' }[c.sys]}, ${auflageUnten(c)} mm) braucht Platz über dem Boden.`, befunde:['EG-9', 'EP-16', 'RM-10', 'EP-14'] },
+  { id:'K08', wirkung:'grenze', felder:['gapTop'], wenn:schieneReicht, min:deckeFuerSchiene,
+    grund:c => `Mit dem obersten Tablar mindestens ${deckeFuerSchiene(c)} mm unter der Decke reicht je eine Wandschiene ${RAIL_MAX} mm – sonst braucht jede Schiene ein zweites Stück.`, befunde:['TR-13', 'DY-8'] },
   { id:'K13', wirkung:'grenze', felder:c => tiefenFelder(c).filter(k => k !== 'dBack'), wenn:c => c.kind === 'reduit' && c.shape !== 'I', max:c => c.dBack + SEITE_MEHR,
     grund:() => `Die Seiten höchstens ${SEITE_MEHR} mm tiefer als hinten – sonst wird die Stossfuge in der Ecke lang und die Ecke hängt durch. Für tiefe Seiten hinten tiefer machen.`, befunde:['EP-8', 'EP-11'] },
   { id:'S16', wirkung:'sperren', feld:'sys', werte:c => eingebaut(c) && c.wall === 'drywall' ? ['rails', 'brackets'] : [],
@@ -232,7 +240,7 @@ const REGELN = [
     grund:() => 'Die Tür geht nach innen auf – vor dem hinteren Regal braucht sie ihre Breite und 50 mm Luft.', befunde:['EG-6', 'RM-2'] }
 ];
 REGELN.push(...BW_REGELN);
-const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBottom:[0, 600] };   // Grundgrenzen der Zahlenfelder (wie index.html)
+const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBottom:[0, 600], gapTop:[100, 800] };   // Grundgrenzen der Zahlenfelder (wie index.html)
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
 // Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
@@ -277,7 +285,7 @@ function wertName(feld, w){
   return w;
 }
 const FELDNAME = { sections:'Fächer', bw:'Bauweise', build:'Regal', top:'Deckel', frontT:'Frontstärke', joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
-  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar' };
+  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar', gapTop:'Oberstes Tablar bis Decke' };
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
 // dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 12 Runden).

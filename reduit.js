@@ -176,7 +176,15 @@ const BUY = Object.fromEntries(Object.entries(BUY_INFO).map(([k, b]) => {
   const P = PRICE_DATA.kaufteile[k] || { price:0, est:true };
   return [k, { ...b, price:P.price, ...(P.est ? { est:true } : {}) }];
 }));
-const RAIL_LENS = [1000, 1500, 2000];
+const RAIL_LENS = [1000, 1500, 2000], RAIL_MAX = 2000;
+// Längen der Schienenstücke für `need` mm. Über 2000 mm zwei Stücke, jedes mindestens 500 mm, damit das obere
+// genug Dübel und Konsolen trägt (Review TR-13). Gekürzt wird nur am freien Ende, das Lochraster läuft am Stoss durch.
+const RAIL_STUECK_MIN = 500;
+function railParts(need){
+  if (need <= RAIL_MAX) return [r0(need)];
+  const oben = Math.max(RAIL_STUECK_MIN, need - RAIL_MAX);
+  return [r0(need - oben), r0(oben)];
+}
 // Wandschiene: so tief steht sie von der Wand ab (Annahme, am Produkt nachmessen). Das Tablar beginnt 2 mm davor.
 const RAIL_T = 12, RAIL_V0 = RAIL_T + 2;
 // Ganze Bretter bei Wandschienen: das Brett beginnt vor der Schiene und steht darum so viel weiter vor als die Tiefe.
@@ -420,11 +428,8 @@ const SUPPORTS = {
       if (!on.length) continue;
       const y0 = Math.min(...on.map(p => p.y)) - 60, y1 = Math.max(...on.map(p => p.y)) + 40;
       const need = y1 - y0;
-      // Schienenstücke: längste Jumbo-Schiene ist 200 cm, darüber zwei Stücke übereinander.
-      const parts = [];
-      for (let rest = need; rest > 0; ) { const l = RAIL_LENS.find(x => x >= rest) || RAIL_LENS[RAIL_LENS.length - 1]; parts.push(l); rest -= l; }
-      if (parts.length > 1) groupWarn(ctx, 'rails2', SIDE_NAME[seg.id], sides => `Die Wandschienen ${sides} brauchen ${r0(need)} mm – längste Schiene ist ${RAIL_LENS[RAIL_LENS.length - 1]} mm, darum je zwei Stücke bündig übereinander (eingeplant).`);
-      for (const l of parts) { ctx.buy('rail' + l, 1, 'senkrecht, auf Länge kürzen'); ctx.dowel(0, Math.ceil(l / 300) + 1); }
+      for (const l of railParts(need)) { ctx.buy('rail' + RAIL_LENS.find(x => x >= l), 1, 'senkrecht, auf Länge kürzen'); ctx.dowel(0, Math.ceil(l / 300) + 1); }
+      if (need > RAIL_MAX) { ctx.schieneZweiteilig = true; groupWarn(ctx, 'rails2', SIDE_NAME[seg.id], sides => `Die Wandschienen ${sides} brauchen ${r0(need)} mm – längste Schiene ist ${RAIL_MAX} mm, darum je zwei Stücke übereinander, jedes mindestens ${RAIL_STUECK_MIN} mm lang (eingeplant).`); }
       ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 8, u1:u + 8, y0, y1: y1, v0:0, v1:RAIL_T }, 'v', 'y', null) });
       for (const p of on) {
         ctx.extras.push({ type:'metal', ...ctx.box(seg, { u0:u - 6, u1:u + 6, y0:p.y - 25, y1:p.y, v0:RAIL_T, v1:RAIL_T + kl }, 'u', 'v', null, [0, 0, 120]) });
@@ -773,7 +778,7 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasCorner: rows.some(r => r.name === 'Eckleiste'),
+  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, schieneZweiteilig:!!ctx.schieneZweiteilig, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasCorner: rows.some(r => r.name === 'Eckleiste'),
     pins: ctx.pins, stuetzen: { frei: rows.some(r => r.note.includes('freien Ende')), stoss: rows.some(r => r.note.includes('Tablarstoss')), ecke: rows.some(r => r.note.startsWith('Eckstütze')) } });
 
   // Raumwände und Nischen für die 3D-Ansicht
@@ -831,7 +836,7 @@ function buildReduitSteps(o){
   // Waagrecht statt parallel zum Boden: Höhen von einem Meterriss aus messen (Review RM-17).
   st.push(['Tablarhöhen anzeichnen', `Die höchste Stelle des Bodens suchen und von dort einen waagrechten Meterriss rundum anzeichnen, mit Laser oder Schlauchwaage. Die Unterkanten der Tablare liegen ${o.levels.join(', ')} mm über dieser Stelle – alle Höhen vom Meterriss aus messen.`, 'Ein Laser spart hier viel Zeit.']);
   if (c.sys === 'battens') st.push(['Leisten montieren', `Wandleisten und Endleisten auf die Linien halten, alle 40 cm vorbohren und mit ${ank} befestigen. Die Oberkante der Leiste ist die Unterkante des Tablars.`, 'Erst die Enden befestigen, dann mit der Wasserwaage die Mitte ausrichten.']);
-  if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
+  if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.${o.schieneZweiteilig ? ` Zweiteilige Schienen nur am freien Ende kürzen (unten beim unteren, oben beim oberen Stück) und am Stoss bündig aufeinanderstellen, damit das Lochraster durchläuft; jedes Stück mindestens ${RAIL_STUECK_MIN} mm.` : ''}`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
   if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
   if (c.sys === 'cheeks') {
     const eck = o.eck.fach || o.eck.leer;
@@ -866,5 +871,5 @@ function buildReduitSteps(o){
 if (typeof module !== 'undefined') module.exports = {
   REDUIT_DEFAULTS, normReduit, shelfLevels, layoutReduit, toWorld, boxOf,
   BUY, SYS, cheekPositions, moduleSplit, computeReduit, shelfJoints,
-  RAIL_T, RAIL_V0, WINKEL_WAND, winkelFuer, railsVor
+  RAIL_T, RAIL_V0, RAIL_MAX, WINKEL_WAND, winkelFuer, railsVor, railParts
 };
