@@ -108,6 +108,23 @@ test('Spannweiten-Tabelle', () => {
   assert.strictEqual(S.maxSpan('unbekannt', 18), 700);
 });
 
+test('Spannweiten Leimholz und Dreischicht nach der Balkenformel (TR-14)', () => {
+  // Einfeldträger unter Dauerlast: L = ∛(384 · E · b · t³ / (12 · 5 · q · k · Kriechfaktor)), b = 300 mm, q = 0,4 N/mm.
+  const spanFormel = (E, kriech, t, k) => Math.cbrt(384 * E * 300 * t ** 3 / (12 * 5 * 0.4 * k * kriech));
+  const LEIM = { E:10000, kriech:1.6 }, DREI = { E:6000, kriech:1.8 };
+  const nachgerechnet = { fichte:LEIM, eiche:LEIM, gon_fichte:LEIM, mood_fichte:LEIM, dreischicht:DREI, gon_3s:DREI };
+  for (const [k, { E, kriech }] of Object.entries(nachgerechnet)) for (const [t, L] of Object.entries(S.SPAN[k])) {
+    const L250 = spanFormel(E, kriech, Number(t), 250);
+    assert.strictEqual(L, Math.floor(L250 / 50) * 50, `${k} ${t} mm`);
+    assert.ok(L <= spanFormel(E, kriech, Number(t), 200), `${k} ${t} mm: höchstens L/200`);
+  }
+  // Werte aus dem Review: Fichte 18 ≈ 960, Dreischicht 19 ≈ 820 bei L/200
+  assert.strictEqual(Math.round(spanFormel(10000, 1.6, 18, 200) / 10) * 10, 960);
+  assert.strictEqual(Math.round(spanFormel(6000, 1.8, 19, 200) / 10) * 10, 820);
+  // Sperrholz, MDF und Spanplatte bleiben (TR-14: passen)
+  assert.deepStrictEqual([S.maxSpan('birke', 18), S.maxSpan('mdf', 19), S.maxSpan('dekorspan', 19), S.maxSpan('osb', 18)], [800, 550, 500, 650]);
+});
+
 test('jede Material-Stärke hat einen Spannweiten-Wert', () => {
   for (const [k, M] of Object.entries(S.MATS)) for (const t of M.t) assert.ok(S.SPAN[k] && S.SPAN[k][t], `${k} ${t} mm fehlt in SPAN`);
 });

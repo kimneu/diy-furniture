@@ -136,21 +136,23 @@ function packBoards(items, boards, kerf){
 /* ---------- Spannweiten ---------- */
 // Maximale freie Spannweite (mm) eines belasteten Tablars (ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200).
 // Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
+// Leimholz und Dreischicht nachgerechnet (Review TR-14): Einfeldträger, 40 kg/m, 300 mm tief, Dauerlast,
+// E 10 000 / 6 000 N/mm², Kriechfaktor 1,6 / 1,8, Durchbiegung ≤ L/250, auf 50 mm abgerundet (spanFormel im Test).
 const SPAN = {
   birke:     { 12:500, 15:650, 18:800, 21:950 },
   birkesi:   { 12:500, 15:650, 18:800, 21:950 },
-  eiche:     { 18:700, 20:800, 26:1000, 27:1050 },
-  fichte:    { 18:600, 21:720, 27:900, 28:950 },
+  eiche:     { 18:850, 20:950, 26:1250, 27:1300 },
+  fichte:    { 18:850, 21:1000, 27:1300, 28:1350 },
   seekiefer: { 12:450, 15:550 },
   fichtesp:  { 12:450, 15:600, 18:700, 21:800, 24:900 },
   mdf:       { 16:450, 19:550, 22:650 },
   schaltafel:{ 27:1000 },
   osb:       { 12:450, 15:550, 18:650, 22:800 },
-  dreischicht:{ 19:650, 27:950 },
+  dreischicht:{ 19:750, 27:1050 },
   dekorspan: { 16:400, 19:500 },
-  gon_fichte:{ 18:600 },
-  gon_3s:    { 19:650 },
-  mood_fichte:{ 18:600 },
+  gon_fichte:{ 18:850 },
+  gon_3s:    { 19:750 },
+  mood_fichte:{ 18:850 },
   regalbau:  { 16:400 },
   moebel_weiss:{ 18:470 }
 };
