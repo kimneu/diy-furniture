@@ -145,3 +145,49 @@ test('Karten: Details der Bauweise, im Bad mit den Bad-Regeln', () => {
   assert.ok(Object.fromEntries(K.bwDetails(K.BW.S5, K.cfgFromData(SB))).Verbindung.includes('Deckel zwischen den Seiten'));
   assert.strictEqual(Object.fromEntries(K.bwDetails(K.BW.R3, K.cfgFromData(RD))).Wand, 'nur Beton oder Backstein');
 });
+
+function seeded(seed){
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+test('Zufall würfelt zuerst die Bauweise und bleibt in ihr', () => {
+  for (const base of [SB, RD, { ...SB, room:'bath' }, { ...RD, wall:'drywall' }]) {
+    const rnd = seeded(base.kind.length + (base.room === 'bath' ? 7 : 0) + (base.wall === 'drywall' ? 11 : 0)), seen = new Set();
+    for (let i = 0; i < 80; i++) {
+      const d = K.zufall(base, rnd);
+      assert.ok(K.BW[d.bw], JSON.stringify(d));
+      const X = P(d);
+      assert.deepStrictEqual(X.korrekturen, [], JSON.stringify(d));
+      assert.deepStrictEqual(X.warnungen, [], JSON.stringify(d));
+      if (base.room === 'bath') assert.ok(!['S3', 'S5', 'S6'].includes(d.bw), d.bw);
+      if (base.wall === 'drywall') assert.ok(!['R3', 'R4'].includes(d.bw), d.bw);
+      seen.add(d.bw);
+    }
+    assert.ok(seen.size >= 3, [...seen].join());
+  }
+});
+
+test('Zufall hält eine festgehaltene Bauweise', () => {
+  const rnd = seeded(3);
+  for (let i = 0; i < 20; i++) {
+    assert.strictEqual(K.zufall({ ...SB, bw:'S4', mat:'eiche', t:'18', joint:'dowels' }, rnd, 60, ['bauweise']).bw, 'S4');
+    assert.strictEqual(K.zufall({ ...RD, bw:'R5', sys:'cheeks' }, rnd, 60, ['bauweise']).bw, 'R5');
+  }
+});
+
+test('Ältere Einträge ohne Bauweise gelten nicht als geändert', () => {
+  const alt = { ...FORM };   // ohne bw
+  assert.ok(!K.geaendert({ ...alt, bw:K.bauweiseVon(alt) }, alt));
+  assert.ok(K.geaendert({ ...alt, bw:'S4' }, alt));
+});
+
+test('Fächer wachsen mit, wenn das Material weniger spannt (Spanplatte, MDF)', () => {
+  const s3 = P({ ...SB, bw:'S3' });
+  assert.strictEqual(s3.d.sections, '3');
+  assert.ok(s3.korrekturen.some(k => k.startsWith('Fächer: 3 statt 2')));
+  assert.ok(!K.computeData(s3.d).warn.some(w => w.includes('biegen')));
+  assert.strictEqual(P(SB).d.sections, '2', 'Birke 18 spannt 800 mm – 2 Fächer reichen bei 1200');
+  assert.ok(sperre(SB, 'sections', '1'));
+  // ohne Einlegeböden dürfen Deckel und Boden 200 mm weiter spannen
+  assert.strictEqual(P({ ...SB, bw:'S3', shelves:'0' }).d.sections, '2');
+});

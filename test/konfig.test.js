@@ -199,7 +199,8 @@ test('Reduit-Standard: Pfostenrahmen mit Sperrholz Fichte 18, ohne Warnung', () 
   assert.strictEqual(d.price, matPrice(MATS.fichtesp, 18));
   assert.deepStrictEqual(d.katalog, { price:d.price, sheetL:MATS.fichtesp.sheet[0], sheetB:MATS.fichtesp.sheet[1] });
   assert.deepStrictEqual(K.computeData(d).warn, []);
-  assert.deepStrictEqual(K.startwerte(FORM, 'sideboard'), { ...FORM, kind:'sideboard' });
+  assert.strictEqual(d.bw, 'R2');
+  assert.deepStrictEqual(K.startwerte(FORM, 'sideboard'), { ...FORM, kind:'sideboard', bw:'S1' });
 });
 
 test('Plattenformat wird nicht mehr auf 2100 mm gekappt (Birke 1500 × 3000)', () => {

@@ -188,7 +188,7 @@ test('Fixpunkt: die angepassten Werte sind erlaubt und brauchen keine weitere Ko
 
 test('Keine Sackgasse: jedes Feld behält mindestens einen erlaubten Wert', () => {
   const OPT = { joint:['pocket', 'screws', 'dowels', 'cam'], front:['open', 'hinged', 'sliding'], back:['hdf3', 'hf3', 'ply6', 'none'],
-    sys:['battens', 'rails', 'brackets', 'cheeks', 'posts'], grain:['true', 'false'], frontMat:['korpus', 'dekorspan'] };
+    sys:['battens', 'rails', 'brackets', 'cheeks', 'posts'], grain:['true', 'false'], frontMat:['korpus', 'dekorspan'], sections:['1', '2', '3', '4'] };
   for (const d of kombinationen()) {
     const P = K.pruefeRegeln(d);
     for (const [feld, werte] of Object.entries(P.gesperrt)) {

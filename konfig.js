@@ -39,7 +39,7 @@ const mitVerbindung = c => istSideboard(c) || freiStehend(c);   // Korpusverbind
 const AUSWEICH = {
   joint:['pocket', 'dowels', 'cam', 'screws'], front:['hinged', 'sliding', 'open'], back:['hdf3', 'ply6', 'hf3', 'none'],
   sys:['posts', 'battens', 'cheeks', 'rails', 'brackets'], mat:['birke', 'mdf', 'fichtesp', 'birkesi'], frontMat:['korpus'], grain:['true'],
-  top:['over', 'between'], build:['built', 'free'],
+  top:['over', 'between'], build:['built', 'free'], sections:['1', '2', '3', '4'],
   bw:{ sideboard:['S1', 'S2', 'S4', 'S6', 'S5', 'S3'], reduit:['R2', 'R6', 'R5', 'R3', 'R4', 'R1'] }
 };
 // Wandschienen: kürzeste Konsole 250 mm + Schiene 12 mm + 10 mm Luft vorne, gerundet.
@@ -58,6 +58,7 @@ function auflageUnten(c){
 }
 // Korpus beim Sideboard sowie Wangen und hohe Module im Reduit: mindestens 18 mm (Entscheid 28.09.2026).
 const KORPUS_MIN = 18;
+const fachSpan = c => maxSpan(c.mat, c.t) + (c.shelves ? 0 : 200);
 const hoheSeiten = c => c.kind === 'reduit' && (c.build === 'free' ? c.rh - c.gapTop > 1200 : c.sys === 'cheeks');
 // Brettbreiten, die in [a, b] liegen (ganze Bretter); bei Plattenmaterial null.
 const breitenIn = (c, a, b) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.filter(w => w >= a && w <= b) : null; };
@@ -188,6 +189,13 @@ const REGELN = [
     grund:(c, w) => w === 'cam' ? 'Die Beschläge gibt es nur für 15–22 mm Platten.' : 'Dübel und Schrauben erst ab 15 mm – in dünneren Platten brechen sie durch.', befunde:['SK-2', 'MX-1', 'DY-2', 'SK-10'] },
   { id:'W03', wirkung:'warnen', wenn:c => mitVerbindung(c) && c.joint === 'cam' && c.t === 15,
     text:() => 'Exzenter in 15 mm: nur mit Minifix 15, der für 15 mm zugelassen ist. Das Gehäuse lässt rund 3 mm Holz stehen – mit Tiefenanschlag bohren.', befunde:['MX-1', 'SK-2'] },
+  // Fächer: so viele, dass jedes Fach unter der Spannweite bleibt (ohne Einlegeböden spannen Deckel und Boden 200 mm mehr).
+  // Fachbreite s = (W − t) / n − t ≤ Spannweite, also n ≥ (W − t) / (Spannweite + t); höchstens 4 Fächer.
+  { id:'W01', wirkung:'sperren', feld:'sections', werte:c => {
+      if (!istSideboard(c) || !MATS[c.mat]) return [];
+      const n = Math.min(4, Math.ceil((c.W - c.t) / (fachSpan(c) + c.t)));
+      return ['1', '2', '3', '4'].filter(v => Number(v) < n);
+    }, grund:c => `Mit ${MATS[c.mat].name} ${c.t} mm höchstens ca. ${fachSpan(c)} mm pro Fach – sonst biegen sich ${c.shelves ? 'die Einlegeböden' : 'Deckel und Boden'} durch.`, befunde:['SK-3', 'MX-4'] },
   { id:'W06', wirkung:'warnen', wenn:c => istSideboard(c) && c.front !== 'open' && c.color !== 'korpus' && (MATS[c.frontMat] || MATS[c.mat]).coated,
     text:() => 'Lack auf beschichteter Spanplatte: die Fronten mit Körnung 240 anschleifen und einen Haftgrund für Melamin verwenden, sonst blättert der Lack ab.', befunde:['SF-9', 'MX-14'] },
   { id:'S05', wirkung:'sperren', feld:'joint', werte:c => mitVerbindung(c) && c.mat === 'osb' ? ['screws'] : [],
@@ -228,13 +236,14 @@ const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBotto
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
 // Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
-const REIHENFOLGE = ['room', 'wall', 'bw', 'build', 'sys', 'shape', 'top', 'mat', 't', 'frontMat', 'frontT', 'front', 'back', 'joint', 'grain'];
+const REIHENFOLGE = ['room', 'wall', 'bw', 'build', 'sys', 'shape', 'top', 'mat', 't', 'sections', 'frontMat', 'frontT', 'front', 'back', 'joint', 'grain'];
 // Gesperrte Werte je Feld: { feld: { wert: { regel, grund } } } (Werte als Text, wie im Formular).
 function gesperrt(c){
   const g = {};
   for (const r of REGELN) if (r.wirkung === 'sperren') for (const w of r.werte(c).map(String)) {
     const f = g[r.feld] || (g[r.feld] = {});
     if (!f[w]) f[w] = { regel:r.id, grund:r.grund(c, w) };
+    if (r.id === 'BW') f[w].bw = true;   // gehört nicht zur Bauweise: im Formular ausblenden statt ausgrauen
   }
   return g;
 }
@@ -267,7 +276,7 @@ function wertName(feld, w){
   if (feld === 'frontT') return `${w} mm`;
   return w;
 }
-const FELDNAME = { bw:'Bauweise', build:'Regal', top:'Deckel', frontT:'Frontstärke', joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
+const FELDNAME = { sections:'Fächer', bw:'Bauweise', build:'Regal', top:'Deckel', frontT:'Frontstärke', joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
   dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar' };
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
@@ -355,7 +364,9 @@ function bwDetails(b, c){
   const staerke = istSideboard(c) || b.id === 'R5' || b.id === 'R6'
     ? [haupt.split(',').join('/') + ' mm', ...mats.filter(k => String(b.mats[k]) !== haupt).map(k => `${name(k)} ${b.mats[k].join('/')} mm`)].join(', ')
     : 'ab 15 mm';
-  const rows = [['Material', mats.map(name).join(' · ')], ['Stärke', staerke]];
+  // Leisten, Pfosten, Schienen, Winkel nehmen fast alles – dort reicht eine Zeile statt 16 Namen.
+  const breit = !istSideboard(c) && ['R1', 'R2', 'R3', 'R4'].includes(b.id);
+  const rows = [['Material', breit ? `Platten und ganze Bretter ab 15 mm, ${b.mats.mdf ? 'auch MDF 19 mm' : 'ohne MDF'}` : mats.map(name).join(' · ')], ...(breit ? [] : [['Stärke', staerke]])];
   const backs = istSideboard(c) && c.room === 'bath' ? ['ply6'] : b.backs;
   if (istSideboard(c)) {
     rows.push(['Verbindung', JOINTS[bwJoint(b, c)].name + (b.top === 'between' ? ', Deckel zwischen den Seiten' : '')]);
@@ -379,6 +390,7 @@ const HARMLOS = /kippt leicht|^Bad:|^Gipskarton|eingeplant|gesetzt \(Brettbreite
 // Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder.
 const SPERREN = {
   masse:['w', 'h', 'd'],
+  bauweise:['bw', 'build', 'sys', 'joint'],
   bauart:['build', 'sys'],
   form:['shape', 'corner'],
   tablare:['dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop'],
@@ -424,6 +436,17 @@ function zufall(base, rnd = Math.random, tries = 60, locks = []){
   return best.d;
 }
 
+// Bauweise zuerst: nur die hier möglichen, gewichtet (Review, Abschnitt 5); bei festem Material nur die mit ihm.
+const GEWICHT = { S1:30, S2:20, S3:15, S4:20, S5:8, S6:7, R2:30, R6:20, R5:15, R3:15, R4:10, R1:10 };
+function wuerfleBauweise(base, rnd, fix){
+  const c = cfgFromData({ ...base, ...fix });
+  if (fix.bw && bwVon(c)) return bwVon(c);
+  let moeglich = bwKind(c).filter(b => !bwSperre(b, c) && (!('mat' in fix) || bwMats(b, c).includes(fix.mat)));
+  if (!moeglich.length) moeglich = bwKind(c);
+  let r = rnd() * moeglich.reduce((a, b) => a + GEWICHT[b.id], 0);
+  return moeglich.find(b => (r -= GEWICHT[b.id]) < 0) || moeglich[0];
+}
+
 function wuerfelSideboard(base, rnd, fix = {}){
   const pick = a => a[Math.floor(rnd() * a.length)];
   const range = ([a, b], step = 10) => a + Math.round(rnd() * (b - a) / step) * step;
@@ -433,8 +456,9 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const fits = SB_TYPES.filter(([, rw, rh]) => !has('w') || (fix.w >= rw[0] && fix.w <= rw[1] && fix.h >= rh[0] && fix.h <= rh[1]));
   const [typ, rw, rh, rdp, bases] = pick(fits.length ? fits : SB_TYPES);
   const regal = typ === 'Regal';
-  const mat = val('mat', () => pick(SB_MATS.filter(k => MATS[k]))), M = MATS[mat];
-  const t = Number(val('t', () => chance(0.75) ? M.tDef : pick(M.t.filter(v => v >= KORPUS_MIN && v <= 21).concat(M.tDef))));
+  const bw = wuerfleBauweise(base, rnd, fix), cb = cfgFromData(base);
+  const mat = val('mat', () => pick(bwMats(bw, cb))), M = MATS[mat];
+  const t = Number(val('t', () => (bw.mats[mat] || [M.tDef])[0]));
   const W = Number(val('w', () => range(rw, 50))), H = Number(val('h', () => range(rh, 10))), D = Number(val('d', () => range(rdp, 10)));
   const b = val('base', () => pick(bases));
   const baseH = Number(val('baseH', () => b === 'legs' ? range([100, 220], 10) : b === 'plinth' ? range([60, 100], 10) : base.baseH));
@@ -447,15 +471,16 @@ function wuerfelSideboard(base, rnd, fix = {}){
   const handle = front === 'sliding' ? pick(['shell', 'hole']) : pick(['hole', 'knob', 'push']);
   // Fronten meist wie der Korpus, sonst dünner aus demselben Material oder lackiertes MDF.
   const thinner = M.t.filter(v => v < t && v >= 15 && v <= FRONT_MAX);
-  const frontMat = val('frontMat', () => front === 'open' || chance(0.7) ? 'korpus' : thinner.length && chance(0.6) ? mat : 'mdf');
-  const frontT = Number(val('frontT', () => frontMat === 'korpus' ? t : frontMat === mat && thinner.length ? pick(thinner) : (MATS[frontMat] || M).tDef));
+  const andere = bw.front.filter(k => k !== 'korpus');
+  const frontMat = val('frontMat', () => front === 'open' || chance(0.7) || !andere.length ? 'korpus' : pick(andere));
+  const frontT = Number(val('frontT', () => frontMat === 'korpus' ? t : pick(frontTs(MATS[frontMat]).filter(v => v >= 16))));
   const painted = ['weiss', 'salbei', 'taube', 'anthrazit'];
   const color = val('color', () => mat === 'mdf' || frontMat === 'mdf' ? pick(painted) : mat === 'eiche' || M.coated ? 'korpus' : chance(0.55) ? 'korpus' : pick(painted));
-  const joint = val('joint', () => mat === 'mdf' ? pick(['dowels', 'cam', 'pocket']) : pick(['pocket', 'pocket', 'dowels', 'cam', 'screws']));
+  const joint = val('joint', () => bwJoint(bw, { ...cb, mat }));
   return {
-    ...base, mat, t, w:W, h:H, d:D, base:b, baseH, sections, shelves, front, handle, color, joint, frontMat, frontT,
-    top: joint === 'screws' ? 'between' : pick(['over', 'over', 'between']),
-    back: base.room === 'bath' ? 'ply6' : M.ply && chance(0.3) ? 'ply6' : 'hdf3',
+    ...base, bw:bw.id, mat, t, w:W, h:H, d:D, base:b, baseH, sections, shelves, front, handle, color, joint, frontMat, frontT,
+    top: bw.top || (joint === 'screws' ? 'between' : pick(['over', 'over', 'between'])),
+    back: base.room === 'bath' ? 'ply6' : pick(bw.backs),
     doorsPer:'auto', slideN:'auto',
     legShape: pick(['cone', 'cone', 'straight']), taper: range([20, 45], 5),
     legColor: color === 'anthrazit' || mat === 'mdf' ? pick(['black', 'oak']) : pick(['oak', 'oak', 'black']),
@@ -478,14 +503,19 @@ function wuerfelReduit(base, rnd, fix = {}){
   const corner = val('corner', () => wantL && !wantR ? 'L' : wantR && !wantL ? 'R' : pick(['L', 'R']));
   // Feste Tablartiefen: nur Materialien, die sie ohne Umrunden erlauben.
   const depthsOk = k => !MATS[k].boards || TIEFEN.every(t => MATS[k].widths.includes(Number(fix[t])));
-  const mat = val('mat', () => pick(RD_MATS.filter(k => MATS[k] && (!has('dBack') || depthsOk(k)))));
+  const bw = wuerfleBauweise(base, rnd, fix);
+  // Material aus der Bauweise, bevorzugt die üblichen Reduit-Platten
+  const passend = k => bw.mats[k] && (!has('dBack') || depthsOk(k));
+  const mats = RD_MATS.filter(passend).length ? RD_MATS.filter(passend) : Object.keys(bw.mats).filter(passend);
+  const mat = val('mat', () => pick(mats.length ? mats : Object.keys(bw.mats)));
+  const tMat = bw.mats[mat] || MATS[mat].t;
   const side = range([200, 400], 50);
   const gapBottom = Number(val('gapBottom', () => range([100, 300], 50))), gapTop = Number(val('gapTop', () => range([250, 450], 50)));
   const nShelves = Math.max(3, Math.min(8, Math.round((rh - gapBottom - gapTop) / range([320, 420], 10)) + 1));
   const niche = shape !== 'I' && chance(0.3);
   return {
-    ...base, shape, corner, build:chance(0.8) ? 'built' : 'free', sys:pick(['battens', 'battens', 'rails', 'brackets', 'cheeks', 'posts']),
-    mat, t:MATS[mat].tDef, back:'hdf3', joint:pick(['pocket', 'screws', 'dowels']),
+    ...base, bw:bw.id, shape, corner, build:bw.build, sys:bw.sys || base.sys,
+    mat, t:tMat.includes(MATS[mat].tDef) ? MATS[mat].tDef : tMat[0], back:bw.backs ? pick(bw.backs) : 'hdf3', joint:bw.joint ? bwJoint(bw, { mat }) : 'pocket',
     dBack:range([300, 500], 50), dLeft:side, dRight:chance(0.7) ? side : range([200, 400], 50),
     nShelves, gapBottom, gapTop,
     nicheL:niche && chance(0.5), nicheLW:range([400, 500], 10), nicheLH:range([1200, 1400], 50),
@@ -497,7 +527,7 @@ function wuerfelReduit(base, rnd, fix = {}){
 /* ---------- Entwürfe ---------- */
 // Startwerte eines Typs ohne Entwurf: die Formularwerte beim Laden plus die Abweichungen des Typs.
 // Reduit: Pfostenrahmen mit Sperrholz Fichte 18 – ohne Warnung (Entscheid 28.09.2026).
-const START = { reduit:{ sys:'posts', mat:'fichtesp', t:'18' } };
+const START = { sideboard:{ bw:'S1' }, reduit:{ bw:'R2', sys:'posts', mat:'fichtesp', t:'18' } };
 function startwerte(defaults, kind){
   let d = { ...defaults, kind, ...(START[kind] || {}) };
   if (START[kind] && START[kind].mat) {
@@ -547,7 +577,7 @@ const STANDARD = { frontMat:'korpus' };
 function geaendert(a, b){
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   keys.delete('katalog');
-  const wert = (d, k) => String(k in d ? d[k] : STANDARD[k]);
+  const wert = (d, k) => String(k in d ? d[k] : k === 'bw' ? bauweiseVon(d) : STANDARD[k]);   // ohne Bauweise: die passende
   for (const k of keys) {
     if (wert(a, k) === wert(b, k)) continue;
     if (KATALOGFELDER.includes(k) && folgtKatalog(a, k) && folgtKatalog(b, k)) continue;
