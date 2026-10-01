@@ -94,10 +94,37 @@ test('Lackierte MDF-Fronten am geölten Korpus: Öl nur für den Korpus, Lack f�
 test('Geölte Fronten an einem MDF-Korpus: eigener Satz im Bauablauf', () => {
   const R = run({ mat:'mdf', t:19, frontMat:'eiche', frontT:18 });
   assert.strictEqual(R.frontFin.color, MATS.eiche.color);
-  assert.ok(R.steps.some(([titel, text]) => titel === 'Grundieren und lackieren' && text.includes('Die Fronten mit Hartwachsöl')));
+  assert.ok(R.steps.some(([titel, text]) => titel.startsWith('Grundieren und lackieren') && text.includes('Die Fronten mit Hartwachsöl')));
 });
 
 test('Bad: Hinweise auch für das Frontmaterial', () => {
   const R = run({ room:'bath', mat:'eiche', frontMat:'seekiefer', frontT:15 });
   assert.ok(R.warn.some(w => w.includes('wasserfest verleimtes Sperrholz Seekiefer')));
+});
+
+test('Schiebetüren: vordere Lochreihe liegt unter dem Einlegeboden (SK-1)', () => {
+  const R = run({ front:'sliding', sections:2, shelves:1 });
+  const seite = R.rows.find(r => r.name === 'Seite'), boden = R.rows.find(r => r.name === 'Einlegeboden');
+  const vorn = Number(seite.note.match(/vorne (\d+) mm/)[1]);
+  assert.ok(vorn >= seite.B - boden.B, `${vorn} < ${seite.B - boden.B}`);   // Loch hinter der Vorderkante des Bodens
+  assert.ok(R.steps.find(s => s[0].startsWith('Löcher für Bodenträger'))[1].includes(`${vorn} mm von vorne`));
+});
+
+test('Spannweite je Material: Einlegeböden (W01) und Deckel/Boden bei jeder Fachzahl (W02)', () => {
+  const span = R => R.warn.filter(w => w.includes('biegen sich'));
+  // Spanplatte 19 spannt ca. 500 mm: 750 breit, 1 Fach → Warnung; Birke 18 (800) nicht
+  assert.ok(span(run({ mat:'dekorspan', t:19, W:750, sections:1, shelves:1 })).some(w => w.includes('Spanplatte weiss 19 mm') && w.includes('500 mm')));
+  assert.deepStrictEqual(span(run({ W:750, sections:1, shelves:1 })), []);
+  // Deckel und Boden ohne Einlegeböden: auch bei 2 Fächern geprüft
+  assert.ok(run({ mat:'dekorspan', t:16, W:2000, sections:2, shelves:0 }).warn.some(w => w.startsWith('Deckel und Boden spannen')));
+  assert.ok(!run({ W:1200, sections:2, shelves:0 }).warn.some(w => w.includes('spannen')));
+});
+
+test('Anleitung Sideboard: Kippschutz vor dem Einräumen, MDF vor dem Zusammenbau lackieren', () => {
+  const hoch = run({ H:1300, D:350 }).steps.map(s => s[0]);
+  assert.ok(hoch.includes('Aufstellen und gegen Kippen sichern'));
+  assert.ok(hoch.indexOf('Aufstellen und gegen Kippen sichern') < hoch.indexOf('Einlegeböden einlegen'));
+  assert.ok(!run({}).steps.some(s => s[0] === 'Aufstellen und gegen Kippen sichern'));
+  const mdf = run({ mat:'mdf', t:19 }).steps.map(s => s[0]);
+  assert.ok(mdf.indexOf('Grundieren und lackieren – vor dem Zusammenbau') < mdf.indexOf('Korpus zusammenbauen'), mdf.join(' → '));
 });

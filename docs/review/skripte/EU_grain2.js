@@ -1,0 +1,11 @@
+const p=require('path').join(__dirname, '../../..') + '/';
+Object.assign(globalThis, require(p+'shared.js'));
+Object.assign(globalThis, require(p+'sideboard.js'), require(p+'reduit.js'));
+const K = require(p+'konfig.js');
+const src = require('fs').readFileSync(p+'test/konfig.test.js','utf8');
+const m = src.match(/const FORM = (\{[\s\S]*?\});/); const FORM = eval('('+m[1]+')');
+const d = K.withCatalog ? K.withCatalog({ ...FORM, kind:'reduit' }) : { ...FORM, kind:'reduit' };
+console.log('sheet', d.sheetL, d.sheetB, d.mat, d.t, d.grain, d.shape, d.sys);
+const R = K.computeData({ ...FORM, kind:'reduit' });
+console.log('warn', R.warn);
+console.log('groups', R.groups.map(g=>[g.label, g.sheet, g.sheets && g.sheets.length]));

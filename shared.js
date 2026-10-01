@@ -133,6 +133,59 @@ function packBoards(items, boards, kerf){
 }
 
 /* ---------- Verbindungen ---------- */
+/* ---------- Spannweiten ---------- */
+// Maximale freie Spannweite (mm) eines belasteten Tablars (ca. 30–40 kg/m, Durchbiegung ≤ ca. 1/200).
+// Daumenregel; MDF kriecht unter Dauerlast und liegt deshalb tiefer.
+// Leimholz und Dreischicht nachgerechnet (Review TR-14): Einfeldträger, 40 kg/m, 300 mm tief, Dauerlast,
+// E 10 000 / 6 000 N/mm², Kriechfaktor 1,6 / 1,8, Durchbiegung ≤ L/250, auf 50 mm abgerundet (spanFormel im Test).
+const SPAN = {
+  birke:     { 12:500, 15:650, 18:800, 21:950 },
+  birkesi:   { 12:500, 15:650, 18:800, 21:950 },
+  eiche:     { 18:850, 20:950, 26:1250, 27:1300 },
+  fichte:    { 18:850, 21:1000, 27:1300, 28:1350 },
+  seekiefer: { 12:450, 15:550 },
+  fichtesp:  { 12:450, 15:600, 18:700, 21:800, 24:900 },
+  mdf:       { 16:450, 19:550, 22:650 },
+  schaltafel:{ 27:1000 },
+  osb:       { 12:450, 15:550, 18:650, 22:800 },
+  dreischicht:{ 19:750, 27:1050 },
+  dekorspan: { 16:400, 19:500 },
+  gon_fichte:{ 18:850 },
+  gon_3s:    { 19:750 },
+  mood_fichte:{ 18:850 },
+  regalbau:  { 16:400 },
+  moebel_weiss:{ 18:470 }
+};
+function maxSpan(mat, t){ return (SPAN[mat] && SPAN[mat][t]) || 700; }
+
+/* ---------- Schrauben nach Stärke ---------- */
+// Handelsübliche Holzschrauben [Ø, Länge] in mm.
+const SCHRAUBEN = [[3.5, 10], [4, 12], [4, 16], [4, 20], [4, 25], [3.5, 30], [4, 35], [4, 40], [4, 45]];
+// Längste Schraube, die durch `durch` mm (Blech, Leiste, Tablar) höchstens `biss` mm in `holz` mm Holz greift und
+// mindestens 4 mm Holz über der Spitze lässt (Schreiner-Review, Tabelle im Eck-Urteil).
+function schraube(durch, holz, biss = 22){
+  const max = durch + Math.min(holz - 4, biss);
+  return [...SCHRAUBEN].reverse().find(([, L]) => L <= max) || SCHRAUBEN[0];
+}
+// Schraube je Anwendung bei Bauteilstärke t:
+// blech    = von unten durch Konsole oder Blechwinkel (ca. 2 mm) ins Tablar
+// latte    = von unten durch eine Eck- oder Stossleiste aus Dachlatte (24 mm, flach) ins Tablar
+// streifen = von unten durch eine Leiste aus dem Plattenmaterial (t, flach) ins Tablar
+// oben     = von oben durch das Tablar in Leiste oder Latte
+// fuss     = Anschraubplatte oder Winkel unter dem Boden (Platte nicht mitgerechnet, höchstens 16 mm Biss)
+// kante    = durch ein Bauteil (t) in die Kante eines zweiten, z. B. Sockelecken (höchstens 25 mm Biss)
+function screwFor(anbau, t){
+  if (anbau === 'blech') return schraube(2, t);
+  if (anbau === 'latte') return schraube(24, t);
+  if (anbau === 'streifen') return schraube(t, t);
+  if (anbau === 'oben') return schraube(t, 40);
+  if (anbau === 'fuss') return schraube(0, t, 16);
+  if (anbau === 'kante') return schraube(t, 100, 25);
+  throw new Error('screwFor: unbekannte Anwendung ' + anbau);
+}
+const screwText = ([d, L]) => `${String(d).replace('.', ',')} × ${L}`;
+const screwKey = ([d, L]) => `screw${d}x${L}`;
+
 // Beschläge für die gewählte Korpusverbindung. lens = Längen aller Stösse (mm), what = wofür die Schrauben sind.
 function jointHardware(c, lens, t, bath, what){
   const hw = [];
@@ -162,6 +215,17 @@ function jointHardware(c, lens, t, bath, what){
   }
   return hw;
 }
+// Bohrschritte für die Korpusverbindung (Sideboard und selbststehende Module). mittel = Mittelwände vorhanden,
+// topOver = Deckel liegt auf den Seiten; between = was zwischen die Seiten kommt.
+function jointSteps(c, t, { topOver = false, mittel = false, between = topOver ? 'den Boden' : 'Deckel und Boden' } = {}){
+  const st = [], mdf = c.mat === 'mdf';
+  if (c.joint === 'pocket') st.push(['Taschenlöcher bohren', `Bohrlehre auf ${t} mm Plattenstärke einstellen. Taschenlöcher an beiden Enden von ${between}${mittel ? ' und der Mittelwände' : ''} bohren, alle ca. 15 cm und 40 mm von vorne und hinten.${topOver ? ' Für den aufgesetzten Deckel die Taschenlöcher oben innen in die Seiten bohren.' : ''} Die Löcher kommen immer auf Innen- oder Unterseiten – beim Boden auf die Unterseite.`, null]);
+  if (c.joint === 'screws') st.push(['Schraublöcher vorbohren', `Schraubpositionen anreissen: ${t/2} mm von der Plattenkante, alle ca. 15 cm, 40 mm von vorne und hinten. In ${topOver ? 'Deckel (von oben) und Seiten' : 'die Seiten'} Ø ${mdf ? '5' : '4'} mm durchbohren und ansenken. In die Stirnkante des Gegenstücks Ø ${mdf ? '5 mm mit Stufenbohrer (Konfirmat)' : '2,5–3 mm'} vorbohren.`, mdf ? 'MDF reisst ohne Vorbohren an den Kanten auf.' : 'Mittig in die Kante bohren – ein Anschlag an der Bohrmaschine hilft.']);
+  if (c.joint === 'dowels') st.push(['Dübellöcher bohren', `Dübel alle ca. 12 cm setzen, 40 mm von vorne und hinten. Mit Dübellehre oder Dübelmarkierern die Positionen übertragen. In der Plattenfläche ${t <= 16 ? '10' : '12'} mm tief bohren (nie durch!), in der Stirnkante ${t <= 16 ? '20' : '28'} mm.`, 'Erst eine Probeverbindung mit Reststücken machen.']);
+  if (c.joint === 'cam') st.push(['Bohrungen für Exzenter', `Exzentergehäuse Ø 15 mm mit dem Forstnerbohrer in die Innenseiten von ${between}${mittel ? ' und die Mittelwände' : ''} bohren, Tiefe und Randabstand gemäss Hersteller (meist 12,5 mm tief, 24 oder 34 mm von der Kante). Passende Löcher für die Bolzen in die Gegenstücke.`, 'Eine Bohrschablone spart viel Anreissen und Fehler.']);
+  return st;
+}
+
 function jointTools(c, t, tools){
   if (c.joint === 'pocket') tools.add('Taschenloch-Bohrlehre mit Stufenbohrer');
   if (c.joint === 'screws') { tools.add('Kegelsenker'); if (c.mat === 'mdf') tools.add('Stufenbohrer für Konfirmat'); }
@@ -210,4 +274,4 @@ function pack(items, SL, SB, kerf, margin, rotate){
   return { sheets, unplaced, used, partArea, total: sheets.length * SL * SB };
 }
 
-if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards };
+if (typeof module !== 'undefined') module.exports = { PRICE_DATA, clamp, r0, MATS, BACKS, COLORS, COLOR_NAMES, JOINTS, pack, jointHardware, jointSteps, jointTools, matPrice, sheetCosts, BOARD_SLACK, boardWidthFor, packBoards, SPAN, maxSpan, SCHRAUBEN, schraube, screwFor, screwText, screwKey };

@@ -1,0 +1,14 @@
+const { run } = require('./SK-base.js');
+const show = (lbl, R) => { console.log('\n=== ' + lbl); console.log('WARN', JSON.stringify(R.warn, null, 1)); };
+let R = run({ room:'bath', mat:'dekorspan', t:19, back:'ply6' });
+show('Bad Spanplatte weiss 19', R);
+console.log('FINISH', JSON.stringify(R.finish));
+console.log('STEP', JSON.stringify(R.steps.find(s => s[0].startsWith('Alle Teile'))));
+console.log('STEP2', JSON.stringify(R.steps.find(s => s[0].startsWith('Kanten'))));
+console.log('group', R.groups.map(g => g.label));
+R = run({ room:'bath', mat:'osb', t:18, back:'ply6' });
+show('Bad OSB 18', R); console.log('FINISH', JSON.stringify(R.finish));
+R = run({ room:'bath', mat:'mdf', t:19, back:'ply6' });
+show('Bad MDF 19', R); console.log('groups', R.groups.map(g => [g.label, g.price]));
+R = run({ room:'bath', mat:'eiche', t:18, back:'ply6', joint:'cam' });
+console.log('HW bath cam', JSON.stringify(R.hw));

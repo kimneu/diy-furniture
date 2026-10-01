@@ -23,10 +23,13 @@ test('hinteres Segment über volle Breite, Seiten stossen davor an', () => {
 });
 
 test('Tür nach innen verkürzt das Seitenregal auf der Bandseite', () => {
-  const l = lay({ shape:'U', rd:1400, doorW:800, doorIn:true, hinge:'L' });
-  assert.strictEqual(seg(l, 'left').u1, 600);
+  const l = lay({ shape:'U', rd:1800, doorW:800, doorIn:true, hinge:'L' });
+  assert.strictEqual(seg(l, 'left').u1, 1000);
   assert.strictEqual(seg(l, 'left').ends[1], 'free');
-  assert.strictEqual(seg(l, 'right').u1, 1400);
+  assert.strictEqual(seg(l, 'right').u1, 1800);
+  // Standard-U: neben der Tür blieben nur 200 mm – das Regal entfällt (K15)
+  const std = lay({ shape:'U', rd:1400, doorW:800, doorIn:true, hinge:'L' });
+  assert.ok(!seg(std, 'left') && std.warn.some(w => w.includes('entfällt')));
 });
 
 test('Seitentiefe grösser als Wandstück neben der Tür gibt Warnung', () => {
@@ -91,12 +94,6 @@ const run = over => R.computeReduit({ ...R.REDUIT_DEFAULTS, ...base, ...over });
 const qtyOf = (Rr, text) => Rr.hw.filter(h => h[1].startsWith(text)).reduce((a, h) => a + h[0], 0);
 const rowsNamed = (Rr, name) => Rr.rows.filter(r => r.name === name);
 
-test('Spannweiten-Tabelle', () => {
-  assert.strictEqual(R.maxSpan('birke', 18), 800);
-  assert.strictEqual(R.maxSpan('mdf', 19), 550);
-  assert.strictEqual(R.maxSpan('unbekannt', 18), 700);
-});
-
 test('Schienen: Anzahl aus Spannweite (1600 mm, 50 mm eingerückt, max 800 → 3 Schienen à 750 mm)', () => {
   const Rr = run({ shape:'I', rw:1600, rh:2000, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 3);
@@ -124,7 +121,7 @@ test('Selbststehend: Modul-Aufteilung', () => {
 });
 
 test('Stütze am freien Ende (Tür nach innen)', () => {
-  const Rr = run({ shape:'U', doorIn:true, hinge:'L', sys:'rails' });
+  const Rr = run({ shape:'U', rd:1800, doorIn:true, hinge:'L', sys:'rails' });
   assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
 });
 
@@ -171,15 +168,21 @@ test('Randfall: Tür breiter als Raum erlaubt wird mit Warnung verkleinert', () 
   assert.ok(!ok.warn.some(w => w.includes('Türbreite')));
 });
 
-test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt', () => {
+test('Schienen länger als 200 cm werden aus zwei Stücken zusammengesetzt, jedes mindestens 500 mm', () => {
   const Rr = run({ shape:'I', rw:1600, rh:2400, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 200'), 3);
   assert.strictEqual(qtyOf(Rr, 'Wandschiene Element System, 100'), 3);
-  assert.ok(Rr.warn.some(w => w.includes('zwei Stücke')));
-});
-
-test('jede Material-Stärke hat einen Spannweiten-Wert', () => {
-  for (const [k, M] of Object.entries(MATS)) for (const t of M.t) assert.ok(R.SPAN[k] && R.SPAN[k][t], `${k} ${t} mm fehlt in SPAN`);
+  assert.ok(Rr.warn.some(w => w.includes('zwei Stücke') && w.includes('500 mm')));
+  // 2050 mm: 1550 + 500 statt 2000 + 50; Dübel nach genutzter Länge (7 + 3 statt 8 + 5 je Schiene)
+  assert.deepStrictEqual(R.railParts(2050), [1550, 500]);
+  assert.deepStrictEqual(R.railParts(2700), [2000, 700]);
+  assert.deepStrictEqual(R.railParts(1800), [1800]);
+  assert.strictEqual(qtyOf(Rr, 'Spreizdübel'), Math.ceil(3 * (7 + 3) * 1.1), '+10 % Reserve');
+  assert.ok(Rr.steps.some(s => s[0] === 'Wandschienen montieren' && s[1].includes('nur am freien Ende kürzen')));
+  // Eine Schiene reicht: kein Hinweis zum Stoss
+  const eins = run({ shape:'I', rw:1600, rh:2400, sys:'rails', gapTop:350 });
+  assert.strictEqual(qtyOf(eins, 'Wandschiene Element System, 100'), 0);
+  assert.ok(!eins.steps.some(s => s[1].includes('nur am freien Ende kürzen')));
 });
 
 test('beschichtete Platten werden nicht geölt', () => {
@@ -316,7 +319,7 @@ test('Stoss mit Nische: oben und unten korrekt gestossen', () => {
 });
 
 test('Stoss und freies Ende (Tür nach innen): Stütze am freien Ende bleibt', () => {
-  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, doorIn:true, hinge:'L', sys:'rails' });
+  const Rr = run({ mat:'regalbau', t:16, shape:'U', rw:1800, rd:2600, doorW:800, doorPos:'L', doorOff:100, doorIn:true, hinge:'L', sys:'rails' });
   assert.ok(Rr.rows.some(r => r.kind === 'solid' && r.note.includes('freien Ende')));
   assert.ok(pieceLens(Rr).every(L => L <= 1150));
 });
@@ -326,9 +329,10 @@ test('Plattenmaterial: keine Stösse', () => {
   assert.ok(!Rr.rows.some(r => r.name === 'Stossleiste'));
 });
 
-test('Bauablauf: Schritt «Stösse verbinden» nur mit Stössen', () => {
-  assert.ok(run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
-  assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stösse verbinden'));
+test('Bauablauf: Stossleisten nur mit Stössen, vor dem Auflegen', () => {
+  const names = run({ mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800, sys:'rails' }).steps.map(s => s[0]);
+  assert.ok(names.indexOf('Stossleisten vormontieren') >= 0 && names.indexOf('Stossleisten vormontieren') < names.indexOf('Tablare auflegen'), names.join(' → '));
+  assert.ok(!run({ mat:'gon_fichte', t:18, shape:'I', rw:1600, sys:'rails' }).steps.some(s => s[0] === 'Stossleisten vormontieren'));
 });
 
 /* ---------- Review-Befunde ---------- */
@@ -347,4 +351,291 @@ test('Tiefenhinweis nennt nur Seiten, die wirklich auf einer Brettbreite liegen'
   const n = cfg({ mat:'gon_3s', shape:'U', rw:1000, doorW:700, dLeft:600, dRight:600 });
   const hint = n.warn.find(w => w.includes('Brettbreite'));
   assert.ok(!hint || !/links 350|rechts 350/.test(hint), hint);
+});
+
+/* ---------- Pfostenrahmen (Schreiner-Review, Variante A) ---------- */
+const postBoxes = Rr => Rr.boxes.filter(b => b.key.startsWith('Kantholz'));
+const postRun = over => run({ sys:'posts', ...over });
+const lo = (b, i) => b.pos[i] - b.size[i] / 2, hi = (b, i) => b.pos[i] + b.size[i] / 2;
+// Auflager einer Querlatte: Wand an einem Ende (Winkel auf die Endlatte) oder ein Pfosten, der sie von vorne berührt.
+function querlattenAuflager(Rr, q){
+  const ax = q.size[0] > q.size[2] ? 0 : 2, px = 2 - ax;
+  const walls = ax === 0 ? [-Rr.W / 2, Rr.W / 2] : [-Rr.D / 2, Rr.D / 2];
+  let n = walls.filter(w => Math.abs(lo(q, ax) - w) < 6 || Math.abs(hi(q, ax) - w) < 6).length;
+  for (const p of postBoxes(Rr)) {
+    const touch = Math.abs(lo(p, px) - hi(q, px)) < 1 || Math.abs(hi(p, px) - lo(q, px)) < 1;
+    if (touch && hi(p, ax) > lo(q, ax) + 1 && lo(p, ax) < hi(q, ax) - 1 && hi(p, 1) >= hi(q, 1) - 1) n++;
+  }
+  return n;
+}
+const postCases = [];
+for (const shape of ['I', 'L', 'U']) for (const rd of [1100, 1400, 2600])
+  for (const extra of [{}, { corner:'R' }, { doorIn:true, hinge:'L' }, { nicheL:true, nicheR:true }, { mat:'gon_fichte', t:18, rw:2400 }, { mat:'regalbau', t:16 }, { mat:'osb', t:12 }])
+    postCases.push({ shape, rd, ...extra });
+
+test('Pfostenrahmen: Pfosten stehen vor den Tablaren, nicht darin', () => {
+  for (const o of postCases) {
+    const Rr = postRun(o), posts = postBoxes(Rr);
+    assert.ok(posts.length || o.shape === 'I', JSON.stringify(o));
+    for (const p of posts) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), JSON.stringify(o) + ' ' + b.key);
+  }
+});
+
+test('Pfostenrahmen: jede Querlatte hat mindestens zwei Auflager', () => {
+  for (const o of [...postCases, { shape:'I', rw:790, rd:900, doorW:600 }, { shape:'U', rd:1100 }]) {
+    const Rr = postRun(o);
+    for (const q of Rr.boxes.filter(b => b.key.includes('|Querlatte vorne'))) assert.ok(querlattenAuflager(Rr, q) >= 2, JSON.stringify(o) + ' ' + JSON.stringify(q.pos));
+  }
+});
+
+test('Pfostenrahmen: Eckpfosten an jeder Innenecke, keine Eckleiste', () => {
+  for (const [shape, n] of [['I', 0], ['L', 1], ['U', 2]]) for (const rd of [1100, 1400]) {
+    const Rr = postRun({ shape, rd });
+    assert.strictEqual(Rr.rows.filter(r => r.note.startsWith('Eckpfosten')).reduce((a, r) => a + r.qty, 0), n, shape + rd);
+    assert.ok(!Rr.rows.some(r => r.name === 'Eckleiste'), shape);
+  }
+});
+
+test('Pfostenrahmen: Pfostenzahl richtet sich nach der Querlatte, nicht nach dem Tablarmaterial', () => {
+  const count = over => postRun(over).rows.filter(r => r.name.startsWith('Kantholz')).reduce((a, r) => a + r.qty, 0);
+  assert.strictEqual(count({}), 2);                 // Standard-U: nur die Eckpfosten
+  assert.strictEqual(count({ mat:'osb', t:12 }), 2);
+  assert.strictEqual(count({ mat:'dekorspan', t:16 }), 2);
+  assert.strictEqual(count({ shape:'L' }), 2);      // Eckpfosten + einer im 1255 mm langen Feld hinten
+  assert.ok(postRun({ shape:'L' }).warn.some(w => w.includes('Zwischenpfosten')));
+});
+
+test('Pfostenrahmen: Bauablauf – erst Tablare, dann Pfosten, dann verschrauben', () => {
+  const names = postRun({}).steps.map(s => s[0]);
+  const i = n => names.indexOf(n);
+  assert.ok(i('Latten montieren') < i('Tablare einschieben') && i('Tablare einschieben') < i('Pfosten stellen') && i('Pfosten stellen') < i('Tablare verschrauben'), names.join(' → '));
+  assert.ok(!names.includes('Tablare auflegen'));
+});
+
+test('Pfostenrahmen: Verbindungen stehen auf der Kaufliste', () => {
+  const Rr = postRun({});
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 60'), 2 * Math.ceil(3 * 5 * 1.1));   // 2 Eckpfosten × 3 Schrauben × 5 Ebenen
+  assert.strictEqual(qtyOf(Rr, 'Winkelverbinder'), 3 * 2 * 5);                          // je Querlatte 2 Enden (Wand oder Ecke) × 5 Ebenen
+  assert.ok(qtyOf(Rr, 'Holzschrauben 4 × 40') > 0);
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 5 × 70'), 0);
+});
+
+test('Pfostenrahmen: Durchgang wird zwischen den Pfosten gemessen', () => {
+  const o = { shape:'U', rw:1300, doorW:800, dLeft:320, dRight:320 };
+  assert.ok(postRun(o).warn.some(w => w.includes('Durchgang') && w.includes('Pfosten')));
+  assert.ok(!run({ ...o, sys:'battens' }).warn.some(w => w.includes('Durchgang')));
+});
+
+test('Stützen an freien Enden und Stössen stehen vor dem Tablar', () => {
+  for (const sys of ['battens', 'rails', 'brackets'])
+    for (const o of [{ shape:'U', doorIn:true, hinge:'L' }, { mat:'gon_fichte', t:18, shape:'I', rw:2400 }, { mat:'regalbau', t:16, shape:'U', nicheL:true }]) {
+      const Rr = run({ sys, ...o });
+      for (const p of postBoxes(Rr)) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), sys + JSON.stringify(o) + ' ' + b.key);
+    }
+});
+
+/* ---------- Schrauben und Dübel nach Stärke (Schreiner-Review K04) ---------- */
+const screwLens = Rr => Rr.hw.filter(h => /^Holzschrauben [\d,]+ × \d+ mm$/.test(h[1])).map(h => ({ n:h[0], L:Number(h[1].match(/× (\d+)/)[1]), note:h[2] }));
+
+test('Schrauben durch Konsolen und Winkel kommen nicht oben aus dem Tablar', () => {
+  for (const sys of ['rails', 'brackets']) for (const [mat, t] of [['birke', 12], ['fichtesp', 15], ['birke', 18], ['mdf', 19], ['birke', 21], ['fichte', 27]]) {
+    const Rr = run({ sys, mat, t, shape:'I' });
+    const s = screwLens(Rr).filter(x => x.note.includes('Konsolen') || x.note.includes('Winkel'));
+    assert.ok(s.length, sys + t);
+    for (const x of s) assert.ok(x.L <= 2 + t - 3, `${sys} ${mat} ${t}: ${x.L} mm`);
+  }
+});
+
+test('Leisten: die Tablare werden von oben verschraubt, die Schrauben stehen auf der Liste', () => {
+  const Rr = run({ sys:'battens', shape:'I' });
+  const s = screwLens(Rr).find(x => x.note.includes('von oben'));
+  assert.ok(s && s.L === 40 && s.n > 0, JSON.stringify(screwLens(Rr)));
+  assert.ok(Rr.steps.some(st => st[0] === 'Tablare auflegen' && st[1].includes('von oben') && st[1].includes('4 × 40')));
+});
+
+test('Eckleiste aus dem Plattenmaterial: die Schraube bricht nicht durch', () => {
+  for (const t of [12, 18, 21]) {
+    const Rr = run({ sys:'battens', shape:'U', mat:'birke', t });
+    const s = screwLens(Rr).find(x => x.note.includes('Eckleisten'));
+    assert.ok(s && s.L <= 2 * t - 3, `${t}: ${JSON.stringify(s)}`);
+  }
+});
+
+test('Dübelschraube nach Anbauteil: 4,5 × 50 für Metall, 5 × 60 für Latten 24', () => {
+  const posts = run({ sys:'posts' }), rails = run({ sys:'rails' });
+  assert.ok(qtyOf(posts, 'Spreizdübel 6 mm + Schraube 5 × 60') > 0);
+  assert.strictEqual(qtyOf(posts, 'Spreizdübel 6 mm + Schraube 4,5 × 50'), 0);
+  assert.ok(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 4,5 × 50') > 0);
+  assert.strictEqual(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 5 × 60'), 0);
+  assert.ok(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 5 × 70') > 0);
+  assert.ok(qtyOf(run({ sys:'posts', wall:'drywall' }), 'Hohlraumdübel') > 0);
+});
+
+/* ---------- Geometrie (Schreiner-Review, Schritt 4) ---------- */
+test('Wandschienen: Tablar beginnt 2 mm vor der Schiene, die Ecke schliesst', () => {
+  const Rr = run({ sys:'rails', shape:'U', dBack:400, dLeft:300 });
+  const back = rowsNamed(Rr, 'Tablar').find(r => r.L === 1594), side = rowsNamed(Rr, 'Tablar').find(r => r.L !== 1594);
+  assert.strictEqual(back.B, 400 - R.RAIL_V0);
+  assert.strictEqual(side.B, 300 - R.RAIL_V0);
+  const rails = Rr.extras.filter(e => e.type === 'metal' && e.size[1] > 500);
+  for (const s of Rr.boxes.filter(b => b.key.startsWith('Tablar'))) for (const r of rails) assert.ok(!overlaps(s, r), 'Tablar steckt in der Schiene');
+  for (const s of Rr.boxes) for (const t of Rr.boxes) if (s !== t && s.key.startsWith('Tablar') && t.key.startsWith('Tablar')) assert.ok(!overlaps(s, t));
+});
+
+test('Wandschienen mit ganzen Brettern: Seitenregal beginnt vor dem vorstehenden Brett', () => {
+  const Rr = run({ sys:'rails', shape:'U', mat:'gon_fichte', t:18, dBack:400, dLeft:400, dRight:400, rw:2000 });
+  const shelves = Rr.boxes.filter(b => b.key.startsWith('Tablar'));
+  for (const a of shelves) for (const b of shelves) if (a !== b) assert.ok(!overlaps(a, b));
+});
+
+test('Tablarwinkel: Wandschenkel als Daten, reicht nicht in den Boden', () => {
+  const Rr = run({ sys:'brackets', shape:'I', dBack:300, gapBottom:260 });
+  assert.ok(Rr.extras.filter(e => e.type === 'metal').every(e => e.pos[1] - e.size[1] / 2 >= 0));
+  assert.ok(!Rr.warn.some(w => w.includes('in den Boden')));
+  assert.ok(run({ sys:'brackets', shape:'I', dBack:300, gapBottom:150 }).warn.some(w => w.includes('in den Boden')));
+});
+
+test('Wangen: Höhe bis 50 mm über das oberste Tablar statt raumhoch', () => {
+  const Rr = run({ sys:'cheeks', shape:'I', rh:2400, gapTop:300, nShelves:5 });
+  const top = Math.max(...R.shelfLevels(5, 150, 300, 2400));
+  assert.ok(rowsNamed(Rr, 'Wange').every(r => r.L === top + 18 + 50), JSON.stringify(rowsNamed(Rr, 'Wange').map(r => r.L)));
+});
+
+test('Leisten: Eckstütze vor jeder Innenecke, Warnung misst das freie Feld', () => {
+  for (const [shape, n] of [['I', 0], ['L', 1], ['U', 2]]) {
+    const Rr = run({ sys:'battens', shape });
+    assert.strictEqual(Rr.rows.filter(r => r.note.startsWith('Eckstütze')).reduce((a, r) => a + r.qty, 0), n, shape);
+    for (const p of postBoxes(Rr)) for (const b of Rr.boxes) if (b !== p) assert.ok(!overlaps(p, b), shape + b.key);
+  }
+  const U = run({ sys:'battens', shape:'U' });
+  const w = U.warn.find(x => x.includes('vorne frei'));
+  assert.ok(w && w.includes('hinten (955 mm)') && !w.includes('1594'), w);
+  assert.ok(U.steps.some(s => s[0] === 'Stützen stellen' && s[1].includes('an den Innenecken')));
+  // Stoss mit Stütze: das freie Feld ist rund die halbe Wand, nicht die ganze Tablarlänge
+  const J = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).warn.find(x => x.includes('vorne frei'));
+  assert.ok(J && !J.includes('2394'), J);
+});
+
+/* ---------- Eckfach bei Wangen und Modulen (350 mm) ---------- */
+// Offene Breite des hintersten Fachbodens, der im linken Eckquadrat beginnt; Infinity = Ecke leer.
+function eckOffen(Rr, dL, dB){
+  const xc = -Rr.W / 2 + dL, zc = -Rr.D / 2 + dB;
+  let min = Infinity;
+  for (const b of Rr.boxes) if (/^(Tablar|Einlegeboden|Boden|Deckel)\|/.test(b.key) && lo(b, 0) < xc - 1 && hi(b, 2) <= zc + 1) min = Math.min(min, hi(b, 0) - xc);
+  return min;
+}
+
+test('Eckfach: mindestens 350 mm offen oder leer (Wangen und Module, L und U)', () => {
+  for (const build of ['built', 'free']) for (const shape of ['L', 'U'])
+    for (const [mat, t] of [['birke', 18], ['mdf', 19], ['dekorspan', 19], ['gon_fichte', 18], ['osb', 18]]) for (const side of [200, 300, 400, 450, 500]) {
+      const Rr = run({ build, sys:'cheeks', shape, corner:'L', mat, t, dLeft:side, dRight:side, dBack:Math.min(600, side + 100) });
+      const dL = Rr.boxes.length && R.normReduit({ ...R.REDUIT_DEFAULTS, ...base, mat, t, shape, dLeft:side, dBack:Math.min(600, side + 100) }).cfg;
+      const offen = eckOffen(Rr, dL.dLeft, dL.dBack);
+      assert.ok(offen >= 345, `${build} ${shape} ${mat} Seite ${side}: ${offen}`);
+      for (const a of Rr.boxes) for (const b of Rr.boxes) if (a !== b && a.key.startsWith('Wange') && !b.key.startsWith('Wange')) assert.ok(!overlaps(a, b), b.key);
+    }
+});
+
+test('Eckfach: Standard-U mit Wangen wird genutzt und zuerst bestückt', () => {
+  const Rr = run({ sys:'cheeks', shape:'U', dLeft:300, dRight:300 });
+  assert.ok(Math.abs(eckOffen(Rr, 300, 400) - 490) < 5);
+  assert.ok(Rr.steps.some(s => s[0] === 'Eckfach zuerst einrichten'));
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 4 × 40'), 6);   // 3 je Ecke
+  assert.ok(!Rr.warn.some(w => w.includes('Eckfach')));
+});
+
+test('Eckfach: MDF 19 lässt das Eckquadrat leer und sagt es', () => {
+  const Rr = run({ sys:'cheeks', shape:'U', mat:'mdf', t:19, dLeft:300, dRight:300 });
+  assert.strictEqual(eckOffen(Rr, 300, 400), Infinity);
+  assert.ok(Rr.warn.some(w => w.includes('leeres Eckquadrat eingeplant')));
+  assert.ok(Rr.steps.some(s => s[0] === 'Ecke schliessen'));
+  const M = run({ build:'free', shape:'U', mat:'mdf', t:19, dLeft:300, dRight:300 });
+  assert.strictEqual(eckOffen(M, 300, 400), Infinity);
+  assert.ok(M.steps.some(s => s[0] === 'Ecke leer lassen'));
+});
+
+test('Selbststehend: Seiten, Böden und Rückwand überschneiden sich nicht', () => {
+  for (const shape of ['I', 'L', 'U']) for (const [mat, t, back] of [['birke', 18, 'hdf3'], ['mdf', 19, 'ply6'], ['birke', 18, 'none']]) {
+    const Rr = run({ build:'free', shape, mat, t, back });
+    for (let i = 0; i < Rr.boxes.length; i++) for (let j = i + 1; j < Rr.boxes.length; j++)
+      assert.ok(!overlaps(Rr.boxes[i], Rr.boxes[j]), `${shape} ${mat} ${Rr.boxes[i].key} × ${Rr.boxes[j].key}`);
+  }
+});
+
+/* ---------- Türlage und Türhöhe ---------- */
+test('Türlage: Wandstücke und Sturz liegen dort, wo die Tür ist', () => {
+  const front = Rr => Rr.extras.filter(e => e.type === 'wall' && e.front);
+  const mid = run({ shape:'I' }), links = run({ shape:'I', doorPos:'L', doorOff:100, doorH:2100 });
+  assert.deepStrictEqual(front(mid).map(e => e.size[0]), [500, 500, 800]);
+  assert.deepStrictEqual(front(links).map(e => e.size[0]), [200, 800, 800]);
+  const sturz = front(links)[2];
+  assert.strictEqual(sturz.pos[0], -800 + 100 + 400);
+  assert.strictEqual(sturz.pos[1] - sturz.size[1] / 2, 2100);
+  assert.strictEqual(run({ shape:'I', doorPos:'R', doorOff:100 }).room.doorX0, 1600 - 100 - 800);
+});
+
+test('Tür nach innen: das Regal auf der Bandseite wird nur gekürzt, wenn das Blatt es trifft', () => {
+  const seite = o => R.layoutReduit(cfg({ shape:'U', rd:1800, doorW:800, doorIn:true, hinge:'L', ...o }).cfg).segs.find(s => s.id === 'left');
+  assert.strictEqual(seite({ dLeft:300 }).u1, 1000);                           // Wandstück 400 − 110 < 300: gekürzt
+  assert.strictEqual(seite({ dLeft:250 }).u1, 1800);                           // 250 ≤ 290: das Blatt steht davor
+  assert.strictEqual(seite({ dLeft:300, doorPos:'R', doorOff:100 }).u1, 1800); // Tür rechts: links 700 mm Wand
+  assert.strictEqual(seite({ dLeft:200, doorPos:'L', doorOff:100 }).u1, 1000); // Tür links: kaum Wand
+  // Nicht gekürzt: ein Türstopper kommt auf die Liste
+  assert.ok(qtyOf(run({ shape:'U', rd:1800, doorIn:true, hinge:'L', dLeft:250 }), 'Türstopper') === 1);
+  assert.strictEqual(qtyOf(run({ shape:'U', rd:1800, doorIn:true, hinge:'L', dLeft:300 }), 'Türstopper'), 0);
+});
+
+test('Türlage: ein Regal neben einer seitlichen Tür ragt in die Öffnung', () => {
+  assert.ok(lay({ shape:'U', doorPos:'R', doorOff:100, dRight:300 }).warn.some(w => w.includes('Türöffnung') && w.includes('rechts')));
+  assert.ok(!lay({ shape:'U', doorPos:'R', doorOff:100, dLeft:300 }).warn.some(w => w.includes('links') && w.includes('Türöffnung')));
+});
+
+test('Türlage: fehlende Werte älterer Entwürfe gelten als mittig, 2000 hoch', () => {
+  const c = cfg({ doorPos:undefined, doorOff:NaN, doorH:NaN }).cfg;
+  assert.strictEqual(c.doorPos, 'M');
+  assert.strictEqual(c.doorH, 2000);
+  assert.strictEqual(c.doorX0, (1600 - 800) / 2);
+});
+
+test('Türhöhe: zu grosse Module werden im Reduit gebaut, Kippmass wird geprüft', () => {
+  const tief = run({ build:'free', shape:'I', doorH:1800, rh:2400 });
+  assert.ok(tief.steps.find(s => s[0] === 'Module bauen')[1].includes('im Reduit zusammenbauen'));
+  assert.ok(!run({ build:'free', shape:'I', doorH:2200, rh:2400, gapTop:500 }).steps.find(s => s[0] === 'Module bauen')[1].includes('im Reduit'));
+  assert.ok(run({ build:'free', shape:'I', rh:2000, gapTop:100, dBack:600 }).warn.some(w => w.includes('Kippmass')));
+  assert.ok(!run({ build:'free', shape:'I' }).warn.some(w => w.includes('Kippmass')));
+  assert.ok(!run({ sys:'cheeks', shape:'I' }).warn.some(w => w.includes('Kippmass')));
+});
+
+/* ---------- Anleitung (Schreiner-Review Schritt 6) ---------- */
+const stepNames = Rr => Rr.steps.map(s => s[0]);
+const vor = (Rr, a, b) => { const n = stepNames(Rr); return n.indexOf(a) >= 0 && n.indexOf(a) < n.indexOf(b); };
+
+test('Anleitung Module: Lochreihen und Verbindung vor dem Bauen, Kippschutz sofort, Schrauben auf der Liste', () => {
+  for (const [joint, name] of [['pocket', 'Taschenlöcher bohren'], ['dowels', 'Dübellöcher bohren'], ['cam', 'Bohrungen für Exzenter'], ['screws', 'Schraublöcher vorbohren']]) {
+    const Rr = run({ build:'free', shape:'U', joint });
+    assert.ok(vor(Rr, 'Lochreihen bohren', 'Module bauen') && vor(Rr, name, 'Module bauen'), joint + ': ' + stepNames(Rr).join(' → '));
+  }
+  const Rr = run({ build:'free', shape:'U' });
+  assert.ok(Rr.steps.find(s => s[0] === 'Module stellen')[1].includes('sofort nach dem Aufstellen'));
+  assert.ok(!stepNames(Rr).includes('Kippschutz montieren'));
+  assert.ok(Rr.hw.some(h => h[2].includes('Module untereinander verbinden') && h[0] > 0));
+  assert.ok(run({ build:'free', shape:'I', dowels:true, joint:'dowels' }).steps.find(s => s[0] === 'Module bauen')[1].includes('Leim'));
+});
+
+test('Anleitung: Oberfläche vor der Montage, Höhen vom Meterriss', () => {
+  for (const o of [{ sys:'battens' }, { mat:'mdf', t:19, sys:'rails' }, { build:'free' }, { mat:'dekorspan', t:19, sys:'cheeks' }]) {
+    const Rr = run(o), n = stepNames(Rr);
+    const i = n.findIndex(x => x.endsWith('– vor der Montage'));
+    assert.ok(i > 0 && i === n.indexOf('Teile beschriften und schleifen') + 1, JSON.stringify(o) + ' ' + n.join(' → '));
+  }
+  assert.ok(run({ sys:'battens' }).steps.find(s => s[0] === 'Tablarhöhen anzeichnen')[1].includes('Meterriss'));
+});
+
+test('Anleitung: ein Schritt für alle Stützen (freie Enden, Stösse, Innenecken)', () => {
+  const stoss = run({ sys:'battens', mat:'gon_fichte', t:18, shape:'I', rw:2400, rd:1400, doorW:800 }).steps.find(s => s[0] === 'Stützen stellen');
+  assert.ok(stoss && stoss[1].includes('Tablarstössen'), JSON.stringify(stoss));
+  const frei = run({ sys:'rails', shape:'U', rd:1800, doorIn:true, hinge:'L' }).steps.find(s => s[0] === 'Stützen stellen');
+  assert.ok(frei && frei[1].includes('freien Enden'));
+  assert.ok(!stepNames(run({ sys:'rails', shape:'I' })).includes('Stützen stellen'));
+  assert.ok(!stepNames(run({ sys:'posts', shape:'U' })).includes('Stützen stellen'), 'Pfosten haben ihren eigenen Schritt');
 });

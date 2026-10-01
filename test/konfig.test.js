@@ -190,3 +190,22 @@ test('Sammlungseintrag nennt abweichende Fronten', () => {
   const d = { ...FORM, frontMat:'birke', frontT:'12' };
   assert.strictEqual(K.sammlungEintrag(d, K.computeData(d)).info.material, 'Sperrholz Birke Premium 18 mm · Fronten Sperrholz Birke Premium 12 mm');
 });
+
+test('Reduit-Standard: Pfostenrahmen mit Sperrholz Fichte 18, ohne Warnung', () => {
+  const d = K.startwerte(FORM, 'reduit');
+  assert.strictEqual(d.sys, 'posts');
+  assert.strictEqual(d.mat, 'fichtesp');
+  assert.strictEqual(d.t, '18');
+  assert.strictEqual(d.price, matPrice(MATS.fichtesp, 18));
+  assert.deepStrictEqual(d.katalog, { price:d.price, sheetL:MATS.fichtesp.sheet[0], sheetB:MATS.fichtesp.sheet[1] });
+  assert.deepStrictEqual(K.computeData(d).warn, []);
+  assert.strictEqual(d.bw, 'R2');
+  assert.deepStrictEqual(K.startwerte(FORM, 'sideboard'), { ...FORM, kind:'sideboard', bw:'S1' });
+});
+
+test('Plattenformat wird nicht mehr auf 2100 mm gekappt (Birke 1500 × 3000)', () => {
+  const d = { ...FORM, kind:'reduit', sys:'posts', sheetL:'1500', sheetB:'3000', grain:false };
+  const R = K.computeData(d);
+  assert.deepStrictEqual(R.groups[0].sheet, [1500, 3000]);
+  assert.ok(!R.warn.some(w => w.includes('2100')), JSON.stringify(R.warn));
+});

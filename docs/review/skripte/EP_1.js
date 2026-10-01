@@ -1,0 +1,11 @@
+const p=require('path').join(__dirname, '../../..') + '/';
+Object.assign(globalThis, require(p+'shared.js'));
+Object.assign(globalThis, require(p+'sideboard.js'), require(p+'reduit.js'));
+const base = { ...REDUIT_DEFAULTS, mat:'birke', t:18, back:'hdf3', joint:'pocket', sheetL:3000, sheetB:1500, kerf:4, grain:true, price:88.95, shape:'U', build:'built' };
+const sysArg = process.argv[2] || 'posts';
+const extra = process.argv[3] ? JSON.parse(process.argv[3]) : {};
+const R = computeReduit({ ...base, sys:sysArg, ...extra });
+console.log('WARN', R.warn);
+for (const r of R.rows) console.log(r.pos, r.qty, r.name, r.L, 'x', r.B, 'x', r.t, '|', r.group, '|', r.note);
+console.log('HW'); for (const h of R.hw) console.log(' ', h[0], h[1], '|', h[2]);
+console.log('STEPS'); for (const s of R.steps) console.log(' -', s[0], ':', s[1]);

@@ -184,6 +184,29 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .card:not(:has(input:checked)) .desc{display:none}
 .card:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .card:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+/* Von einer Regel gesperrt (konfig.js → REGELN): sichtbar, aber nicht wählbar; der Grund steht in .hint.sperre */
+.card:has(input:disabled){opacity:.5;cursor:not-allowed}
+.seg input:disabled + label{opacity:.4;cursor:not-allowed}
+.hint.sperre{margin-top:-4px}
+/* Bauweise-Karten: Beschreibung und Preis immer sichtbar, Details nur bei der gewählten, Grund bei gesperrten */
+.card.bw{grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:3px 10px}
+.card.bw .sw{width:20px;height:20px;border-radius:5px;border:1px solid var(--line-strong)}
+.card.bw .desc,.card.bw .preis{grid-column:2 / -1}
+.card:not(:has(input:checked)).bw .desc{display:block}
+.card.bw .preis{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.card.bw .bwdet{grid-column:1 / -1;display:grid;grid-template-columns:84px minmax(0,1fr);gap:4px 10px;margin:6px 0 0;padding-top:8px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.4}
+.card.bw .bwdet dt{color:var(--muted)}
+.card.bw .bwdet dd{margin:0}
+.card.bw:not(:has(input:checked)) .bwdet{display:none}
+.card.bw .grund{grid-column:1 / -1;display:none;gap:6px;font-size:12.5px;line-height:1.4;color:var(--warn)}
+.card.bw .grund svg{flex:none;margin-top:2px}
+.card.bw:has(input:disabled){opacity:1}
+.card.bw:has(input:disabled) > :not(.grund):not(input){opacity:.5}
+.card.bw:has(input:disabled) .grund{display:flex}
+.bwnotice{display:grid;gap:8px;margin-top:12px;padding:10px 12px;border:1px solid var(--warn-line);border-radius:9px;background:var(--warn-bg);color:var(--warn);font-size:13px;line-height:1.45}
+.bwnotice[hidden]{display:none}
+.bwnotice ul{margin:0;padding-left:18px}
+.bwnotice .acts{display:flex;gap:8px;flex-wrap:wrap}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .swatches input{position:absolute;opacity:0;pointer-events:none}
 .swatches label{display:grid;justify-items:center;gap:3px;font-size:11px;color:var(--muted);cursor:pointer;width:52px;text-align:center;line-height:1.2}
@@ -526,6 +549,7 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
         <p class="hint">Mit dem Schloss bei einer Gruppe bleibt sie beim Würfeln, wie sie ist.</p>
       </section>
+      <div class="bwnotice" id="bwNotice" role="status" hidden></div>
       <section class="group" data-kind="sideboard" data-lock="masse">
         <h2>Masse</h2>
         <div class="dim">
@@ -544,6 +568,13 @@ body[data-ort="sammlung"] .layout{display:none}
           <input id="d-r" type="range" min="250" max="650" step="10" value="400" data-for="d" aria-label="Tiefe">
         </div>
         <p class="hint">Höhe inklusive Füsse bzw. Sockel. Tiefe inklusive Rückwand, ohne aufliegende Türen.</p>
+        <div class="field" id="row-room">
+          <span class="lbl" id="lbl-room">Einsatzort</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
+            <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
+            <input type="radio" name="room" id="room-bath" value="bath"><label for="room-bath">Badezimmer</label>
+          </div>
+        </div>
       </section>
 
       <section class="group" data-kind="reduit">
@@ -568,6 +599,20 @@ body[data-ort="sammlung"] .layout{display:none}
           <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
           <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
         </div>
+        <div class="dim">
+          <label for="doorH">Türhöhe</label>
+          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
+          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-doorPos">Türlage</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
+        </div>
+        <div class="dim" id="row-doorOff">
+          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
+          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
+          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
+        </div>
         <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
         <div class="field" id="row-hinge">
           <span class="lbl" id="lbl-hinge">Türband</span>
@@ -577,21 +622,28 @@ body[data-ort="sammlung"] .layout{display:none}
           <span class="lbl" id="lbl-wall">Wände</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-wall"><input type="radio" name="wall" id="wall-solid" value="solid" checked><label for="wall-solid">Beton / Backstein</label><input type="radio" name="wall" id="wall-drywall" value="drywall"><label for="wall-drywall">Gipskarton</label></div>
         </div>
-        <p class="hint">Innenmasse von Wand zu Wand. Die Tür liegt mittig in der Vorderwand.</p>
+        <p class="hint">Innenmasse von Wand zu Wand. Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
       </section>
 
-      <section class="group" data-kind="reduit" data-lock="bauart">
+      <section class="group" id="grp-bw" data-lock="bauweise">
+        <h2>Bauweise</h2>
+        <p class="hint" id="bwHint"></p>
+        <div class="cards" role="radiogroup" aria-label="Bauweise" id="bwCards"></div>
+        <p class="hint" id="bwPreisHint"></p>
+      </section>
+
+      <section class="group" id="grp-bauart" data-kind="reduit" data-lock="bauart">
         <h2>Bauart</h2>
         <div class="field">
           <span class="lbl" id="lbl-build">Regal</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-build"><input type="radio" name="build" id="build-built" value="built" checked><label for="build-built">eingebaut</label><input type="radio" name="build" id="build-free" value="free"><label for="build-free">selbststehend</label></div>
         </div>
         <div class="cards" role="radiogroup" aria-label="Einbau-Art" id="row-sys">
-          <label class="card"><input type="radio" name="sys" value="battens" checked><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/></svg><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
+          <label class="card"><input type="radio" name="sys" value="battens"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/></svg><b>Leisten</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Tablare liegen auf Leisten, die an drei Wände geschraubt sind. Günstig und stabil, Höhen fix.</span></label>
           <label class="card"><input type="radio" name="sys" value="rails"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 3v18M17 3v18"/><path d="M4 9h16M4 15h16"/></svg><b>Wandschienen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Schienen mit einhängbaren Konsolen. Höhen jederzeit verstellbar, teurer.</span></label>
           <label class="card"><input type="radio" name="sys" value="brackets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10l4 4M4 16l4 4"/></svg><b>Tablarwinkel</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Metallwinkel direkt an der Wand. Günstig, Höhen fix – für nicht zu tiefe Tablare.</span></label>
           <label class="card"><input type="radio" name="sys" value="cheeks"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="4" height="18" rx=".5"/><rect x="17" y="3" width="4" height="18" rx=".5"/><path d="M7 9h10M7 15h10"/></svg><b>Wangen</b><span class="lvl" data-l="2" aria-label="Niveau 2 von 3"><i></i><i></i><i></i></span><span class="desc">Senkrechte Platten mit Lochreihe, an die Wand geschraubt. Verstellbar, alles aus Holz.</span></label>
-          <label class="card"><input type="radio" name="sys" value="posts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Kanthölzer vorne, Latten als Auflage – das klassische Kellerregal. Trägt am meisten.</span></label>
+          <label class="card"><input type="radio" name="sys" value="posts" checked><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/></svg><b>Pfostenrahmen</b><span class="lvl" data-l="1" aria-label="Niveau 1 von 3"><i></i><i></i><i></i></span><span class="desc">Latten rundum als Auflage, Kanthölzer vor den Tablaren – das klassische Kellerregal. Trägt auch tiefe Tablare.</span></label>
         </div>
       </section>
 
@@ -777,14 +829,7 @@ body[data-ort="sammlung"] .layout{display:none}
       </section>
 
       <section class="group" data-lock="material">
-        <h2>Material</h2>
-        <div class="field" id="row-room">
-          <span class="lbl" id="lbl-room">Einsatzort</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-room">
-            <input type="radio" name="room" id="room-living" value="living" checked><label for="room-living">Wohnraum</label>
-            <input type="radio" name="room" id="room-bath" value="bath"><label for="room-bath">Badezimmer</label>
-          </div>
-        </div>
+        <h2>Optik</h2>
         <div class="field">
           <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
           <select id="mat" name="mat"></select>
@@ -818,7 +863,7 @@ body[data-ort="sammlung"] .layout{display:none}
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
             <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
-            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="2100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
+            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
           </div>
         </div>
         <div class="field" id="row-boards" hidden>
@@ -832,7 +877,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <label class="check" id="row-grain" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
         <p class="hint" id="sheetHint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
       </section>
-      <section class="group">
+      <section class="group" id="grp-niveau">
         <h2>Niveau</h2>
         <div class="levelbox" id="levelBox" aria-live="polite"></div>
       </section>
@@ -1067,9 +1112,11 @@ function syncVisibility(){
   const kind = f.get('kind'), reduit = kind === 'reduit', free = f.get('build') === 'free';
   for (const sec of form.querySelectorAll('[data-kind]')) sec.hidden = sec.dataset.kind !== kind;
   syncDepths(false);
-  $('#grp-joint').hidden = reduit && !free;
+  // Verbindung, Bauart und Niveau folgen aus der Bauweise und stehen auf ihrer Karte.
+  $('#grp-joint').hidden = $('#grp-bauart').hidden = $('#grp-niveau').hidden = true;
   $('#row-room').hidden = reduit;
   $('#row-back').hidden = reduit && !free;
+  fillBauweisen(kind);
   if (!reduit) return;
   const shape = f.get('shape'), corner = f.get('corner');
   const hasL = shape === 'U' || (shape === 'L' && corner === 'L');
@@ -1077,6 +1124,11 @@ function syncVisibility(){
   $('#row-corner').hidden = shape !== 'L';
   $('#row-sys').hidden = free;
   $('#row-hinge').hidden = !f.get('doorIn');
+  // Tür seitlich: Abstand zur Wand auf dieser Seite, höchstens so viel, dass auf der anderen Seite 50 mm Wand bleiben.
+  const dPos = f.get('doorPos');
+  $('#row-doorOff').hidden = dPos === 'M';
+  $('#lbl-doorOff').textContent = dPos === 'R' ? 'Abstand zur rechten Wand' : 'Abstand zur linken Wand';
+  $('#doorOff').max = $('#doorOff-r').max = Math.max(50, Number(f.get('rw')) - Number(f.get('doorW')) - 50);
   $('#row-dLeft').hidden = $('#row-nicheL').hidden = !hasL;
   $('#row-dRight').hidden = $('#row-nicheR').hidden = !hasR;
   $('#row-nicheL-dims').hidden = !f.get('nicheL');
@@ -1086,6 +1138,11 @@ function syncVisibility(){
 // Ganze Bretter: Tablartiefe = Brettbreite. Regler und Zahlenfeld rasten auf die Breiten ein, darunter Markierungen.
 const TIEFEN_IDS = ['dBack', 'dLeft', 'dRight'];
 function boardMat(){ const M = MATS[$('#mat').value]; return M && M.boards ? M : null; }
+// Brettbreiten, die im Tiefenfeld k erlaubt sind (min/max setzen die Regeln, siehe zeigeSperren).
+function breiten(BM, k){
+  const el = $('#' + k), w = BM.widths.filter(x => x >= Number(el.min) && x <= Number(el.max));
+  return w.length ? w : BM.widths;
+}
 function syncDepths(snap){
   const BM = boardMat();
   $('#depthHint').hidden = !BM;
@@ -1094,10 +1151,10 @@ function syncDepths(snap){
     const num = $('#' + k), r = $('#' + k + '-r'), ticks = $('#' + k + '-ticks');
     ticks.hidden = !BM;
     if (!BM) continue;
-    if (snap) num.value = r.value = snapBreite(BM.widths, Number(num.value));
+    if (snap) num.value = r.value = snapBreite(breiten(BM, k), Number(num.value));
     const v = Number(num.value), mn = Number(r.min), mx = Number(r.max);
     if (BM.widths.includes(v)) num.dataset.last = v;
-    ticks.innerHTML = BM.widths.map(w => `<span style="--p:${(w - mn) / (mx - mn)}"${w === v ? ' class="on"' : ''}>${w}</span>`).join('');
+    ticks.innerHTML = breiten(BM, k).map(w => `<span style="--p:${(w - mn) / Math.max(1, mx - mn)}"${w === v ? ' class="on"' : ''}>${w}</span>`).join('');
   }
 }
 // Nächste Brettbreite in Richtung dir (+1/-1) ab cur, sonst cur.
@@ -1134,6 +1191,8 @@ function stored(){
 }
 // Setzt das Formular auf data (ohne data: Standardwerte des Materials). Ohne katalog gelten Preis und Format aus dem Katalog.
 function restore(data){
+  fillBauweisen(data && data.kind || 'sideboard');
+  if (data && !data.bw) data = { ...data, bw:bauweiseVon(data) };   // ältere Entwürfe kennen die Bauweise noch nicht
   fillMaterials();   // alle Materialien; syncMaterials() filtert danach nach Möbeltyp
   const mat = data && MATS[data.mat] ? data.mat : 'birke';
   $('#mat').value = mat;
@@ -1156,14 +1215,146 @@ function restore(data){
     else els.value = v;
   }
   for (const r of form.querySelectorAll('input[type=range][data-for]')) r.value = $('#' + r.dataset.for).value;
+  if (!form.querySelector('input[name=bw]:checked')) form.querySelector('input[name=bw]').checked = true;
+}
+
+/* ---------- Bauweisen ---------- */
+// Karten aus BAUWEISEN (konfig.js). Preis, Details und Sperrgrund setzt zeigeBauweisen bei jedem render().
+const BW_SVG = {
+  R1:'<path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10.5h3M4 16.5h3" stroke-width="2.4"/>',
+  R2:'<path d="M6 3v18M18 3v18"/><path d="M3 8h18M3 14h18M3 20h18"/>',
+  R3:'<path d="M7 3v18M17 3v18"/><path d="M4 9h16M4 15h16"/>',
+  R4:'<path d="M3 3v18"/><path d="M3 9h17M3 15h17"/><path d="M4 10l4 4M4 16l4 4"/>',
+  R5:'<rect x="3" y="3" width="4" height="18" rx=".5"/><rect x="17" y="3" width="4" height="18" rx=".5"/><path d="M7 9h10M7 15h10"/>',
+  R6:'<rect x="3" y="4" width="8" height="17" rx="1"/><rect x="13" y="4" width="8" height="17" rx="1"/><path d="M3 12.5h8M13 12.5h8"/>'
+};
+const BW_FARBE = { S2:COLORS.salbei };   // Muster der Sideboard-Karten: sonst das erste Material
+const BAN_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
+function fillBauweisen(kind){
+  const box = $('#bwCards');
+  if (box.dataset.kind === kind) return;
+  box.dataset.kind = kind;
+  const lead = b => kind === 'reduit'
+    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">${BW_SVG[b.id]}</svg>`
+    : `<span class="sw" style="background:${BW_FARBE[b.id] || MATS[Object.keys(b.mats)[0]].color}" aria-hidden="true"></span>`;
+  box.innerHTML = BAUWEISEN[kind].map(b => `<label class="card bw"><input type="radio" name="bw" value="${b.id}">${lead(b)}<b>${esc(b.name)}</b><span class="lvl" data-l="${b.niveau[0]}" aria-label="Niveau ${b.niveau[0]} von 3"><i></i><i></i><i></i></span><span class="desc">${esc(b.desc)}</span><span class="preis"></span><dl class="bwdet"></dl><span class="grund">${BAN_SVG}<span></span></span></label>`).join('');
+  $('#bwHint').textContent = kind === 'reduit'
+    ? 'Die Bauweise legt Tragwerk und Material fest. Gesperrt ist, was in diesem Raum nicht hält – der Grund steht auf der Karte.'
+    : 'Die Bauweise legt Material, Stärke, Verbindung und Oberfläche fest. Masse, Aufteilung und Optik bleiben frei.';
+}
+function zeigeBauweisen(P){
+  const c = cfgFromData(P.d), preise = kartenPreise(P.d), g = P.gesperrt.bw || {};
+  for (const inp of form.querySelectorAll('input[name=bw]')) {
+    const card = inp.closest('.card'), b = BW[inp.value], n = b.niveau[c.front === 'open' || b.niveau.length < 2 ? 0 : 1];
+    card.querySelector('.preis').textContent = preise[b.id] == null ? '' : `ca. ${chf5(preise[b.id])}`;
+    card.querySelector('.grund span').textContent = g[b.id] ? g[b.id].grund : '';
+    card.querySelector('.lvl').dataset.l = n;
+    card.querySelector('.lvl').setAttribute('aria-label', `Niveau ${n} von 3`);
+    card.querySelector('.bwdet').innerHTML = inp.checked ? bwDetails(b, c).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('') : '';
+  }
+  $('#bwPreisHint').textContent = c.kind === 'reduit'
+    ? 'Preise: Holz und Kaufteile für den Raum oben – Richtwert, Kaufteile teils geschätzt.'
+    : 'Preise: Holz im Zuschnitt für die Masse oben, ohne Beschläge – Richtwert.';
+}
+
+// Setzt die von den Regeln angepassten Felder, Material wie bei einer Eingabe (Stärken, Katalog, Tiefen).
+function setzeFelder(d, keys){
+  sperrenLoesen();   // FormData liest gesperrte Optionen nicht – die neuen Werte müssen wählbar sein, bis zeigeSperren läuft
+  if (keys.includes('mat')) { $('#mat').value = d.mat; fillThickness(d.mat, d.t); applyCatalog(d.mat); }
+  for (const k of keys) {
+    if (k === 'mat') continue;
+    const els = form.elements[k];
+    if (!els) continue;
+    if (els instanceof RadioNodeList) { for (const r of els) r.checked = r.value === String(d[k]); }
+    else if (els.type === 'radio') els.checked = els.value === String(d[k]);
+    else if (els.type === 'checkbox') els.checked = !!d[k];
+    else els.value = d[k];
+    const r = $('#' + k + '-r'); if (r) r.value = d[k];
+  }
+  if (keys.includes('front')) fillHandles(d.front, $('#handle').value);
+  if (keys.includes('frontMat')) fillFrontT(d.frontMat, curFrontT());
+  if (keys.includes('mat')) syncDepths(true);
+}
+// Gesperrte Optionen aus, der Grund als Hinweis beim Feld; Tiefenfelder mit den Grenzen der Regeln.
+function sperrenLoesen(){
+  for (const el of form.querySelectorAll('[data-sperre]')) {
+    el.disabled = false;
+    if (el.dataset.sperre === 'weg') { el.hidden = false; const l = el.id && form.querySelector(`label[for="${el.id}"]`); if (l) l.hidden = false; }
+    delete el.dataset.sperre;
+  }
+}
+function zeigeSperren(P){
+  sperrenLoesen();
+  for (const h of form.querySelectorAll('.hint.sperre')) h.remove();
+  $('#grain').disabled = !MATS[$('#mat').value].grain;   // Grundzustand wie in syncVisibility
+  const hints = new Map();   // Feld-Container → { grund → [Werte] }
+  const hint = (box, grund, wert) => {
+    const g = hints.get(box) || new Map(); hints.set(box, g);
+    const l = g.get(grund) || []; g.set(grund, l); if (wert && !l.includes(wert)) l.push(wert);
+  };
+  for (const [feld, werte] of Object.entries(P.gesperrt)) {
+    const els = form.elements[feld];
+    if (!els) continue;
+    const list = els instanceof RadioNodeList ? [...els] : els.tagName === 'SELECT' ? [...els.querySelectorAll('option')] : [els];
+    for (const o of list) {
+      const w = o.type === 'checkbox' ? 'false' : o.value, s = werte[w];
+      if (!s) continue;
+      o.disabled = true; o.dataset.sperre = '1';
+      if (feld === 'bw') continue;   // der Grund steht auf der Karte
+      // Was nicht zur gewählten Bauweise gehört, verschwindet aus der Auswahl, statt ausgegraut dazustehen.
+      if (s.bw && feld !== 'top') {
+        o.hidden = true; o.dataset.sperre = 'weg';
+        const l = o.id && form.querySelector(`label[for="${o.id}"]`); if (l) l.hidden = true;
+        continue;
+      }
+      const box = (o.tagName === 'OPTION' ? o.closest('select') : o).closest('.cards, .field, .check');
+      hint(box, s.grund, o.type === 'checkbox' ? null : wertName(feld, w));
+    }
+  }
+  for (const k of Object.keys(RANGES)) {
+    const num = $('#' + k), rng = $('#' + k + '-r'), g = P.grenzen[k];
+    num.dataset.min0 = num.dataset.min0 || num.min; num.dataset.max0 = num.dataset.max0 || num.max;
+    num.min = rng.min = g ? g.min : num.dataset.min0;
+    num.max = rng.max = g ? Math.max(g.min, g.max) : num.dataset.max0;
+    // Grund nur zeigen, wenn der Wert an der Grenze dieser Regel anstösst. Tiefen: ein Hinweis unter allen drei Feldern.
+    const v = Number(num.value), an = r => (r.min != null && v <= r.min) || (r.max != null && v >= r.max);
+    if (g) for (const r of g.regeln) if (an(r)) hint(TIEFEN_IDS.includes(k) ? $('#depthHint') : num.closest('.dim'), r.grund, null);
+  }
+  for (const og of form.querySelectorAll('#mat optgroup, #frontMat optgroup')) og.hidden = ![...og.children].some(o => !o.hidden);
+  // Stärke: bleibt nur eine übrig, braucht es keine Knöpfe (sie steht im Materialkasten).
+  $('#row-t').hidden = [...form.querySelectorAll('input[name=t]')].filter(i => !i.hidden).length <= 1;
+  for (const [box, g] of hints) if (box) for (const [grund, werte] of [...g].reverse()) {
+    const p = document.createElement('p');
+    p.className = 'hint sperre';
+    p.textContent = werte.length ? `${werte.join(', ')}: ${grund}` : grund;
+    box.insertAdjacentElement('afterend', p);
+  }
 }
 
 /* ---------- Ausgabe ---------- */
 let R = null;
 function render(){
+  // Regeln (konfig.js): gesperrte Werte weichen aus, Zahlen bleiben in ihren Grenzen; Anpassungen zurück ins Formular.
+  const d = formData(), P = pruefeRegeln(d, unveraendert ? new Set(Object.keys(d)) : undefined);
+  const diff = Object.keys(P.d).filter(k => k !== 'katalog' && String(P.d[k]) !== String(d[k]));
+  if (diff.length) {
+    setzeFelder(P.d, diff); syncVisibility(); placePills();
+    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(k in RANGES ? P.d[k] + ' mm' : wertName(k, String(P.d[k])))}`);
+    if (eingabe === 'bw') {
+      // Neue Bauweise gewählt: kurz sagen, was sie mitbringt (die Werte folgen aus ihr, nicht aus einer Sperre).
+      const c = cfgFromData(P.d), teile = [`${MATS[c.mat].name} ${c.t} mm`];
+      if (diff.includes('joint') && (c.kind !== 'reduit' || c.build === 'free')) teile.push(JOINTS[c.joint].name);
+      if (diff.includes('sections')) teile.push(`${c.sections} Fächer`);
+      flash('.js-msg', `«${esc(BW[P.d.bw].name)}»: ${esc(teile.join(', '))}.`);
+    } else if (was.length) flash('.js-msg', `Angepasst – ${was.join(' · ')}. Der Grund steht beim Feld.`);
+  }
+  eingabe = null;
+  zeigeSperren(P);
+  zeigeBauweisen(P);
   const c = readCfg();
   const reduit = c.kind === 'reduit';
   R = reduit ? computeReduit(c) : computeSideboard(c);
+  R.warn = [...P.warnungen, ...R.warn];
   renderSummary(R); renderWarns(R); renderCut(R); renderSteps(R); renderKauf(R);
   const zu = R.groups.filter(g => !g.boards), br = R.groups.filter(g => g.boards);
   renderSheets(zu, $('#sheets')); renderSheets(br, $('#ablaengen'));
@@ -1617,10 +1808,14 @@ function build3D(R){
 }
 
 /* ---------- Ereignisse ---------- */
+let eingabe = null;   // Name des zuletzt geänderten Feldes, für die Meldung in render()
 function onInput(e){
   const el = e.target;
+  eingabe = el.name || null;
+  // Nach «Unverändert ansehen»: die erste Änderung passt wieder an die Bauweise an.
+  if (unveraendert) { unveraendert = false; $('#bwNotice').hidden = true; }
   const BM = TIEFEN_IDS.includes(el.dataset.for) && boardMat();
-  if (BM) el.value = snapBreite(BM.widths, Number(el.value));
+  if (BM) el.value = snapBreite(breiten(BM, el.dataset.for), Number(el.value));
   if (el.type === 'range' && el.dataset.for) $('#' + el.dataset.for).value = el.value;
   else if (el.type === 'number') { const r = $('#' + el.id + '-r'); if (r) r.value = el.value; }
   if (el.name === 'mat') {
@@ -1645,7 +1840,7 @@ form.addEventListener('change', e => {
     const BM = TIEFEN_IDS.includes(el.id) && boardMat();
     if (BM) {
       const last = Number(el.dataset.last), d = v - last;
-      v = Math.abs(d) === Number(el.step) ? stepBreite(BM.widths, last, d) : snapBreite(BM.widths, v);
+      v = Math.abs(d) === Number(el.step) ? stepBreite(breiten(BM, el.id), last, d) : snapBreite(breiten(BM, el.id), v);
     }
     if (String(v) !== el.value) { el.value = v; const r = $('#' + el.id + '-r'); if (r) r.value = v; syncVisibility(); render(); save(); }
   }
@@ -1657,7 +1852,7 @@ form.addEventListener('keydown', e => {
   const BM = dir && TIEFEN_IDS.includes(k) && boardMat();
   if (!BM || (el.type === 'number' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) return;
   e.preventDefault();
-  el.value = stepBreite(BM.widths, snapBreite(BM.widths, Number(el.value)), dir);
+  el.value = stepBreite(breiten(BM, k), snapBreite(breiten(BM, k), Number(el.value)), dir);
   el.dispatchEvent(new Event('input', { bubbles:true }));
 });
 form.addEventListener('submit', e => e.preventDefault());
@@ -1724,7 +1919,7 @@ form.addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
-const OPEN = ['Masse', 'Raum', 'Bauart', 'Material', 'Niveau'];
+const OPEN = ['Masse', 'Raum', 'Bauweise', 'Optik'];   // «Bauweise» ersetzt Bauart und Niveau (Review, Abschnitt 4)
 const chevron = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const heads = [...form.querySelectorAll('.group > h2')].map(h => {
   const g = h.parentElement, b = document.createElement('button');
@@ -1842,8 +2037,12 @@ function storeColl(){ try { localStorage.setItem(COLL, JSON.stringify(coll)); } 
 // Formular komplett neu setzen (Laden, Zufall, Typwechsel) und Kamera neu ausrichten.
 // undo: Zustand davor merken, damit «Rückgängig» ihn zurückholt (beide Entwürfe und die geladene Variante).
 let vorher = null;
-function applyData(data, { undo = false } = {}){
+// unveraendert: ältere Variante so rechnen, wie sie gespeichert ist (Abweichungen als Warnung statt angepasst).
+let unveraendert = false;
+function applyData(data, { undo = false, unveraendert:u = false } = {}){
   if (undo) vorher = { entwuerfe: JSON.parse(JSON.stringify(entwuerfe)), aktiv };
+  unveraendert = u;
+  if (!u) $('#bwNotice').hidden = true;
   restore(data); syncMaterials(); syncDepths(true); syncVisibility();
   three.userMoved = false;
   render(); save(); placePills();
@@ -1858,7 +2057,7 @@ function rueckgaengig(){
 }
 // Wechselt zum Entwurf des Typs; ohne Entwurf mit den Startwerten der Seite.
 function wechsleTyp(kind){
-  applyData(entwuerfe && entwuerfe[kind] || { ...DEFAULTS, kind });
+  applyData(entwuerfe && entwuerfe[kind] || startwerte(DEFAULTS, kind));
 }
 const undoBtn = '<button type="button" class="linkbtn" data-undo>Rückgängig</button>';
 $('#bZufall').addEventListener('click', () => {
@@ -1908,7 +2107,7 @@ wahl.addEventListener('click', ev => {
   if (!k && !z && !s) return;
   if (k) wechsleTyp(k.dataset.kind);
   if (z) {
-    const basis = entwuerfe[z.dataset.zufall] || { ...DEFAULTS, kind:z.dataset.zufall };
+    const basis = entwuerfe[z.dataset.zufall] || startwerte(DEFAULTS, z.dataset.zufall);
     applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo: !wahlErst });
     if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
   }
@@ -1941,7 +2140,7 @@ function renderColl(){
   $('#collList').innerHTML = sortiere(coll, sortNach).map(e => `
     <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
       <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
-      <div class="meta">${esc(e.info.typ)} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
+      <div class="meta">${esc(e.info.typ)} · ${esc(BW[mitBauweise(e.data).bw].name)}${pruefeRegeln(mitBauweise(e.data)).korrekturen.length ? ' (ältere Variante)' : ''} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
       <div class="do">
         <button type="button" class="btn ghost" data-act="laden">Laden</button>
         <button type="button" class="btn ghost" data-act="update" title="Mit dem aktuellen Entwurf überschreiben">Überschreiben</button>
@@ -1971,6 +2170,31 @@ for (const b of document.querySelectorAll('.js-ueberschreiben')) b.addEventListe
   storeColl(); renderColl();
   flash('.js-msg', `«${esc(coll[i].name)}» überschrieben.`);
 });
+// Lädt eine Variante. Passt sie nicht (mehr) zu ihrer Bauweise, fragt ein Hinweis: anpassen oder unverändert ansehen.
+const mitBauweise = d => d.bw ? d : { ...d, bw:bauweiseVon(d) };
+function ladeVariante(e){
+  const d = mitBauweise(e.data), P = pruefeRegeln(d);
+  aktiv = e.id; storeAktiv();
+  if (!P.korrekturen.length) { applyData(d, { undo:true }); flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`); return; }
+  applyData(d, { undo:true, unveraendert:true });
+  const box = $('#bwNotice');
+  box.innerHTML = `<p style="margin:0">Ältere Variante – <b>«${esc(e.name)}»</b> passt nicht ganz zur Bauweise <b>${esc(BW[P.d.bw].name)}</b>. Angepasst würde:</p>`
+    + `<ul>${P.korrekturen.map(k => `<li>${esc(k.split(' – ')[0])}</li>`).join('')}</ul>`
+    + `<div class="acts"><button type="button" class="btn" data-bw="anpassen">An Bauweise anpassen</button><button type="button" class="btn ghost" data-bw="ansehen">Unverändert ansehen</button></div>`;
+  box.hidden = false;
+  box._angepasst = P.d;
+}
+$('#bwNotice').addEventListener('click', ev => {
+  const box = $('#bwNotice'), act = ev.target.dataset.bw;
+  if (act === 'anpassen') {
+    applyData(box._angepasst);
+    flash('.js-msg', `An die Bauweise angepasst – ca. ${chf5(kostenGesamt(R))}. Speichern mit «Überschreiben».`);
+  }
+  if (act === 'ansehen') {
+    box.querySelector('ul').remove(); ev.target.remove();
+    box.querySelector('p').textContent = 'Unverändert: So wurde die Variante gespeichert, die Abweichungen stehen bei den Warnungen. Sobald du etwas änderst, passt die App an die Bauweise an.';
+  }
+});
 const sammeln = () => {
   const e = sammlungEintrag(formData(), R);
   const gleich = coll.filter(x => x.name.startsWith(e.name)).length;
@@ -1990,11 +2214,7 @@ $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
   if (!act) return;
   const i = coll.findIndex(x => x.id === ev.target.closest('li').dataset.id), e = coll[i];
-  if (act === 'laden') {
-    applyData(e.data, { undo:true }); aktiv = e.id; storeAktiv();
-    flash('.js-msg', `«${esc(e.name)}» geladen. ${undoBtn}`);
-    geheZu('entwerfen');
-  }
+  if (act === 'laden') { ladeVariante(e); geheZu('entwerfen'); }
   if (act === 'update') {
     coll[i] = { ...sammlungEintrag(formData(), R), id:e.id, name:e.name }; aktiv = e.id; storeAktiv();
     flash('#collMsg', `«${esc(e.name)}» überschrieben.`);
