@@ -41,7 +41,6 @@ const PREISE = {
     "angle40": { "price": 1, "est": true, "stand": "2026-09-25", "quelle": "Ayce Winkelverbinder 40 x 40 mm" },
     "dowel6": { "price": 0.2, "est": true, "stand": "2026-09-25", "quelle": "Fischer Dübel SX 6x30 S" },
     "dowel6x60": { "price": 0.3, "est": true, "stand": "2026-09-28", "quelle": "Fischer Dübel SX 6x30 mit Schraube 5 x 60 mm" },
-    "dowel6x70": { "price": 0.35, "est": true, "stand": "2026-09-28", "quelle": "Fischer Dübel SX 6x30 mit Schraube 5 x 70 mm" },
     "hollow": { "price": 1.6, "stand": "2026-09-25", "quelle": "Fischer HM 5 x 52 S, 4 Stück CHF 6.30" },
     "screw3.5x10": { "price": 0.05, "est": true, "stand": "2026-09-28", "quelle": "Spax Senkkopf 3,5 x 10 mm" },
     "screw4x12": { "price": 0.05, "est": true, "stand": "2026-09-28", "quelle": "Spax Senkkopf 4 x 12 mm" },

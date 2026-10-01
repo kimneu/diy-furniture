@@ -217,7 +217,7 @@ test('Zufall auf Gipskarton würfelt keine Schienen und Winkel', () => {
 });
 
 test('K09: unterstes Tablar über der untersten Auflage', () => {
-  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'battens', gapBottom:'0' }).d.gapBottom, '50');
+  assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'battens', gapBottom:'0' }).d.gapBottom, '60');   // Dachlatte 48 hoch (K05)
   assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'posts', gapBottom:'0' }).d.gapBottom, '60');
   assert.strictEqual(K.pruefeRegeln({ ...RD, sys:'rails', gapBottom:'0' }).d.gapBottom, '70');
   // Tablarwinkel: Wandschenkel 300 bei 375 mm Tiefe, 250 bei 300 mm

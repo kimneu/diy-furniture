@@ -82,7 +82,7 @@ test('screwFor: jede Schraube lässt mindestens 3 mm Holz über der Spitze und g
     const L = a => S.screwFor(a, t)[1];
     assert.ok(L('blech') <= 2 + t - 3 && L('blech') - 2 >= 8, `blech ${t}: ${L('blech')}`);
     assert.ok(L('latte') <= 24 + t - 3 && L('latte') - 24 >= 6, `latte ${t}: ${L('latte')}`);
-    assert.ok(L('streifen') <= 2 * t - 3 && L('streifen') - t >= 6, `streifen ${t}: ${L('streifen')}`);
+    assert.ok(L('platte') <= 2 * t - 3 && L('platte') - t >= 6, `platte ${t}: ${L('platte')}`);
     assert.ok(L('oben') - t >= 15 && L('oben') - t <= 22, `oben ${t}: ${L('oben')}`);
     // Füsse unter einem 12-mm-Boden gehen nicht (Regel S01 sperrt den 12-mm-Korpus beim Sideboard).
     if (t >= 15) assert.ok(L('fuss') <= t - 3, `fuss ${t}: ${L('fuss')}`);

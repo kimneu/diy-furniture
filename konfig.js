@@ -52,8 +52,7 @@ const tiefenFelder = c => ['dBack', ...(c.shape === 'U' || (c.shape === 'L' && c
 const winkelWand = c => WINKEL_WAND[winkelFuer(Math.max(...tiefenFelder(c).map(k => c[k])))];
 // Höhe der untersten Auflage unter dem Tablar (Leiste, Latte, Schiene, Wandschenkel des Tablarwinkels).
 function auflageUnten(c){
-  if (c.sys === 'battens') return MATS[c.mat] && MATS[c.mat].boards ? 48 : 40;
-  if (c.sys === 'posts') return 48;
+  if (c.sys === 'battens' || c.sys === 'posts') return 48;   // Dachlatte hochkant
   if (c.sys === 'rails') return 60;
   if (c.sys === 'brackets') return winkelWand(c);
   return 0;
@@ -115,7 +114,7 @@ const BAUWEISEN = {
       tragwerk:'Latten rundum, Pfosten höchstens 1200 mm auseinander, Eckpfosten an jeder Innenecke' },
     { id:'R1', name:'Leisten', desc:'Leisten an der Wand, vorne frei – für kurze Wände und Nischen.', niveau:[1],
       build:'built', sys:'battens', mats:tablarMats(false), walls:['solid', 'drywall'],
-      tragwerk:'Wand- und Endleisten, Eckstütze an jeder Innenecke' },
+      tragwerk:'Wand- und Endleisten aus Dachlatte 24 × 48, Eckstütze an jeder Innenecke' },
     { id:'R3', name:'Wandschienen', desc:'Tablare auf Konsolen, Höhen jederzeit verstellbar.', niveau:[1],
       build:'built', sys:'rails', mats:tablarMats(false), walls:['solid'], tragwerk:'Schienen mit Konsolen, Tablar vor der Schiene' },
     { id:'R4', name:'Tablarwinkel', desc:'Blechkonsolen für flache Tablare bis 375 mm Tiefe.', niveau:[1],
