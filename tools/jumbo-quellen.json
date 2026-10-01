@@ -43,5 +43,16 @@
   "moebel_weiss 2600x300":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x30-cm-weiss/p/6416988" },
   "moebel_weiss 2600x400":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x40-cm-weiss/p/6416989" },
   "moebel_weiss 2600x500":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x50-cm-weiss/p/6416990" },
-  "moebel_weiss 2600x600":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x60-cm-weiss/p/6416991" }
+  "moebel_weiss 2600x600":  { "url": "https://www.jumbo.ch/de/wohnen-licht/wohn-accessoires/holzfotowand/oecoplan-moebelplatte-260x60-cm-weiss/p/6416991" },
+  "rail1000":             { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/diverses/element-system-wandschiene-weiss--100-cm--2-stueck/p/3191906", "stueck": 2 },
+  "rail1500":             { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/diverses/element-system-wandschiene-weiss--150-cm--2-stueck/p/3191907", "stueck": 2 },
+  "rail2000":             { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/traeger/element-system-wandschiene-weiss--200-cm--2-stueck/p/3191634", "stueck": 2 },
+  "konsole250":           { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/traeger/element-system-konsole-weiss--25-cm/p/3191636", "stueck": 1 },
+  "konsole350":           { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/traeger/konsole-35-cm-weiss/p/3191638", "stueck": 1 },
+  "konsole400":           { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/traeger/element-system-konsole-weiss--40-cm/p/3191639", "stueck": 1 },
+  "konsole470":           { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/werkstatt-keller/gestelle/traeger/element-system-u-traeger-zu-wandschiene--47-cm/p/4250749", "stueck": 1 },
+  "winkel200":            { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/beschlaege-briefkaesten/konsolen/konsolen/blechkonsole-weiss--20--25-cm--max-10-kg/p/3193280", "stueck": 1 },
+  "winkel250":            { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/beschlaege-briefkaesten/konsolen/konsolen/coop-blechkonsole-weiss--25--30-cm/p/3193281", "stueck": 1 },
+  "screw4x40":            { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/kleineisenwaren/schrauben/holzschrauben/grosspackungen/spax-trx-senkkopf-holzschraube--4--40-mm--500-stueck/p/4934872", "stueck": 500 },
+  "screw5x60":            { "url": "https://www.jumbo.ch/de/maschinen-werkstatt/kleineisenwaren/schrauben/holzschrauben/mittelpackungen/spax-trx-senkkopf--5--60-mm--50-stueck/p/4934911", "stueck": 50 }
 }

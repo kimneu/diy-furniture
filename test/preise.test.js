@@ -54,3 +54,33 @@ test('checkBoardPage: nur schreiben, wenn Masse und Stärke zum Format passen', 
   assert.match(checkBoardPage({ dims:[], thick:18 }, { L:2000, B:400, t:18 }), /Masse/);
   assert.match(checkBoardPage({ dims:[2000, 400, 19], thick:19 }, { L:2000, B:400, t:18 }), /Stärke/);
 });
+
+test('Kaufteile: Packung erkennen, Seite prüfen, Preis pro Stück', () => {
+  const { packungAus, checkKaufteilPage, stueckPreis } = require('../tools/preise-datei.cjs');
+  assert.strictEqual(packungAus('Element System Wandschiene Weiss', 'https://x/element-system-wandschiene-weiss--200-cm--2-stueck/p/3191634'), 2);
+  assert.strictEqual(packungAus('Spax TRX Senkkopf | 5 × 60 mm | 50 Stück', ''), 50);
+  assert.strictEqual(packungAus('Konsole 35 cm weiss', 'https://x/konsole-35-cm-weiss/p/3191638'), null);
+  assert.strictEqual(checkKaufteilPage({ price:9.5, stueck:2 }, { stueck:2 }), null);
+  assert.strictEqual(checkKaufteilPage({ price:7.95, stueck:null }, {}), null);
+  assert.match(checkKaufteilPage({ price:9.5, stueck:2 }, { stueck:1 }), /Packung/);
+  assert.match(checkKaufteilPage({ price:null, stueck:2 }, { stueck:2 }), /kein Preis/);
+  assert.strictEqual(stueckPreis(9.5, { stueck:2 }), 4.75);
+  assert.strictEqual(stueckPreis(25.95, { stueck:500 }), 0.052);
+  assert.strictEqual(stueckPreis(2.4, { laenge:2 }), 1.2);   // Meterware: Latte 2 m
+});
+
+test('jumbo-quellen.json: jede Quelle gehört zu einem Eintrag in preise.js', () => {
+  const Q = JSON.parse(fs.readFileSync(require.resolve('../tools/jumbo-quellen.json'), 'utf8'));
+  const { packungAus } = require('../tools/preise-datei.cjs');
+  for (const [k, q] of Object.entries(Q)) {
+    assert.match(q.url, /^https:\/\/www\.jumbo\.ch\/de\/.+\/p\/\d+$/, k);
+    if (k.includes(' ')) {
+      const [mat, fmt] = k.split(' '), [L, B] = fmt.split('x').map(Number);
+      assert.ok(PREISE.bretter[mat] && PREISE.bretter[mat].formate.some(f => f.L === L && f.B === B), k);
+    } else if (PREISE.kaufteile[k]) {
+      assert.ok(Number.isInteger(q.stueck) && q.stueck >= 1, `${k}: stueck`);
+      const n = packungAus('', q.url);
+      assert.ok(n == null || n === q.stueck, `${k}: URL sagt ${n} Stück`);
+    } else assert.ok(PREISE.platten[k.split('~')[0]] || PREISE.rueckwaende[k.split('~')[0]], k);
+  }
+});
