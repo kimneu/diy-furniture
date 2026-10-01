@@ -68,6 +68,24 @@ test('Reduit: Bauweise legt Bauart fest', () => {
   assert.ok(sperre({ ...RD, bw:'R5' }, 'mat', 'osb'));
 });
 
+test('Reduit: Wangen und Module weichen auf Sperrholz Fichte aus, nicht auf Birke mit Maserung', () => {
+  // Birke hat die Maserung über die 1500er-Seite: raumhohe Wangen und Modulseiten hätten keine passende Platte.
+  for (const bw of ['R5', 'R6']) {
+    const R = K.computeData({ ...RD, bw, mat:'gon_fichte', t:'18', grain:true });
+    assert.strictEqual(R.form.mat, 'fichtesp', bw);
+    assert.deepStrictEqual(R.warn.filter(w => !K.HARMLOS.test(w)), [], bw);
+  }
+});
+
+test('Tür nach innen: Wandschienen gesperrt, wenn hinten keine 280 mm Tiefe bleiben', () => {
+  const eng = { ...RD, shape:'I', rw:'1100', rd:'1000', doorW:'700', doorIn:true };   // 1000 − 700 − 50 = 250 mm
+  const s = sperre(eng, 'bw', 'R3');
+  assert.ok(s && s.grund.includes('höchstens 250 mm') && s.grund.includes('mindestens 280 mm'), s && s.grund);
+  assert.ok(!sperre(eng, 'bw', 'R2') && !sperre(eng, 'bw', 'R4'));
+  assert.strictEqual(P({ ...eng, bw:'R3', sys:'rails' }).d.bw, 'R2');
+  assert.ok(!sperre({ ...eng, rd:'1100' }, 'bw', 'R3'), '350 mm reichen');
+});
+
 test('Sperren der Bauweise: Bad, Gipskarton, Leisten über der Spannweite', () => {
   const bad = { ...SB, room:'bath' };
   for (const id of ['S3', 'S5', 'S6']) assert.ok(sperre(bad, 'bw', id), id);

@@ -1339,7 +1339,7 @@ function render(){
   const diff = Object.keys(P.d).filter(k => k !== 'katalog' && String(P.d[k]) !== String(d[k]));
   if (diff.length) {
     setzeFelder(P.d, diff); syncVisibility(); placePills();
-    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(k in RANGES ? P.d[k] + ' mm' : wertName(k, String(P.d[k])))}`);
+    const was = diff.filter(k => FELDNAME[k]).map(k => `${FELDNAME[k]}: ${esc(k in RANGES ? mitEinheit(k, P.d[k]) : wertName(k, String(P.d[k])))}`);
     if (eingabe === 'bw') {
       // Neue Bauweise gewählt: kurz sagen, was sie mitbringt (die Werte folgen aus ihr, nicht aus einer Sperre).
       const c = cfgFromData(P.d), teile = [`${MATS[c.mat].name} ${c.t} mm`];

@@ -170,14 +170,14 @@ function schraube(durch, holz, biss = 22){
 // Schraube je Anwendung bei Bauteilstärke t:
 // blech    = von unten durch Konsole oder Blechwinkel (ca. 2 mm) ins Tablar
 // latte    = von unten durch eine Eck- oder Stossleiste aus Dachlatte (24 mm, flach) ins Tablar
-// streifen = von unten durch eine Leiste aus dem Plattenmaterial (t, flach) ins Tablar
+// platte   = durch ein Plattenteil (t) flach in ein zweites gleich starkes, z. B. Modulseite an Modulseite
 // oben     = von oben durch das Tablar in Leiste oder Latte
 // fuss     = Anschraubplatte oder Winkel unter dem Boden (Platte nicht mitgerechnet, höchstens 16 mm Biss)
 // kante    = durch ein Bauteil (t) in die Kante eines zweiten, z. B. Sockelecken (höchstens 25 mm Biss)
 function screwFor(anbau, t){
   if (anbau === 'blech') return schraube(2, t);
   if (anbau === 'latte') return schraube(24, t);
-  if (anbau === 'streifen') return schraube(t, t);
+  if (anbau === 'platte') return schraube(t, t);
   if (anbau === 'oben') return schraube(t, 40);
   if (anbau === 'fuss') return schraube(0, t, 16);
   if (anbau === 'kante') return schraube(t, 100, 25);

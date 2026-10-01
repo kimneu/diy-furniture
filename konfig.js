@@ -48,14 +48,18 @@ const TIEFE_MAX_WINKEL = 375, TIEFE_MIN_SCHIENE = 280;
 const SEITE_MEHR = 100;
 // Tiefenfelder der Regale, die es in dieser Form gibt.
 const tiefenFelder = c => ['dBack', ...(c.shape === 'U' || (c.shape === 'L' && c.corner !== 'R') ? ['dLeft'] : []), ...(c.shape === 'U' || (c.shape === 'L' && c.corner === 'R') ? ['dRight'] : [])];
+// Wandschenkel der Tablarwinkel für das tiefste Regal dieser Form.
+const winkelWand = c => WINKEL_WAND[winkelFuer(Math.max(...tiefenFelder(c).map(k => c[k])))];
 // Höhe der untersten Auflage unter dem Tablar (Leiste, Latte, Schiene, Wandschenkel des Tablarwinkels).
 function auflageUnten(c){
-  if (c.sys === 'battens') return MATS[c.mat] && MATS[c.mat].boards ? 48 : 40;
-  if (c.sys === 'posts') return 48;
+  if (c.sys === 'battens' || c.sys === 'posts') return 48;   // Dachlatte hochkant
   if (c.sys === 'rails') return 60;
-  if (c.sys === 'brackets') return WINKEL_WAND[winkelFuer(Math.max(...tiefenFelder(c).map(k => c[k])))];
+  if (c.sys === 'brackets') return winkelWand(c);
   return 0;
 }
+// Tablarwinkel: Der Wandschenkel hängt unter dem Tablar und darf das Tablar darunter nicht treffen (Review K09,
+// «lichte Höhe < Wandschenkel → ein Tablar weniger»). Lichte Höhe mindestens Wandschenkel + 10 mm.
+const tablareMaxWinkel = c => Math.max(1, Math.floor((c.rh - c.gapTop - c.gapBottom) / (winkelWand(c) + c.t + 10)) + 1);
 // Wandschienen: Jede Schiene reicht 60 mm unter das unterste bis 40 mm über das oberste Tablar. Die kleinste Deckenlücke,
 // bei der eine Schiene 2000 mm reicht; liegt sie höchstens 300 mm über dem Standard (300 mm), gilt sie als Grenze,
 // statt für einen kleinen Rest ein zweites Stück zu kaufen (Review K08, TR-13). Darüber: zwei Stücke je ≥ 500 mm.
@@ -68,12 +72,18 @@ const fachSpan = c => maxSpan(c.mat, c.t) + (c.shelves ? 0 : 200);
 const hoheSeiten = c => c.kind === 'reduit' && (c.build === 'free' ? c.rh - c.gapTop > 1200 : c.sys === 'cheeks');
 // Brettbreiten, die in [a, b] liegen (ganze Bretter); bei Plattenmaterial null.
 const breitenIn = (c, a, b) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.filter(w => w >= a && w <= b) : null; };
+const TIEFEN = ['dBack', 'dLeft', 'dRight'];
+// Tiefe, mit der gerechnet wird: Bei ganzen Brettern rundet normReduit auf die nächste Brettbreite auf.
+const brettTiefe = (c, v) => { const M = MATS[c.mat]; return M && M.boards ? M.widths.find(w => w >= v) ?? M.widths[M.widths.length - 1] : v; };
 /* ---------- Bauweisen ---------- */
 // Eine Bauweise bündelt Material, Stärke, Verbindung, Rückwand und Oberfläche zu einer geprüften Kombination
 // (docs/review/2026-09-28-eingrenzung-bauweisen.md; Entscheide 28. und 30.09.2026). Frei bleiben Masse, Aufteilung
 // und die Optik innerhalb der Bauweise. mats: Material → erlaubte Stärken; bad: Materialien im Bad (fehlt: nicht
 // im Bad); front: Frontmaterialien (korpus = wie Korpus); Reduit: build und sys legen die Bauart fest.
 const SPERRHOLZ = { birke:[18], birkesi:[18], fichtesp:[18], dreischicht:[19] };
+// Reduit: Sperrholz Fichte zuerst (Reduit-Standard). Weicht ein Material auf die Bauweise aus, nimmt es das erste – Birke mit
+// Maserung längs der 1500er-Seite hätte für raumhohe Wangen und Modulseiten keine passende Platte.
+const SPERRHOLZ_REDUIT = { fichtesp:[18], birke:[18], birkesi:[18], dreischicht:[19] };
 // Tablare für Leisten, Pfosten, Schienen, Winkel: Platten und ganze Bretter ab 15 mm; MDF nur beim Pfostenrahmen (19 mm).
 const tablarMats = mitMdf => Object.fromEntries(Object.entries(MATS)
   .map(([k, M]) => [k, k === 'mdf' ? (mitMdf ? [19] : []) : M.t.filter(t => t >= 15)]).filter(([, ts]) => ts.length));
@@ -104,15 +114,15 @@ const BAUWEISEN = {
       tragwerk:'Latten rundum, Pfosten höchstens 1200 mm auseinander, Eckpfosten an jeder Innenecke' },
     { id:'R1', name:'Leisten', desc:'Leisten an der Wand, vorne frei – für kurze Wände und Nischen.', niveau:[1],
       build:'built', sys:'battens', mats:tablarMats(false), walls:['solid', 'drywall'],
-      tragwerk:'Wand- und Endleisten, Eckstütze an jeder Innenecke' },
+      tragwerk:'Wand- und Endleisten aus Dachlatte 24 × 48, Eckstütze an jeder Innenecke' },
     { id:'R3', name:'Wandschienen', desc:'Tablare auf Konsolen, Höhen jederzeit verstellbar.', niveau:[1],
       build:'built', sys:'rails', mats:tablarMats(false), walls:['solid'], tragwerk:'Schienen mit Konsolen, Tablar vor der Schiene' },
     { id:'R4', name:'Tablarwinkel', desc:'Blechkonsolen für flache Tablare bis 375 mm Tiefe.', niveau:[1],
       build:'built', sys:'brackets', mats:tablarMats(false), walls:['solid'], tragwerk:'Blechkonsolen, langer Schenkel an der Wand' },
     { id:'R5', name:'Wangen mit Lochreihe', desc:'Alles aus Holz, Tablare auf Bodenträgern verstellbar.', niveau:[2],
-      build:'built', sys:'cheeks', mats:SPERRHOLZ, walls:['solid', 'drywall'], tragwerk:'Wangen mit 32er-Lochreihe, oben an die Wand' },
+      build:'built', sys:'cheeks', mats:SPERRHOLZ_REDUIT, walls:['solid', 'drywall'], tragwerk:'Wangen mit 32er-Lochreihe, oben an die Wand' },
     { id:'R6', name:'Selbststehende Module', desc:'Korpusse mit Rückwand, tragen sich selbst – zügelbar, gut für Mietwohnung und Gipskarton.', niveau:[2],
-      build:'free', mats:{ ...SPERRHOLZ, dekorspan:[19], mdf:[19] }, joint:c => ['dekorspan', 'mdf'].includes(c.mat) ? 'cam' : 'pocket',
+      build:'free', mats:{ ...SPERRHOLZ_REDUIT, dekorspan:[19], mdf:[19] }, joint:c => ['dekorspan', 'mdf'].includes(c.mat) ? 'cam' : 'pocket',
       backs:['hdf3', 'hf3', 'ply6'], walls:['solid', 'drywall'], tragwerk:'Korpusmodule mit Rückwand, Kippsicherung' }
   ]
 };
@@ -149,11 +159,17 @@ function leistenFrei(c){
 // Warum ist eine Bauweise hier nicht möglich? null = möglich.
 function bwSperre(b, c){
   if (istSideboard(c)) return c.room === 'bath' && !b.bad ? 'Nicht fürs Bad vorgesehen.' : null;
-  if (c.wall === 'drywall' && !b.walls.includes('drywall')) return `Nicht auf Gipskarton: ${b.sys === 'rails' ? 'Schienen ziehen' : 'Winkel ziehen'} an den Dübeln.`;
+  // Gipskarton: Schienen und Winkel halten nur in den Ständern. Ein Ständerraster als Eingabe lohnt sich nicht
+  // (Entscheid 01.10.2026): Pfostenrahmen, Leisten, Wangen und Module tragen über Latten oder in den Boden.
+  if (c.wall === 'drywall' && !b.walls.includes('drywall')) return `Nicht auf Gipskarton: ${b.sys === 'rails' ? 'Schienen ziehen' : 'Winkel ziehen'} an den Dübeln und hielten nur in den Ständern.`;
   if (b.id === 'R1') {
     const L = leistenFrei(c);
     if (L.frei >= L.max) return `Die Tablare liegen vorne bis ${L.frei} mm frei – ${L.name} ${L.t} mm trägt ca. ${L.max} mm. Pfostenrahmen nehmen.`;
   }
+  // Tür nach innen: Hinten bleibt weniger Tiefe, als die Bauweise mindestens braucht (Wandschienen ab 280 mm).
+  const hinten = grenzen({ ...c, build:b.build, sys:b.sys || c.sys }).dBack;
+  if (hinten && hinten.min > hinten.max && hinten.min > RANGES.dBack[0])
+    return `Vor der nach innen aufgehenden Tür bleiben hinten höchstens ${hinten.max} mm Tiefe – ${b.name} brauchen mindestens ${hinten.min} mm.`;
   return null;
 }
 // Regeln der gewählten Bauweise: Was nicht zu ihr gehört, ist gesperrt; das Regelwerk weicht dann auf ihre Werte aus.
@@ -230,6 +246,8 @@ const REGELN = [
     grund:() => `Die kürzeste Konsole ist 250 mm, dazu Schiene und Luft vorne – Wandschienen ab ${TIEFE_MIN_SCHIENE} mm Tiefe. Für flachere Tablare Tablarwinkel.`, befunde:['EP-9', 'TR-16'] },
   { id:'K09', wirkung:'grenze', felder:['gapBottom'], wenn:c => eingebaut(c) && auflageUnten(c) > 0, min:c => Math.ceil((auflageUnten(c) + 10) / 10) * 10,
     grund:c => `Die unterste Auflage (${{ battens:'Leiste', posts:'Latte', rails:'Schiene', brackets:'Wandschenkel des Tablarwinkels' }[c.sys]}, ${auflageUnten(c)} mm) braucht Platz über dem Boden.`, befunde:['EG-9', 'EP-16', 'RM-10', 'EP-14'] },
+  { id:'K09', wirkung:'grenze', felder:['nShelves'], wenn:c => eingebaut(c) && c.sys === 'brackets', max:tablareMaxWinkel,
+    grund:c => `Der Wandschenkel der Tablarwinkel (${winkelWand(c)} mm) hängt unter dem Tablar – darunter braucht es mindestens ${winkelWand(c) + 10} mm Luft bis zum nächsten Tablar.`, befunde:['EG-9', 'TR-16'] },
   { id:'K08', wirkung:'grenze', felder:['gapTop'], wenn:schieneReicht, min:deckeFuerSchiene,
     grund:c => `Mit dem obersten Tablar mindestens ${deckeFuerSchiene(c)} mm unter der Decke reicht je eine Wandschiene ${RAIL_MAX} mm – sonst braucht jede Schiene ein zweites Stück.`, befunde:['TR-13', 'DY-8'] },
   { id:'K13', wirkung:'grenze', felder:c => tiefenFelder(c).filter(k => k !== 'dBack'), wenn:c => c.kind === 'reduit' && c.shape !== 'I', max:c => c.dBack + SEITE_MEHR,
@@ -240,7 +258,7 @@ const REGELN = [
     grund:() => 'Die Tür geht nach innen auf – vor dem hinteren Regal braucht sie ihre Breite und 50 mm Luft.', befunde:['EG-6', 'RM-2'] }
 ];
 REGELN.push(...BW_REGELN);
-const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], gapBottom:[0, 600], gapTop:[100, 800] };   // Grundgrenzen der Zahlenfelder (wie index.html)
+const RANGES = { dBack:[150, 600], dLeft:[150, 600], dRight:[150, 600], nShelves:[1, 8], gapBottom:[0, 600], gapTop:[100, 800] };   // Grundgrenzen der Zahlenfelder (wie index.html)
 const regelWert = (r, k, c) => typeof r[k] === 'function' ? r[k](c) : r[k];
 
 // Reihenfolge, in der gesperrte Werte ausweichen: Ein früheres Feld kann spätere Sperren ändern.
@@ -285,7 +303,9 @@ function wertName(feld, w){
   return w;
 }
 const FELDNAME = { sections:'Fächer', bw:'Bauweise', build:'Regal', top:'Deckel', frontT:'Frontstärke', joint:'Verbindung', front:'Türen', back:'Rückwand', sys:'Einbau-Art', mat:'Material', frontMat:'Frontmaterial', t:'Stärke', grain:'Maserung',
-  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', gapBottom:'Unterstes Tablar', gapTop:'Oberstes Tablar bis Decke' };
+  dBack:'Tiefe hinten', dLeft:'Tiefe links', dRight:'Tiefe rechts', nShelves:'Anzahl Tablare', gapBottom:'Unterstes Tablar', gapTop:'Oberstes Tablar bis Decke' };
+// Zahl mit Einheit für Meldungen (die Tablarzahl hat keine).
+const mitEinheit = (feld, v) => feld === 'nShelves' ? `${v}` : `${v} mm`;
 
 // Prüft Formularwerte d gegen REGELN. fest = Felder, die nicht geändert werden dürfen (Schloss beim Zufall);
 // dort wird aus Sperre oder Grenze eine Warnung. Läuft bis zum Fixpunkt (höchstens 12 Runden).
@@ -328,15 +348,16 @@ function pruefeRegeln(d, fest = new Set()){
     }
     if (neu) continue;   // erst die Sperren, dann die Grenzen mit den neuen Werten
     for (const [feld, gr] of Object.entries(grenzen(c))) {
-      const v = Number(x[feld]);
-      if (v >= gr.min && v <= gr.max) continue;
+      const v = Number(x[feld]), tiefe = TIEFEN.includes(feld), eff = tiefe ? brettTiefe(c, v) : v;
+      if (eff >= gr.min && eff <= gr.max) continue;
       const grund = gr.regeln.map(r => r.grund).join(' ');
-      if (fest.has(feld) || gr.min > gr.max) { warnungen.push(`${FELDNAME[feld]} ${v} mm: ${grund}`); continue; }
+      if (fest.has(feld) || gr.min > gr.max) { warnungen.push(`${FELDNAME[feld]} ${mitEinheit(feld, v)}: ${grund}`); continue; }
       let w = clamp(v, gr.min, gr.max);
-      const B = breitenIn(c, gr.min, gr.max);
+      // Nur die Tiefen rasten bei ganzen Brettern auf eine Brettbreite ein, Boden- und Deckenabstand nicht.
+      const B = tiefe ? breitenIn(c, gr.min, gr.max) : null;
       if (B && B.length) w = B.reduce((a, b) => Math.abs(b - w) < Math.abs(a - w) ? b : a);
-      else if (B) { warnungen.push(`${FELDNAME[feld]} ${v} mm: ${grund}`); continue; }
-      korrekturen.push(`${FELDNAME[feld]}: ${w} statt ${v} mm – ${grund}`);
+      else if (B) { warnungen.push(`${FELDNAME[feld]} ${mitEinheit(feld, v)}: ${grund}`); continue; }
+      korrekturen.push(`${FELDNAME[feld]}: ${w} statt ${mitEinheit(feld, v)} – ${grund}`);
       x = { ...x, [feld]:typeof x[feld] === 'number' ? w : String(w) };
       neu = true;
     }
@@ -418,7 +439,6 @@ const SB_TYPES = [
 ];
 const SB_MATS = ['birke', 'birke', 'birkesi', 'eiche', 'fichtesp', 'dreischicht', 'fichte', 'mdf', 'dekorspan'];
 const RD_MATS = ['fichtesp', 'dreischicht', 'birkesi', 'osb', 'osb', 'schaltafel', 'dekorspan', 'seekiefer'];
-const TIEFEN = ['dBack', 'dLeft', 'dRight'];
 
 // Nächste Brettbreite zu v (bei Gleichstand die breitere, wie die Berechnung aufrundet).
 function snapBreite(widths, v){

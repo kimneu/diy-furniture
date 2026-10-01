@@ -357,6 +357,7 @@ test('Tiefenhinweis nennt nur Seiten, die wirklich auf einer Brettbreite liegen'
 const postBoxes = Rr => Rr.boxes.filter(b => b.key.startsWith('Kantholz'));
 const postRun = over => run({ sys:'posts', ...over });
 const lo = (b, i) => b.pos[i] - b.size[i] / 2, hi = (b, i) => b.pos[i] + b.size[i] / 2;
+const ov = (a, b, i) => Math.min(hi(a, i), hi(b, i)) - Math.max(lo(a, i), lo(b, i));   // Überlappung entlang einer Achse
 // Auflager einer Querlatte: Wand an einem Ende (Winkel auf die Endlatte) oder ein Pfosten, der sie von vorne berührt.
 function querlattenAuflager(Rr, q){
   const ax = q.size[0] > q.size[2] ? 0 : 2, px = 2 - ax;
@@ -453,12 +454,34 @@ test('Leisten: die Tablare werden von oben verschraubt, die Schrauben stehen auf
   assert.ok(Rr.steps.some(st => st[0] === 'Tablare auflegen' && st[1].includes('von oben') && st[1].includes('4 × 40')));
 });
 
-test('Eckleiste aus dem Plattenmaterial: die Schraube bricht nicht durch', () => {
-  for (const t of [12, 18, 21]) {
-    const Rr = run({ sys:'battens', shape:'U', mat:'birke', t });
+test('Eckleiste aus Dachlatte: die Schraube greift ins Tablar und bricht nicht durch', () => {
+  for (const sys of ['battens', 'rails', 'brackets']) for (const [mat, t] of [['fichtesp', 15], ['birke', 18], ['birke', 21], ['fichte', 27]]) {
+    const Rr = run({ sys, shape:'U', mat, t });
     const s = screwLens(Rr).find(x => x.note.includes('Eckleisten'));
-    assert.ok(s && s.L <= 2 * t - 3, `${t}: ${JSON.stringify(s)}`);
+    assert.ok(s && s.L <= 24 + t - 4 && s.L - 24 >= 6, `${sys} ${t}: ${JSON.stringify(s)}`);
   }
+});
+
+/* ---------- Leisten aus Dachlatte (Schreiner-Review K05) ---------- */
+test('K05: Wand-, End- und Eckleisten immer aus Dachlatte 24 × 48, auch bei Plattenmaterial', () => {
+  for (const [mat, t] of [['birke', 18], ['mdf', 19], ['osb', 15], ['gon_fichte', 18]]) for (const sys of ['battens', 'rails', 'brackets']) {
+    const Rr = run({ sys, shape:'U', mat, t });
+    const leisten = Rr.rows.filter(r => r.name === 'Leiste' || r.name === 'Eckleiste');
+    assert.ok(leisten.length && leisten.every(r => r.kind === 'solid' && r.B === 48 && r.t === 24 && r.note.includes('Dachlatte')), `${sys} ${mat}`);
+    assert.ok(!Rr.rows.some(r => r.kind === 'korpus' && r.B === 40), `${sys} ${mat}: keine Streifen aus der Platte`);
+  }
+  const Rr = run({ sys:'battens', shape:'U' }), box = k => Rr.boxes.filter(b => b.key.startsWith(k + '|'));
+  // Wand- und Endleisten hochkant, die Eckleiste flach; das Tablar liegt 21 mm auf der Wandleiste (3 mm Wandluft).
+  assert.ok(box('Leiste').every(b => b.size[1] === 48 && Math.min(b.size[0], b.size[2]) === 24));
+  assert.ok(box('Eckleiste').length === 10 && box('Eckleiste').every(b => b.size[1] === 24));
+  const hinten = box('Tablar').filter(b => b.size[0] === 1594), wandleiste = box('Leiste').filter(b => b.size[0] === 1594);
+  for (const s of hinten) assert.ok(wandleiste.some(l => Math.abs(hi(l, 1) - lo(s, 1)) < 0.5 && ov(s, l, 2) === 21));
+  // Leisten, Eckleisten, Tablare und Stützen schneiden sich nicht (Eckleiste beginnt hinter der Wandleiste).
+  for (const a of Rr.boxes) for (const b of Rr.boxes) if (a !== b) assert.ok(!overlaps(a, b), `${a.key} × ${b.key}`);
+  // Standard-U Birke 18: 27 m Leisten aus Dachlatte statt CHF 96.60 Birke-Streifen (TR-10)
+  const latten = Rr.rows.filter(r => r.name === 'Leiste' || r.name === 'Eckleiste').reduce((a, r) => a + r.qty * r.L / 1000 * r.pm, 0);
+  assert.ok(latten > 25 && latten < 35, String(latten));
+  assert.ok(Rr.steps.find(s => s[0] === 'Leisten montieren')[1].includes('Dachlatte hochkant'));
 });
 
 test('Dübelschraube nach Anbauteil: 4,5 × 50 für Metall, 5 × 60 für Latten 24', () => {
@@ -467,7 +490,9 @@ test('Dübelschraube nach Anbauteil: 4,5 × 50 für Metall, 5 × 60 für Latten 
   assert.strictEqual(qtyOf(posts, 'Spreizdübel 6 mm + Schraube 4,5 × 50'), 0);
   assert.ok(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 4,5 × 50') > 0);
   assert.strictEqual(qtyOf(rails, 'Spreizdübel 6 mm + Schraube 5 × 60'), 0);
-  assert.ok(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 5 × 70') > 0);
+  // Leisten sind immer Dachlatten 24 mm, auch bei dicken Tablaren (K05)
+  assert.ok(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 5 × 60') > 0);
+  assert.strictEqual(qtyOf(run({ sys:'battens', mat:'fichte', t:27 }), 'Spreizdübel 6 mm + Schraube 4,5 × 50'), 0);
   assert.ok(qtyOf(run({ sys:'posts', wall:'drywall' }), 'Hohlraumdübel') > 0);
 });
 

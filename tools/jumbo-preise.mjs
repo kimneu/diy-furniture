@@ -6,11 +6,15 @@
                 (statt Suchbegriff geht auch eine Kategorie-URL)
    Preise:      node jumbo-preise.mjs [schlüssel …]                        → alle (oder einzelne) Quellen aus jumbo-quellen.json
    Bretter:     node jumbo-preise.mjs gon_fichte                          → alle Formate eines Brett-Materials (Schlüssel «material LxB» in jumbo-quellen.json)
+   Kaufteile:   node jumbo-preise.mjs kaufteile                           → Stückpreise aller Kaufteile mit Quelle (oder einzeln: rail2000 konsole250 …)
    Nachführen:  node jumbo-preise.mjs --schreiben [schlüssel …]            → wie oben, dann ../preise.js aktualisieren
 
    Ohne --schreiben vergleicht das Skript nur mit preise.js. Mit --schreiben übernimmt es Preis und max. Zuschnitt
    bekannter Stärken und setzt «stand» auf heute. Neue oder weggefallene Stärken meldet es nur (neue brauchen einen
    SPAN-Wert in reduit.js). Varianten («fichte~Langformat») werden nur verglichen, nie geschrieben.
+   Kaufteile (Schlüssel aus preise.js → kaufteile): stueck = Stück pro Packung, laenge = Meter pro Stück bei Meterware.
+   Geschrieben wird der Preis pro Stück (bzw. Meter), «est» fällt weg. Passt die Packung auf der Seite nicht zu
+   «stueck», wird nichts geschrieben.
    Schonend: eine Seite nach der anderen, einige Sekunden Pause dazwischen. */
 import { chromium } from 'patchright';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -18,7 +22,7 @@ import { createRequire } from 'node:module';
 
 const here = p => new URL(p, import.meta.url).pathname;
 const require = createRequire(import.meta.url);
-const { FILE, format, checkBoardPage } = require('./preise-datei.cjs');
+const { FILE, format, checkBoardPage, packungAus, checkKaufteilPage, stueckPreis } = require('./preise-datei.cjs');
 const DATA = require(FILE);
 const { BACKS } = require('../shared.js');
 const SOURCES = JSON.parse(readFileSync(here('./jumbo-quellen.json'), 'utf8'));
@@ -167,11 +171,32 @@ async function boardPrices(page, keys) {
   return rows;
 }
 
+// Kaufteile: Packungspreis von der Produktseite, geteilt durch die Packungsgrösse (und die Länge bei Meterware).
+async function kaufteilPrices(page, keys) {
+  const rows = [];
+  for (const key of keys) {
+    const src = SOURCES[key], E = DATA.kaufteile[key];
+    const p = await readBoardPage(page, src.url);   // Name und Preis wie bei ganzen Brettern
+    p.stueck = packungAus(p.name, src.url);
+    const bad = checkKaufteilPage(p, src);
+    rows.push({ key, kauf:true, name:p.name, pack:p.price, stueck:src.stueck || 1, laenge:src.laenge, price: bad ? null : stueckPreis(p.price, src),
+      was:E.price, est:!!E.est, note: bad ? `${bad} – nicht übernommen` : null });
+    await sleep(PAUSE);
+  }
+  if (!rows.length) return rows;
+  console.log('\nKaufteil        Packung CHF   Stück   pro Stück   preise.js   Produkt');
+  for (const r of rows) {
+    const flag = r.price !== r.was || r.est ? '*' : ' ';
+    console.log(`${flag}${r.key.padEnd(14)} ${String(r.pack ?? '–').padStart(11)}   ${String(r.stueck).padStart(5)}   ${String(r.price ?? '–').padStart(9)}   ${String(r.was).padStart(9)}${r.est ? ' est' : '    '}  ${r.name}${r.note ? '  · ' + r.note : ''}`);
+  }
+  console.log('\n* = weicht ab oder war geschätzt · bei Meterware «pro Stück» = pro Meter');
+  return rows;
+}
+
 function write(rows) {
   const today = new Date().toISOString().slice(0, 10), changed = [];
   for (const key of new Set(rows.map(r => r.key))) {
-    if (key.includes(' ')) continue;
-    if (key.includes('~')) continue;
+    if (key.includes(' ') || key.includes('~') || DATA.kaufteile[key]) continue;
     const cur = current(key), mine = rows.filter(r => r.key === key && !r.note && r.price != null && cur.price(r.t) !== undefined);
     if (!mine.length) continue;
     const E = cur.entry;
@@ -195,6 +220,13 @@ function write(rows) {
     if (f.price !== r.price) changed.push(`${r.key}: ${f.price} → ${r.price}`);
     f.price = r.price; E.stand = today;
   }
+  for (const r of rows.filter(r => r.kauf && r.price != null)) {
+    const E = DATA.kaufteile[r.key];
+    if (E.price !== r.price || E.est) changed.push(`${r.key}: ${E.price}${E.est ? ' (geschätzt)' : ''} → ${r.price}`);
+    E.price = r.price; delete E.est; E.stand = today;
+    // Quelle wie von Hand geschrieben: Produkt, Packung (falls der Name sie nicht schon nennt), Packungspreis.
+    E.quelle = `${r.name}${r.stueck > 1 && packungAus(r.name) == null ? `, ${r.stueck} Stück` : ''}${r.laenge ? `, ${r.laenge} m` : ''}, CHF ${r.pack.toFixed(2)}`;
+  }
   writeFileSync(FILE, format(DATA));
   console.log(changed.length ? `\npreise.js nachgeführt:\n  ${changed.join('\n  ')}` : '\npreise.js: keine Änderungen, nur «stand» aktualisiert');
   console.log('Danach: node --test (im Hauptordner) und den Diff von preise.js prüfen.');
@@ -208,11 +240,13 @@ try {
   if (cmd === 'suche') await search(page, args);
   else {
     const all = cmd ? [cmd, ...args] : Object.keys(SOURCES);
-    // Ein Material-Schlüssel ohne Format («mood_fichte») wählt alle seine Formate.
-    const expand = k => k.includes(' ') || SOURCES[k] ? [k] : Object.keys(SOURCES).filter(s => s.startsWith(k + ' '));
+    // Ein Material-Schlüssel ohne Format («mood_fichte») wählt alle seine Formate, «kaufteile» alle Kaufteile mit Quelle.
+    const kauf = k => !!DATA.kaufteile[k];
+    const expand = k => k === 'kaufteile' ? Object.keys(SOURCES).filter(kauf) : k.includes(' ') || SOURCES[k] ? [k] : Object.keys(SOURCES).filter(s => s.startsWith(k + ' '));
     for (const k of all) if (!expand(k).length) console.warn(`«${k}»: keine Quelle in jumbo-quellen.json`);
-    const keys = all.flatMap(expand), plates = keys.filter(k => !k.includes(' '));
-    const rows = [...(plates.length ? await prices(page, plates) : []), ...await boardPrices(page, keys.filter(k => k.includes(' ')))];
+    const keys = all.flatMap(expand), plates = keys.filter(k => !k.includes(' ') && !kauf(k));
+    const rows = [...(plates.length ? await prices(page, plates) : []), ...await boardPrices(page, keys.filter(k => k.includes(' '))),
+      ...await kaufteilPrices(page, keys.filter(kauf))];
     if (doWrite) write(rows);
   }
 } finally {

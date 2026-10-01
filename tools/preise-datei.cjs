@@ -31,4 +31,21 @@ function checkBoardPage(page, want){
   return null;
 }
 
-module.exports = { FILE, format, checkBoardPage };
+// Kaufteile: Packungsgrösse aus dem Produktnamen oder der URL («2 Stück», «…--50-stueck»), null = nicht erkennbar.
+function packungAus(name, url){
+  const m = String(name || '').match(/(\d+)\s*(?:Stück|Stk\b)/i) || String(url || '').match(/-(\d+)-stueck(?:[/?#]|$)/);
+  return m ? Number(m[1]) : null;
+}
+
+// Passt die gelesene Kaufteil-Seite zur Quelle (want = Eintrag in jumbo-quellen.json)? null = ja, sonst der Grund.
+function checkKaufteilPage(page, want){
+  if (!page.price) return 'kein Preis gelesen (Bot-Prüfung?)';
+  const soll = want.stueck || 1;
+  if (page.stueck != null && page.stueck !== soll) return `Packung der Seite (${page.stueck} Stück) passt nicht zu ${soll} Stück in jumbo-quellen.json`;
+  return null;
+}
+
+// Preis pro Stück aus dem Packungspreis; bei Meterware (laenge = Meter pro Stück) pro Meter. Auf 0,001 CHF gerundet.
+const stueckPreis = (price, want) => Math.round(price / (want.stueck || 1) / (want.laenge || 1) * 1000) / 1000;
+
+module.exports = { FILE, format, checkBoardPage, packungAus, checkKaufteilPage, stueckPreis };
