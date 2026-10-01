@@ -159,7 +159,9 @@ function leistenFrei(c){
 // Warum ist eine Bauweise hier nicht möglich? null = möglich.
 function bwSperre(b, c){
   if (istSideboard(c)) return c.room === 'bath' && !b.bad ? 'Nicht fürs Bad vorgesehen.' : null;
-  if (c.wall === 'drywall' && !b.walls.includes('drywall')) return `Nicht auf Gipskarton: ${b.sys === 'rails' ? 'Schienen ziehen' : 'Winkel ziehen'} an den Dübeln.`;
+  // Gipskarton: Schienen und Winkel halten nur in den Ständern. Ein Ständerraster als Eingabe lohnt sich nicht
+  // (Entscheid 01.10.2026): Pfostenrahmen, Leisten, Wangen und Module tragen über Latten oder in den Boden.
+  if (c.wall === 'drywall' && !b.walls.includes('drywall')) return `Nicht auf Gipskarton: ${b.sys === 'rails' ? 'Schienen ziehen' : 'Winkel ziehen'} an den Dübeln und hielten nur in den Ständern.`;
   if (b.id === 'R1') {
     const L = leistenFrei(c);
     if (L.frei >= L.max) return `Die Tablare liegen vorne bis ${L.frei} mm frei – ${L.name} ${L.t} mm trägt ca. ${L.max} mm. Pfostenrahmen nehmen.`;
