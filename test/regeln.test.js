@@ -226,6 +226,28 @@ test('K09: unterstes Tablar über der untersten Auflage', () => {
   assert.ok(!K.pruefeRegeln({ ...RD, sys:'cheeks', gapBottom:'0' }).grenzen.gapBottom);
 });
 
+test('K09: Tablarwinkel – nur so viele Tablare, dass der Wandschenkel das Tablar darunter nicht trifft', () => {
+  // Wandschenkel 300 mm bei 375 mm Tiefe: lichte Höhe ≥ 310, also (1800 − 100 − 310) / (300 + 18 + 10) = 4,2 → 5 Tablare
+  const P = K.pruefeRegeln({ ...RD, sys:'brackets', dBack:'375', rh:'1800', nShelves:'8', gapBottom:'310', gapTop:'100' });
+  assert.strictEqual(P.d.nShelves, '5');
+  assert.strictEqual(P.grenzen.nShelves.max, 5);
+  assert.ok(P.korrekturen.some(k => k.startsWith('Anzahl Tablare: 5 statt 8 – ')), P.korrekturen.join(' | '));
+  const fest = K.pruefeRegeln({ ...RD, sys:'brackets', dBack:'375', rh:'1800', nShelves:'8', gapBottom:'310', gapTop:'100' }, new Set(['nShelves']));
+  assert.ok(fest.warnungen.some(w => w.startsWith('Anzahl Tablare 8: ')), 'ohne «mm»');
+  assert.ok(!K.pruefeRegeln({ ...RD, sys:'posts', nShelves:'8' }).grenzen.nShelves, 'nur bei Tablarwinkeln');
+});
+
+test('Ganze Bretter: nur die Tiefen rasten auf Brettbreiten ein, geprüft wird die aufgerundete Tiefe', () => {
+  const bretter = { ...RD, mat:'gon_fichte', t:'18', dBack:'400', dLeft:'400', dRight:'400' };
+  // Boden- und Deckenabstand bleiben Millimeter, keine Brettbreiten (vorher 200 bzw. 400)
+  assert.strictEqual(K.pruefeRegeln({ ...bretter, sys:'battens', gapBottom:'0' }).d.gapBottom, '60');
+  assert.strictEqual(K.pruefeRegeln({ ...bretter, sys:'rails' }).d.gapTop, '350');
+  // 300 liegt unter 375, wird aber auf das 400er-Brett aufgerundet – zu tief für Tablarwinkel, also 200
+  const w = K.pruefeRegeln({ ...bretter, sys:'brackets', dBack:'200', dLeft:'300', dRight:'200' });
+  assert.strictEqual(w.d.dLeft, '200');
+  assert.ok(!K.computeData({ ...bretter, sys:'brackets', dBack:'200', dLeft:'300', dRight:'200' }).warn.some(x => x.includes('knapp')));
+});
+
 test('K08: Wandschienen – Deckenabstand, bis eine 2-m-Schiene reicht, statt eines kurzen zweiten Stücks', () => {
   const qty = (R, n) => R.hw.filter(h => h[1].startsWith(n)).reduce((a, h) => a + h[0], 0);
   // Standard-U: 5 Tablare 150 … 2100 brauchen 2050 mm Schiene → oberstes Tablar 50 mm tiefer
