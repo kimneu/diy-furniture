@@ -20,7 +20,7 @@ const REDUIT = { ...SIDEBOARD, kind:'reduit', bw:'R2', mat:'fichtesp', price:'60
 for (const [name, d] of [['Sideboard', SIDEBOARD], ['Reduit', REDUIT]]) test(`Link ${name}: hin und zurück ergibt dieselben Werte`, async () => {
   const code = await K.planCode(d);
   assert.match(code, /^1[A-Za-z0-9_-]+$/);
-  assert.ok(code.length < 600, `Link ${code.length} Zeichen`);
+  assert.ok(code.length < 400, `Link ${code.length} Zeichen`);
   const back = await K.planAusCode(code);
   for (const [k, v] of Object.entries(K.linkDaten(d))) assert.deepStrictEqual(back[k], v, k);
   assert.strictEqual(back.kind, d.kind);
@@ -37,4 +37,24 @@ test('Link: kaputte oder fremde Codes ergeben null', async () => {
   for (const c of [null, '', 'x', '1', '1!!!', '2abc', '1' + 'A'.repeat(40)]) assert.strictEqual(await K.planAusCode(c), null, String(c));
   const kein = '1' + Buffer.from(require('zlib').deflateRawSync('{"kind":"sofa"}')).toString('base64url');
   assert.strictEqual(await K.planAusCode(kein), null);
+});
+
+function seeded(seed){
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+// Der Empfänger füllt fehlende Felder mit seinen eigenen Werten auf: Die Rechnung darf davon nichts merken.
+for (const kind of ['sideboard', 'reduit']) test(`Link ${kind}: weggelassene Felder ändern die Rechnung nicht`, () => {
+  const rnd = seeded(7 + kind.length);
+  for (let i = 0; i < 40; i++) {
+    const d = K.zufall({ ...SIDEBOARD, kind }, rnd), fremd = K.zufall({ ...SIDEBOARD, kind:kind === 'reduit' ? 'sideboard' : 'reduit' }, rnd);
+    const empfangen = { ...fremd, ...K.linkDaten(d), kind };
+    for (const k of ['price', 'sheetL', 'sheetB']) if (!(k in K.linkDaten(d))) empfangen[k] = d[k];   // Katalog des Empfängers = Katalog beim Teilen
+    const rechnung = x => { const { form, ...r } = K.computeData(x); return JSON.parse(JSON.stringify(r)); };   // form = Echo aller Formularwerte
+    assert.deepStrictEqual(rechnung(empfangen), rechnung(d), JSON.stringify(d));
+  }
+});
+
+test('Link: jedes Formularfeld der Rechnung steht in LINK_FELDER', () => {
+  const alle = new Set(Object.values(K.LINK_FELDER).flat());
+  for (const k of Object.keys(SIDEBOARD)) if (k !== 'katalog') assert.ok(alle.has(k), k);
 });
