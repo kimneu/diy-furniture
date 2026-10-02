@@ -334,6 +334,106 @@ export const PRUEFUNGEN = {
       await ctx.screenshot(d, `a3-desktop-geaendert-${breite}`);
     }
   },
+  // a4: Erstbesuch ohne Pflichtdialog (Beispiel sichtbar), Möbel-Wahl als Sheet am Handy und mittig am Desktop, Wahl führt nach Entwerfen, Link-Meldungen beim Erstbesuch.
+  a4: async (ctx) => {
+    // planCode wie in test/link.test.js aus den Rechen-Dateien (die Seite ist nur über eine isolierte Welt erreichbar).
+    const req = (await import('node:module')).createRequire(import.meta.url);
+    Object.assign(globalThis, req('../shared.js'));
+    Object.assign(globalThis, req('../sideboard.js'), req('../reduit.js'));
+    const { planCode, startwerte } = req('../konfig.js');
+    const offen = pg => pg.locator('dialog[open]').count();
+    const box = pg => pg.evaluate(() => { const b = document.querySelector('#wahl').getBoundingClientRect(); return { bottom:b.bottom, width:b.width, vh:innerHeight, vw:innerWidth }; });
+    // Warten per Abfrage: patchright-Wartefunktionen bleiben nach history.back() + Hash-Wechsel hängen.
+    const warte = async (pg, fn) => { for (let i = 0; i < 30; i++, await pg.waitForTimeout(100)) { const v = await pg.evaluate(fn); if (v) return v; } return ''; };
+    // Fehler der Seite über ctx.fehler (Init-Script plus Netzfehler); patchright meldet kein «pageerror».
+    const ohneFehler = async (pg, text) => { const f = await ctx.fehler(pg); ctx.pruefe(f.length === 0, text + (f.length ? ': ' + f.join(' | ') : '')); };
+    // Handy, Erstbesuch: kein Dialog, Beispiel sichtbar
+    const p = await ctx.handy();
+    await ctx.oeffne(p, '', { erst:true });
+    ctx.pruefe(await offen(p) === 0, 'Erstbesuch Handy: kein Dialog offen');
+    ctx.pruefe(await p.locator('#w').isVisible(), 'Erstbesuch Handy: Breite (#w) sichtbar');
+    await ctx.screenshot(p, 'a4-erstbesuch-handy');
+    if (await offen(p)) { ctx.pruefe(false, 'übrige Prüfungen übersprungen: der Pflichtdialog sperrt die Seite'); return; }
+    // Sheet von unten, geöffnet aus Einkaufen
+    await p.evaluate(() => { location.hash = 'einkaufen'; });
+    await p.waitForSelector('body[data-ort="einkaufen"]');
+    await p.tap('#bKind');
+    await p.waitForSelector('dialog.wahl[open]');
+    await p.waitForTimeout(350);
+    const r = await box(p);
+    ctx.pruefe(Math.abs(r.bottom - r.vh) <= 2 && r.width >= r.vw - 2, `Sheet unten, volle Breite (unten ${Math.round(r.bottom)}/${r.vh}, Breite ${Math.round(r.width)}/${r.vw})`);
+    ctx.pruefe(await p.locator('#wahlZu').isVisible(), 'Sheet: «Schliessen» sichtbar');
+    ctx.pruefe(await p.locator('.wahlsatz').textContent() === 'Masse eingeben – Einkaufsliste, Teile und Bauablauf erhalten.', 'Sheet: Satz unter dem Titel');
+    ctx.pruefe(/^Dein Entwurf · ca\. CHF \d+$/.test(await p.locator('[data-zuletzt="sideboard"]').textContent()), 'Karte Sideboard: «Dein Entwurf · ca. CHF …»');
+    ctx.pruefe(/^ab ca\. CHF \d+$/.test(await p.locator('[data-zuletzt="reduit"]').textContent()), 'Karte Reduit: «ab ca. CHF …» schon beim Erstbesuch');
+    await ctx.screenshot(p, 'a4-sheet-handy');
+    // Backdrop-Tipp schliesst, Ort bleibt
+    await p.touchscreen.tap(195, 40);
+    ctx.pruefe(await warte(p, () => !document.querySelector('#wahl').open && location.hash === '#einkaufen'), 'Backdrop-Tipp schliesst, Ort bleibt Einkaufen');
+    // Wahl führt nach Entwerfen
+    await p.waitForTimeout(200);
+    await p.tap('#bKind');
+    await p.waitForSelector('dialog.wahl[open]');
+    await p.tap('.wahlbtn[data-kind="reduit"]');
+    ctx.pruefe(await warte(p, () => location.hash === '#entwerfen' && !document.querySelector('#wahl').open), 'Wahl Reduit schliesst und führt nach #entwerfen');
+    ctx.pruefe(await p.locator('#kindName').textContent() === 'Reduit', 'Möbel ist danach Reduit');
+    await ohneFehler(p, 'Handy: keine Fehler auf der Seite');
+    // Erstbesuch mit Link (ungültig, dann gültig)
+    const q = await ctx.handy();
+    await ctx.oeffne(q, 'entwerfen', { erst:true });
+    const neuMitLink = async plan => {
+      await q.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('sideboard-werkbank-v2')) localStorage.removeItem(k); });
+      await q.goto(new URL(`/?plan=${plan}#entwerfen`, q.url()).href);
+      await q.waitForSelector('form.ready', { state:'attached' });
+    };
+    const meldung = () => warte(q, () => { const m = [...document.querySelectorAll('.js-msg')].find(x => x.textContent && x.checkVisibility()); return m ? m.innerHTML : ''; });
+    await neuMitLink('1kaputt');
+    const m1 = await meldung();
+    ctx.pruefe(m1 === 'Der Link ist ungültig – du siehst den Standard-Entwurf.', `ungültiger Link beim Erstbesuch: Meldung ohne Rückgängig (${m1})`);
+    ctx.pruefe(await offen(q) === 0 && await q.locator('#kindName').textContent() === 'Sideboard', 'ungültiger Link: kein Dialog, Standard-Entwurf');
+    await neuMitLink(await planCode({ kind:'reduit', bw:'R2', sys:'posts', mat:'fichtesp', t:'18', rw:'1800' }));
+    const m2 = await meldung();
+    ctx.pruefe(m2 === 'Entwurf von Link geladen.', `gültiger Link beim Erstbesuch: Meldung ohne Rückgängig (${m2})`);
+    ctx.pruefe(await q.locator('#bwNotice').isHidden(), 'gültiger Link: kein Hinweis «Ältere Variante»');
+    ctx.pruefe(await q.locator('#kindName').textContent() === 'Reduit' && await q.inputValue('#rw') === '1800', 'gültiger Link: geteilter Reduit-Entwurf geladen');
+    await ohneFehler(q, 'Link: keine Fehler auf der Seite');
+    // Desktop: kein Dialog beim Erstbesuch, Wahl mittig, Esc schliesst
+    const d = await ctx.desktop();
+    await ctx.oeffne(d, '', { erst:true });
+    ctx.pruefe(await offen(d) === 0, 'Erstbesuch Desktop: kein Dialog offen');
+    await d.click('#bKind');
+    await d.waitForSelector('dialog.wahl[open]');
+    await d.waitForTimeout(300);
+    const rd = await box(d);
+    ctx.pruefe(rd.bottom < rd.vh - 40 && rd.width <= 460, 'Desktop: Wahl mittig, höchstens 460 px breit');
+    await ctx.screenshot(d, 'a4-wahl-desktop');
+    await d.keyboard.press('Escape');
+    ctx.pruefe(await warte(d, () => !document.querySelector('#wahl').open), 'Desktop: Esc schliesst die Wahl');
+    // Reduzierte Bewegung: die Wahl öffnet ohne Gleiten (transform none), sichtbar innerhalb 500 ms
+    const b = await ctx.handy();
+    await ctx.oeffne(b, 'entwerfen', { erst:true });
+    await b.emulateMedia({ reducedMotion:'reduce' });
+    await b.tap('#bKind');
+    const t0 = Date.now();
+    let rm = null;
+    while (Date.now() - t0 < 500) {
+      rm = await b.evaluate(() => { const w = document.querySelector('dialog#wahl[open]'); if (!w) return null; const s = getComputedStyle(w), r = w.getBoundingClientRect();
+        return { transform:s.transform, sichtbar: Number(s.opacity) > 0.9 && r.top < innerHeight && r.bottom <= innerHeight + 2 }; });
+      if (rm && rm.sichtbar) break;
+      await b.waitForTimeout(50);
+    }
+    ctx.pruefe(!!rm && rm.sichtbar && rm.transform === 'none', `reduzierte Bewegung – Wahl öffnet (${rm ? `transform ${rm.transform}, sichtbar ${rm.sichtbar}` : 'nicht offen'}, ${Date.now() - t0} ms)`);
+    // Erstbesuch mit gültigem Reduit-Link aus den Startwerten (Formularwerte des Erstbesuchs als DEFAULTS)
+    const e = await ctx.handy();
+    await ctx.oeffne(e, 'entwerfen', { erst:true });
+    const defaults = await e.evaluate(() => JSON.parse(localStorage.getItem('sideboard-werkbank-v2-entwuerfe')).sideboard);
+    await ctx.oeffne(e, `?plan=${await planCode(startwerte(defaults, 'reduit'))}#entwerfen`, { erst:true });
+    const geladen = await warte(e, () => document.querySelector('#kindName').textContent === 'Reduit');
+    const tag = await e.evaluate(() => document.querySelector('#dimTag').textContent.trim());
+    const fe = await ctx.fehler(e);
+    ctx.pruefe(await offen(e) === 0 && !!geladen && tag.startsWith('Raum') && fe.length === 0,
+      `Erstbesuch mit Reduit-Link (Dialog ${await offen(e)}, Möbel ${await e.locator('#kindName').textContent()}, Masstafel «${tag}»${fe.length ? ', Fehler: ' + fe.join(' | ') : ''})`);
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.
