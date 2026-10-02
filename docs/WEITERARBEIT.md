@@ -1,9 +1,25 @@
-# Weiterarbeit – Stand 01.10.2026
+# Weiterarbeit – Stand 02.10.2026
 
 Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit-Features:
 
 - Spec: `docs/superpowers/specs/2026-09-25-reduit-design.md`
 - Umsetzungsplan: `docs/superpowers/plans/2026-09-25-reduit.md`
+
+## UI/UX-Review (02.10.2026) – hier weitermachen
+
+Review der Oberfläche mit `/layers-intro`, `/emil-design-eng`, `/mobile-native`, `/pick-ui-library`; 33 Agents (Lese-Linsen, Skeptiker, Entwürfe, Jury, Stack-Anwälte), 15 Screenshots. Branch `ux-review` auf dem Fork.
+
+- Einstieg: `docs/review/2026-10-02-ux-review.md` (Kurzurteil, Interview, Befunde zum ersten Moment, Modell-Risse, Richtung mit Wireframes und Wörterbuch, Stufenplan A/B/C, Stack-Urteil, offene Entscheide, iPhone-Prüfliste)
+- Alle Befunde: `docs/review/2026-10-02-ux-befunde.md` (51 geprüft, 6 verworfen, 74 Nachträge, 143 ungeprüft tief/info) · Bilder: `docs/review/bilder/2026-10-02/`
+
+Entschieden am 02.10.2026:
+
+- **Richtung «Beispiel zuerst auf Objekt-Fundament»:** Möbel + Masse auf Bildschirm 1, Felder nach Nutzungshäufigkeit (offen / Aufklapper mit Wert-Einzeiler / Mehr); darunter Wörterbuch, Rückmeldung in drei Formen (Sperre · Anpassung · Warnung, Notizen nicht gezählt), Entwurf mit Zustand Neu · Gesammelt · Geändert · Von Link.
+- **Erstbesuch ohne Pflichtdialog** (Abweichung von der Ansichten-Spec): Beispiel-Sideboard sofort, Typ-Chip im Kopf öffnet die Wahl als Sheet.
+- **3D am Handy:** ein Finger dreht weiterhin; Kopf kürzer (52 statt 305 px), Bühne kleiner. Nach Stufe A am iPhone prüfen; `touch-action: pan-y` allein hilft nicht (OrbitControls r128 ruft `preventDefault()`).
+- **Stack: Vanilla in Stufen**, kein Build. Umbau (Vite + React + Base UI) nur unter den Bedingungen in Kapitel 8 des Berichts.
+
+Nächste Schritte (Stufe A, 5–6 Tage, jeder Schritt deploybar): A1 Doctype mit Sichttest · A2 Mobile-Native-Paket (16-px-Eingaben, Tap-Highlight, theme-color, Manifest, Ortsknöpfe 44 px) · A3 Kopf schrumpfen, Steckbrief unter der Bühne, Leiste ohne Überlauf · A4 Erstbesuch ohne Dialog, Typ-Sheet · A5 Formular Stufe 1 (Masse zuerst, Zufall ans Ende, Aufteilung) · A6 3D-Schleife pausieren. Danach iPhone-Prüfliste (Kapitel 10), dann Stufe B (Wörterbuch, `R.warn` mit Art, Entwurf-Zustand, Tokens, Aufklapper).
 
 ## Schreiner-Review (28.09.2026) – hier weitermachen
 
