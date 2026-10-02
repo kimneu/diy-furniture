@@ -23,6 +23,21 @@ Umsetzungsplan Stufe A (Opus-Entwürfe, je Task geprüft): `docs/superpowers/pla
 
 Nächste Schritte (Stufe A, 5–6 Tage, jeder Schritt deploybar): A1 Doctype mit Sichttest · A2 Mobile-Native-Paket (16-px-Eingaben, Tap-Highlight, theme-color, Manifest, Ortsknöpfe 44 px) · A3 Kopf schrumpfen, Steckbrief unter der Bühne, Leiste ohne Überlauf · A4 Erstbesuch ohne Dialog, Typ-Sheet · A5 Formular Stufe 1 (Masse zuerst, Zufall ans Ende, Aufteilung) · A6 3D-Schleife pausieren. Danach iPhone-Prüfliste (Kapitel 10), dann Stufe B (Wörterbuch, `R.warn` mit Art, Entwurf-Zustand, Tokens, Aufklapper).
 
+### iPhone-Prüfung A2
+
+Nach dem Deploy von A2 (Mobile-Native-Paket, Commit `189fb04`) am iPhone prüfen, Spec Kapitel 10, Teil A2. Je Punkt «Ja» oder «Nein» eintragen (statt «offen»). Die UI-Prüfung `node tools/ui-pruefung.mjs a2` läuft in Chromium und ersetzt diese Liste nicht.
+
+iOS-Version: offen
+
+1. Tipp in «Breite», «Schnittfuge» und ein Select: kein Zoom. Bei «Schnittfuge» zeigt die Tastatur ein Komma. – offen
+2. Ortsknöpfe: kein grauer Blitz, beim Drücken spürbares Einsinken. – offen
+3. Adressleiste hell (#EDF0EE) und dunkel (#131A1C). Färbt Safari sie gar nicht (neuere iOS-Versionen ignorieren theme-color): «Nein (ignoriert)». – offen
+4. «Zum Home-Bildschirm»: Das Icon ist das Möbel auf Petrol, der Name «Martylko», die App öffnet ohne Safari-Leiste. – offen
+5. Im Home-Bildschirm-Modus: Alle vier Orte sind über die Leiste erreichbar, und die Möbel-Wahl schliesst über ihren Knopf. Die Sammlung ist dort leer, weil iOS den Speicher vom Safari-Speicher trennt; Varianten kommen nur per Link hinüber. Ja oder Nein, und ob das stört. – offen
+6. Am Seitenanfang nach unten ziehen: kein Gummiband, kein Neuladen. – offen
+7. Querformat: Die Bühne scrollt mit. – offen
+8. Namensfeld: Die Taste heisst «Fertig», und ein Tipp darauf schliesst die Tastatur. – offen
+
 ## Schreiner-Review (28.09.2026) – hier weitermachen
 
 Prüfung der ganzen App aus Sicht eines Möbel- und Holzbauers: Konstruktion Sideboard/Reduit, Ecken der L-/U-Form, Material- und Beschlagkombinationen, Vorschlag zur Eingrenzung. Branch `schreiner-review` auf dem Fork (noch nicht in `main`).
