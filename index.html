@@ -1579,6 +1579,7 @@ function highlight(key){
       mat.emissive.setHex(on ? 0x3a8aa0 : 0x000000); mat.emissiveIntensity = on ? 0.45 : 0;
     }
   }
+  requestRender();
 }
 function keyFromEl(el){ const h = el.closest('[data-key]'); return h ? decodeURIComponent(h.dataset.key) : null; }
 for (const sel of ['#cutTable', '#sheets', '#ablaengen']) {
@@ -1592,6 +1593,14 @@ for (const sel of ['#cutTable', '#sheets', '#ablaengen']) {
 const S = 0.001;
 const three = { hideFront:false, ok:false, byKey:{}, doors:[], open:0, openT:0, ex:0, exT:0, userMoved:false, texCache:{}, matCache:{} };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Rendern auf Abruf: ein Frame je Anfrage, weiter nur solange die Kamera dämpft oder Türen/Explosion laufen.
+let renderFrame = 0, stageSichtbar = true;
+function requestRender(){
+  if (!three.ok || renderFrame || document.hidden || !stageSichtbar) return;
+  renderFrame = requestAnimationFrame(three.tick);
+}
+function stopRender(){ cancelAnimationFrame(renderFrame); renderFrame = 0; }
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopRender(); else requestRender(); });
 
 function shade(hex, f){
   const n = parseInt(hex.slice(1), 16);
@@ -1722,6 +1731,7 @@ function initThree(){
       if (!w || !h) return;
       renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
       if (!three.userMoved && R) fitCamera(R);
+      camera.lookAt(controls.target); renderer.render(scene, camera);
     };
     new ResizeObserver(resize).observe(el); resize();
 
@@ -1743,19 +1753,30 @@ function initThree(){
         pick.hidden = false;
       } else { highlight(null); pick.hidden = true; }
     });
-    three.ok = true;
     const tick = () => {
-      requestAnimationFrame(tick);
+      renderFrame = 0;
       const k = reduceMotion ? 1 : 0.12;
       three.open += (three.openT - three.open) * k;
       three.ex += (three.exT - three.ex) * k;
+      if (Math.abs(three.openT - three.open) < 1e-3) three.open = three.openT;
+      if (Math.abs(three.exT - three.ex) < 1e-3) three.ex = three.exT;
       applyAnim();
-      controls.update();
+      const bewegt = controls.update();   // r128: true, solange sich die Kamera noch ändert (auch beim Ausdämpfen)
       renderer.render(scene, camera);
+      if (bewegt || three.open !== three.openT || three.ex !== three.exT) requestRender();
     };
-    tick();
+    three.tick = tick;
+    controls.addEventListener('change', requestRender);
+    new IntersectionObserver(([e]) => {
+      stageSichtbar = e.isIntersecting;
+      if (stageSichtbar) requestRender(); else stopRender();
+    }).observe(el);
+    three.ok = true;
+    requestRender();
   } catch (e) {
-    el.innerHTML = '<div class="nogl">Die 3D-Vorschau braucht WebGL. Materialliste und Plattenplan funktionieren trotzdem.</div>';
+    el.innerHTML = '<div class="nogl">' + (e.message === 'lib'
+      ? 'Die 3D-Vorschau braucht eine Internetverbindung.'
+      : 'Die 3D-Vorschau braucht WebGL.') + ' Einkaufen und Bauen funktionieren trotzdem.</div>';
   }
 }
 function applyAnim(){
@@ -1779,6 +1800,7 @@ function fitCamera(R){
   cam.position.copy(target).addScaledVector(dir, dist);
   three.controls.target.copy(target);
   cam.near = dist / 50; cam.far = dist * 20; cam.updateProjectionMatrix();
+  requestRender();
 }
 function clearRoot(){
   const root = three.root;
@@ -1858,6 +1880,7 @@ function build3D(R){
   hlKey = '__none'; highlight(null);
   $('#pick').hidden = true;
   applyAnim();
+  requestRender();
 }
 
 /* ---------- Ereignisse ---------- */
@@ -1914,16 +1937,19 @@ $('#bDoors').addEventListener('click', e => {
   three.openT = three.openT ? 0 : 1;
   e.currentTarget.setAttribute('aria-pressed', String(!!three.openT));
   e.currentTarget.querySelector('.t').textContent = three.openT ? 'Türen schliessen' : 'Türen öffnen';
+  requestRender();
 });
 $('#bExplode').addEventListener('click', e => {
   three.exT = three.exT ? 0 : 1;
   e.currentTarget.setAttribute('aria-pressed', String(!!three.exT));
+  requestRender();
 });
 $('#bWall').addEventListener('click', e => {
   three.hideFront = !three.hideFront;
   e.currentTarget.setAttribute('aria-pressed', String(three.hideFront));
   e.currentTarget.querySelector('.t').textContent = three.hideFront ? 'Vorderwand ein' : 'Vorderwand aus';
   if (three.ok) for (const o of three.root.children) if (o.userData.front) o.visible = !three.hideFront;
+  requestRender();
 });
 $('#bReset').addEventListener('click', () => { three.userMoved = false; if (three.ok && R) fitCamera(R); });
 

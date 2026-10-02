@@ -540,6 +540,109 @@ export const PRUEFUNGEN = {
     ctx.pruefe(!fl.length && !fz.length && gleich(g.map(x => x.titel), SB) && gewuerfelt,
       `alter Speicher lädt ohne Fehler (Gruppen ${g.map(x => x.titel).join(' · ')}; Zufall ${gewuerfelt ? 'würfelt' : geklickt ? 'ohne Meldung' : 'nicht klickbar'}${[...fl, ...fz].length ? '; Fehler: ' + [...fl, ...fz].join(' | ') : ''})`);
   },
+  // a6: 3D rendert nur bei Bewegung (Ruhe, Drehen, Türen, Tab im Hintergrund, Sammlung, Handy Einkaufen), eigener Fehlertext ohne Lib.
+  a6: async (ctx) => {
+    // Zähler in der Hauptwelt der Seite: jeder ausgeführte rAF-Callback erhöht window.__frames.
+    const ZAEHLER = `window.__frames = 0; { const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = cb => raf(t => { window.__frames++; cb(t); }); }`;
+    const mitZaehler = async page => {
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Page.enable');
+      await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: ZAEHLER });
+      return cdp;
+    };
+    const haupt = async (cdp, js) => {   // patchright-evaluate wäre isoliert
+      const r = await cdp.send('Runtime.evaluate', { expression: js, awaitPromise: true, returnByValue: true });
+      if (r.exceptionDetails) throw new Error(r.exceptionDetails.text);
+      return r.result.value;
+    };
+    const frames = (cdp, ms) => haupt(cdp,
+      `new Promise(res => { const a = window.__frames; setTimeout(() => res(window.__frames - a), ${ms}); })`);
+    const hidden = (cdp, wert) => haupt(cdp, (wert
+      ? `Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });`
+      : `delete document.hidden;`) + ` document.dispatchEvent(new Event('visibilitychange'));`);
+    const ohneWahl = async page => {   // Schutz, falls A4 (kein Pflichtdialog) noch fehlt
+      const b = page.locator('#wahl[open] .wahlbtn[data-kind="sideboard"]');
+      if (await b.count()) await b.click();
+    };
+
+    // Desktop: Ruhe, Drehen, Türen, Tab im Hintergrund, Sammlung
+    const d = await ctx.desktop();
+    const dc = await mitZaehler(d);
+    await ctx.oeffne(d, 'entwerfen', { erst: true });
+    await ohneWahl(d);
+    ctx.pruefe(await d.locator('#stage canvas').count() === 1, 'Canvas in #stage (WebGL und CDN da)');
+    await d.waitForTimeout(2000);
+    const ruhe = await frames(dc, 1000);
+    ctx.pruefe(ruhe <= 5, `in Ruhe höchstens 5 Frames pro Sekunde (${ruhe})`);
+    const box = await d.locator('#stage canvas').boundingBox();
+    const mx = box.x + box.width / 2, my = box.y + box.height / 2;
+    const vor = await haupt(dc, 'window.__frames');
+    await d.mouse.move(mx, my);
+    await d.mouse.down();
+    await d.mouse.move(mx + 160, my + 40, { steps: 20 });
+    await d.mouse.up();
+    await d.waitForTimeout(300);
+    const drag = await haupt(dc, 'window.__frames') - vor;
+    ctx.pruefe(drag > 10, `Drehen auf der Bühne rendert (${drag} Frames)`);
+    await d.waitForTimeout(2000);
+    const nachDrag = await frames(dc, 1000);
+    ctx.pruefe(nachDrag <= 5, `nach Drehen und Dämpfung wieder Ruhe (${nachDrag})`);
+    await d.click('#bDoors');
+    const tuer = await frames(dc, 500);
+    ctx.pruefe(tuer > 10, `Türen-Animation läuft (${tuer})`);
+    await d.waitForTimeout(1500);
+    const nachTuer = await frames(dc, 1000);
+    ctx.pruefe(nachTuer <= 5, `nach Türen-Animation Ruhe (${nachTuer})`);
+    await hidden(dc, true);
+    await d.click('#bExplode');
+    const versteckt = await frames(dc, 500);
+    ctx.pruefe(versteckt === 0, `Tab im Hintergrund, keine Frames (${versteckt})`);
+    await hidden(dc, false);
+    const zurueck = await frames(dc, 500);
+    ctx.pruefe(zurueck > 10, `Tab wieder vorn, Explosion läuft weiter (${zurueck})`);
+    await ctx.screenshot(d, 'a6-desktop');
+    await d.waitForTimeout(1500);
+    await d.click('#bDoors');                       // Türen schliessen, Animation läuft
+    await haupt(dc, `location.hash = 'sammlung'`);
+    await d.waitForTimeout(300);
+    const samml = await frames(dc, 1000);
+    ctx.pruefe(samml === 0, `Desktop in der Sammlung keine Frames (${samml})`);
+    await haupt(dc, `location.hash = 'entwerfen'`);
+    const ausSamml = await frames(dc, 400);
+    ctx.pruefe(ausSamml > 0, `zurück aus der Sammlung rendert die Bühne (${ausSamml})`);
+
+    // Handy: Ort Einkaufen blendet die Bühne aus, die Schleife steht
+    const h = await ctx.handy();
+    const hc = await mitZaehler(h);
+    await ctx.oeffne(h, 'entwerfen', { erst: true });
+    await ohneWahl(h);
+    await h.click('#bExplode');
+    await h.click('.mnav button[data-ort="einkaufen"]');
+    await h.waitForTimeout(300);
+    const kauf = await frames(hc, 1000);
+    ctx.pruefe(kauf === 0, `Handy im Ort Einkaufen keine Frames (${kauf})`);
+    await h.click('.mnav button[data-ort="entwerfen"]');
+    const wieder = await frames(hc, 400);
+    ctx.pruefe(wieder > 0, `zurück in Entwerfen rendert die Bühne (${wieder})`);
+    const passt = await h.$eval('#stage', el => {
+      const c = el.querySelector('canvas');
+      return !!c && c.width === Math.floor(el.clientWidth * Math.min(devicePixelRatio, 2));
+    });
+    ctx.pruefe(passt, 'Canvas nach Rückkehr auf Bühnenbreite');
+    await ctx.screenshot(h, 'a6-handy-zurueck');
+
+    // Lib lädt nicht: eigener Fehlertext, der Rest der App läuft
+    const l = await ctx.desktop();
+    await l.route('**/three.min.js', r => r.abort());
+    await ctx.oeffne(l, 'entwerfen', { erst: true });
+    await ohneWahl(l);
+    const text = ((await l.locator('#stage .nogl').textContent()) || '').trim();
+    ctx.pruefe(text === 'Die 3D-Vorschau braucht eine Internetverbindung. Einkaufen und Bauen funktionieren trotzdem.',
+      `Fehlertext ohne Lib («${text}»)`);
+    ctx.pruefe(await l.locator('#cutTable tr[data-key]').count() > 0, 'Materialliste trotz fehlender Lib');
+    await ctx.screenshot(l, 'a6-ohne-lib');
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.
