@@ -517,7 +517,7 @@ body[data-ort="sammlung"] .layout{display:none}
     </div>
     <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
     <dl class="summary" id="summary"></dl>
-    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
+    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link teilen</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -954,7 +954,7 @@ body[data-ort="sammlung"] .layout{display:none}
   <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
 </dialog>
 <div class="mbar" id="mbar">
-  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
+  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
   <nav class="mnav" aria-label="Orte">
     <button type="button" data-ort="entwerfen">Entwerfen</button>
     <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
@@ -2232,6 +2232,29 @@ $('#collMsg').addEventListener('click', ev => {
   storeColl(); renderColl(); flash('#collMsg', 'Wiederhergestellt.');
 });
 
+/* ---------- Link ---------- */
+// Der Link trägt den ganzen Entwurf (?plan=…, siehe planCode in konfig.js); der Hash bleibt für den Ort.
+async function teileLink(){
+  const url = `${location.origin}${location.pathname}?plan=${await planCode(formData())}`;
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ title:kaufTitel(R), url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); flash('.js-msg', 'Link kopiert.'); }
+  catch (e) { prompt('Link zu diesem Entwurf:', url); }
+}
+for (const b of document.querySelectorAll('.js-link')) b.addEventListener('click', teileLink);
+// Geteilter Entwurf aus ?plan=…: wie eine Variante aus der Sammlung laden (Regeln prüfen, Rückgängig).
+// Fehlende Felder kommen aus den Startwerten, Preis und Format aus dem aktuellen Katalog.
+async function ladeLink(code){
+  const d = await planAusCode(code);
+  if (!d || !MATS[d.mat]) { flash('.js-msg', 'Der Link ist ungültig – der Entwurf liess sich nicht lesen.'); return; }
+  const { katalog, price, sheetL, sheetB, ...basis } = startwerte(DEFAULTS, d.kind);
+  const kat = catalogValues(d.mat, d.t);
+  ladeVariante({ id:null, name:'Geteilter Entwurf', data:{ ...basis, ...kat, ...d, katalog:kat } });
+}
+const planLink = new URLSearchParams(location.search).get('plan');
+if (planLink) history.replaceState(null, '', location.pathname + location.hash);   // Neuladen holt sonst den Link zurück
+
 /* ---------- Start ---------- */
 fillMaterials();
 fillBacks();
@@ -2250,7 +2273,8 @@ render();
 save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
 zeigeOrt(ortAusHash(location.hash));
-if (erstBesuch) oeffneWahl({ erst:true });
+if (planLink) ladeLink(planLink);
+else if (erstBesuch) oeffneWahl({ erst:true });
 requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>

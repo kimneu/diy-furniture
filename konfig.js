@@ -619,6 +619,36 @@ function sortiere(coll, nach){
   return nach === 'preis' ? c.sort((x, y) => x.info.kosten - y.info.kosten) : c;
 }
 
+/* ---------- Link ---------- */
+// Ein Entwurf als Link (?plan=…): Formularwerte als JSON, deflate-raw, base64url, vorne die Version des Formats.
+// Ohne Server: Der Link trägt den ganzen Entwurf. Fehlende Felder füllt der Empfänger mit seinen Startwerten.
+const PLAN_V = '1';
+// Was in den Link gehört. Katalogwerte (Preis, Format), die dem Katalog folgen, bleiben weg:
+// Der Empfänger rechnet dann mit seinem aktuellen Katalog statt mit dem Preis beim Teilen.
+function linkDaten(d){
+  const { katalog, ...rest } = d;
+  for (const k of KATALOGFELDER) if (folgtKatalog(d, k)) delete rest[k];
+  // TODO: Felder des anderen Möbeltyps weglassen (Link kürzer)
+  return rest;
+}
+const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const ausB64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+async function durch(bytes, strom){
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(strom)).arrayBuffer());
+}
+async function planCode(d){
+  const json = new TextEncoder().encode(JSON.stringify(linkDaten(d)));
+  return PLAN_V + b64url(await durch(json, new CompressionStream('deflate-raw')));
+}
+// Formularwerte aus dem Code; null, wenn der Code kaputt, unbekannt oder kein Entwurf ist.
+async function planAusCode(code){
+  if (typeof code !== 'string' || code[0] !== PLAN_V) return null;
+  try {
+    const d = JSON.parse(new TextDecoder().decode(await durch(ausB64url(code.slice(1)), new DecompressionStream('deflate-raw'))));
+    return d && typeof d === 'object' && !Array.isArray(d) && ['sideboard', 'reduit'].includes(d.kind) ? d : null;
+  } catch (e) { return null; }
+}
+
 /* ---------- Orte ---------- */
 const ORTE = ['entwerfen', 'einkaufen', 'bauen', 'sammlung'];
 function ortAusHash(hash){
@@ -626,4 +656,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, planCode, planAusCode };
