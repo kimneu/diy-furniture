@@ -217,6 +217,90 @@ export const PRUEFUNGEN = {
     await ctx.screenshot(page, 'a2-handy-sammlung');
     await page.close();
   },
+  // a3: Kopf eine Zeile, Steckbrief unter der Bühne (Handy) bzw. im Kopf (Desktop), Masse beschriftet, Leiste mit Preis-Blitz, Meldungs-Blende und Aufschlüsselung, Reduit ohne Querscrollen.
+  a3: async (ctx) => {
+    const waehle = async (page, kind) => {
+      if (!(await page.evaluate(() => document.querySelector('#wahl').open))) await page.click('#bKind');
+      await page.click(`#wahl .wahlbtn[data-kind="${kind}"]`);
+      await page.waitForFunction(k => !document.querySelector('#wahl').open && document.querySelector('#kind').value === k, kind);
+    };
+    const hoehe = (page, sel) => page.evaluate(s => document.querySelector(s).getBoundingClientRect().height, sel);
+    const text = (page, sel) => page.evaluate(s => document.querySelector(s)?.textContent.trim() ?? '', sel);
+    const sichtbar = (page, sel) => page.locator(sel).first().isVisible();
+    const binnen = (page, fn, ms) => page.waitForFunction(fn, null, { timeout:ms }).then(() => true, () => false);
+
+    // Handy, Sideboard
+    const h = await ctx.handy();
+    await ctx.oeffne(h, 'entwerfen', { erst:true });
+    await waehle(h, 'sideboard');
+    ctx.pruefe(await hoehe(h, 'header.top') <= 64, 'Handy: Kopf höchstens 64 px hoch');
+    ctx.pruefe(await h.locator('#summary, .brand p').count() === 0, 'Handy: dl.summary und Untertitel entfernt');
+    ctx.pruefe(await sichtbar(h, '#steckbrief') && (await text(h, '#steckbrief .sb-was')).includes('Teile'), 'Handy: Steckbrief unter der Bühne nennt die Teile');
+    ctx.pruefe(await text(h, '#steckbrief .sb-zustand') === 'Entwurf', 'Handy: Zustand «Entwurf» ohne geladene Variante');
+    ctx.pruefe(/^B \d+ · H \d+ · T \d+ mm$/.test(await text(h, '#dimTag')), 'Handy: Masstafel Sideboard «B … · H … · T … mm»');
+    const stage = await hoehe(h, '#stage');
+    ctx.pruefe(stage >= 200 && stage <= 0.3 * 844 + 1, 'Handy: Bühne 30 svh, mindestens 200 px');
+    ctx.pruefe(await h.locator('.mbar .btn:not(.ghost):visible').count() === 1, 'Handy: genau ein gefüllter Knopf in der Leiste (Sammeln)');
+    await h.evaluate(() => document.querySelector('#mMeta')?.click());
+    ctx.pruefe(await h.evaluate(() => document.querySelector('#aufschl')?.matches(':popover-open') ?? false), 'Handy: ▸ öffnet die Aufschlüsselung');
+    ctx.pruefe((await text(h, '#aufschl')).includes('Ohne Beschläge'), 'Handy: Aufschlüsselung Sideboard «Ohne Beschläge»');
+    ctx.pruefe(await h.evaluate(() => { const a = document.querySelector('#aufschl'); return !!a && a.getBoundingClientRect().bottom <= document.querySelector('#mbar').getBoundingClientRect().top; }), 'Handy: Aufschlüsselung liegt über der Leiste');
+    await ctx.screenshot(h, 'a3-handy-aufschluesselung');
+    await h.evaluate(() => document.querySelector('#aufschl')?.hidePopover?.());
+    // Preis-Blitz: Breite ändern; .blitz sofort da, danach wieder weg
+    const blitz = await h.evaluate(() => {
+      const w = document.querySelector('#w'), vorher = document.querySelector('#mPrice').textContent;
+      w.value = String(Number(w.value) + 400); w.dispatchEvent(new Event('input', { bubbles:true }));
+      const p = document.querySelector('#mPrice');
+      return { an: p.classList.contains('blitz'), anders: p.textContent !== vorher };
+    });
+    ctx.pruefe(blitz.an && blitz.anders, 'Handy: Preis blitzt bei Preisänderung (.blitz)');
+    ctx.pruefe(await binnen(h, () => !document.querySelector('#mPrice').classList.contains('blitz'), 1000), 'Handy: .blitz nach 300 ms entfernt');
+    // Meldung als Blende über der Meta-Zeile, Leistenhöhe bleibt
+    const leiste = await hoehe(h, '#mbar');
+    await h.evaluate(() => document.querySelector('#bZufall').click());
+    ctx.pruefe(await binnen(h, () => { const m = document.querySelector('.mbar .js-msg'), meta = document.querySelector('#mMeta');
+      return m.classList.contains('an') && m.textContent.includes('gewürfelt') && Number(getComputedStyle(m).opacity) > 0.9 && Number(getComputedStyle(meta).opacity) < 0.1; }, 1500),
+      'Handy: Meldung blendet über die Meta-Zeile');
+    ctx.pruefe(Math.abs(await hoehe(h, '#mbar') - leiste) < 1, 'Handy: Leistenhöhe während der Meldung unverändert');
+    await ctx.screenshot(h, 'a3-handy-meldung');
+    // Sammeln/Link nur in Entwerfen
+    ctx.pruefe(await sichtbar(h, '.mbar .js-sammeln') && await sichtbar(h, '.mbar .js-link'), 'Handy: Sammeln und Link in Entwerfen sichtbar');
+    await h.evaluate(() => { location.hash = 'einkaufen'; });
+    await h.waitForFunction(() => document.body.dataset.ort === 'einkaufen');
+    ctx.pruefe(!(await sichtbar(h, '.mbar .js-sammeln')) && !(await sichtbar(h, '.mbar .js-link')), 'Handy: in Einkaufen kein Sammeln/Link in der Leiste');
+    ctx.pruefe(await sichtbar(h, '#mPrice'), 'Handy: Preis in Einkaufen sichtbar');
+
+    // Handy, Reduit
+    await h.evaluate(() => { location.hash = 'entwerfen'; });
+    await h.waitForFunction(() => document.body.dataset.ort === 'entwerfen');
+    await waehle(h, 'reduit');
+    ctx.pruefe(/^Raum B \d+ · T \d+ · H \d+ mm$/.test(await text(h, '#dimTag')), 'Handy: Masstafel Reduit «Raum B … · T … · H … mm»');
+    ctx.pruefe(await h.evaluate(() => document.scrollingElement.scrollWidth) <= 390, 'Handy: Reduit ohne horizontalen Überlauf');
+    ctx.pruefe(await hoehe(h, 'header.top') <= 64, 'Handy: Kopf beim Reduit höchstens 64 px hoch');
+    await h.evaluate(() => document.querySelector('#mMeta')?.click());
+    const aufR = await text(h, '#aufschl');
+    ctx.pruefe(aufR.includes('Kaufteile') && !aufR.includes('Ohne Beschläge'), 'Handy: Aufschlüsselung Reduit mit Kaufteile, ohne Beschläge-Hinweis');
+    await h.evaluate(() => document.querySelector('#aufschl')?.hidePopover?.());
+    await ctx.screenshot(h, 'a3-handy-reduit');
+
+    // Desktop
+    const d = await ctx.desktop();
+    await ctx.oeffne(d, 'entwerfen', { erst:true });
+    await waehle(d, 'sideboard');
+    ctx.pruefe(await hoehe(d, 'header.top') <= 64, 'Desktop: Kopf eine Zeile, höchstens 64 px');
+    ctx.pruefe(await sichtbar(d, '.top .kopfbrief') && (await text(d, '.top .kopfbrief')).includes('Teile'), 'Desktop: Steckbrief im Kopf');
+    ctx.pruefe(await d.locator('#steckbrief').count() === 1 && !(await sichtbar(d, '#steckbrief')), 'Desktop: Steckbrief unter der Bühne vorhanden, aber ausgeblendet');
+    ctx.pruefe(await d.locator('.top .btn:not(.ghost):visible').count() === 1, 'Desktop: genau ein gefüllter Knopf im Kopf (Sammeln)');
+    ctx.pruefe(/^CHF \d+$/.test(await text(d, '#kPrice')), 'Desktop: Preis im Kopf');
+    await ctx.screenshot(d, 'a3-desktop');
+    // Zwischenbreite (Tablet quer, 921–1199 px): Kopf bleibt einzeilig, nichts läuft über
+    await d.setViewportSize({ width:1000, height:800 });
+    await d.waitForFunction(() => innerWidth === 1000);
+    ctx.pruefe(await hoehe(d, 'header.top') <= 64 && await d.evaluate(() => document.scrollingElement.scrollWidth) <= 1000 && await sichtbar(d, '.top .kopfbrief'),
+      'Zwischenbreite 1000 px: Kopf eine Zeile mit Steckbrief, kein Überlauf');
+    await ctx.screenshot(d, 'a3-zwischenbreite');
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.

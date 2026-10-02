@@ -64,13 +64,11 @@ button,input,select{font:inherit;color:inherit}
 
 /* Kopf */
 /* Festes Raster, damit der Kopf bei anderen Werten (Zufall, Laden) nicht umbricht und die Seite springt. */
-.top{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind" "sum acts";gap:14px 40px;align-items:center;padding-block:6px 16px;border-bottom:1px solid var(--line)}
+.top{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind brief acts";gap:0 28px;align-items:center;padding-block:4px 10px;border-bottom:1px solid var(--line)}
 .brand{grid-area:brand}
 .brand{display:flex;gap:14px;align-items:center}
 .brand svg{flex:none;color:var(--accent)}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
-.brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
-.summary{grid-area:sum;display:grid;grid-auto-flow:column;grid-template-columns:auto auto minmax(0,1fr);grid-auto-columns:auto;gap:6px 28px;margin:0;min-width:0}
 .kindpick{grid-area:kind;justify-self:end}
 #bKind{font-size:15px}
 .wahl{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:18px;width:min(460px,calc(100% - 32px));box-shadow:var(--shadow)}
@@ -83,22 +81,28 @@ button,input,select{font:inherit;color:inherit}
 .wahlbtn[aria-current]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .wahlbtn small{color:var(--muted);font-size:12.5px}
 .wahlbtn .zuletzt{font-family:var(--f-mono);color:var(--ink)}
-@media (max-width:920px){.kindpick{justify-self:start}}
-.hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
+.hacts{grid-area:acts;display:flex;align-items:center;gap:12px}
 .top{position:relative}
 .hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
-.hacts .copied:empty{display:none}
-.variante{margin:0;font-size:12.5px;color:var(--muted);text-align:right}
-.variante b{color:var(--ink);font-weight:600}
-.summary div{display:flex;flex-direction:column}
-.summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
-.summary .wide{min-width:0}
-.summary .wide dd{overflow:hidden;text-overflow:ellipsis}
-.summary .price dd{min-height:44px}
-.summary .price dd b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1;color:var(--accent)}
-.summary .price dd small{display:block;font-family:var(--f-body)}
-.summary small{color:var(--muted);font-size:12px}
+.js-msg{transition:opacity 180ms ease,filter 180ms ease}
+.js-msg:not(.an){opacity:0;filter:blur(4px);pointer-events:none}
+.kopfbrief{grid-area:brief;margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--muted)}
+.kopfbrief .sb-zustand::before{content:" · "}
+.kopfbrief .sb-was,.steckbrief .sb-was{color:var(--ink);font-weight:500}
+.kopfbrief b,.steckbrief b{color:var(--ink);font-weight:600}
+.steckbrief{display:none;margin:8px 2px 0;font-size:13px;line-height:1.4;color:var(--muted)}
+.steckbrief span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpreis{margin:0;display:flex;align-items:center;white-space:nowrap}
+.js-preis{display:inline-block;font-family:var(--f-display);font-size:20px;font-weight:700;line-height:1.1;color:var(--accent);transform-origin:left center;transition:color 220ms var(--ease-out),transform 220ms var(--ease-out)}
+.js-preis.blitz{color:var(--ink);transform:scale(1.06);transition-duration:80ms}
+.metabtn{border:0;background:none;margin:0;padding:6px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.aufschl{margin:0;inset:64px 20px auto auto;width:min(320px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raise);color:var(--ink);box-shadow:var(--shadow);font-size:13px;transform-origin:top right;transition:opacity 180ms var(--ease-out),transform 180ms var(--ease-out)}
+@starting-style{.aufschl:popover-open{opacity:0;transform:scale(.97)}}
+.aufschl p{margin:0}
+.aufschl .total{font-size:15px;margin-bottom:6px}
+.aufschl dl{display:grid;grid-template-columns:1fr auto;gap:2px 16px;margin:0 0 6px}
+.aufschl dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.aufschl .hint{color:var(--muted);font-size:12px}
 .lvl{display:inline-flex;gap:3px;vertical-align:middle;margin-right:6px}
 .lvlhead{margin:0;display:flex;align-items:center;gap:4px;font-size:15px}
 .lvlhead .lvl i{width:11px;height:11px}
@@ -123,15 +127,8 @@ button,input,select{font:inherit;color:inherit}
   html,body{height:100%}
   body{overflow:hidden}
   .app{max-width:none;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding-block:8px 14px}
-  .top{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind sum acts";gap:0 28px;padding-block:2px 10px}
-  .brand p{display:none}
   .brand svg{width:30px;height:30px}
   .brand h1{font-size:21px}
-  .summary{gap:6px 20px;grid-template-columns:auto auto minmax(100px,1fr) auto}
-  .summary dt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .summary .price dd{min-height:0;max-width:210px}
-  .summary .price dd small{overflow:hidden;text-overflow:ellipsis}
-  .hacts{width:auto;display:flex;align-items:center;gap:12px;justify-items:initial}
   .layout{grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"controls viewer output" "controls warns output";gap:10px 18px;margin-top:12px;min-height:0;align-items:stretch}
   .controls{position:static;max-height:none;min-height:0}
   .viewer{min-height:0;display:flex;flex-direction:column}
@@ -404,7 +401,7 @@ body[data-ort="sammlung"] .layout{display:none}
   body[data-ort="einkaufen"] .cfgwrap,body[data-ort="bauen"] .cfgwrap{display:none}
   body[data-ort="entwerfen"] .output{display:none}
   .output .tabs{display:none}
-  body:not([data-ort="entwerfen"]) .top .summary{display:none}
+  body:not([data-ort="entwerfen"]) .mbtns{display:none}
 }
 
 .chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
@@ -430,7 +427,7 @@ body[data-ort="sammlung"] .layout{display:none}
 @media (max-width:920px){
   .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(140px + env(safe-area-inset-bottom))}
   .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
-  #stage{aspect-ratio:auto;height:38svh;min-height:220px;max-height:none}
+  #stage{aspect-ratio:auto;height:30svh;min-height:200px;max-height:none}
   .stage-wrap{border-radius:12px}
   .vbar{top:auto;bottom:8px;left:8px;right:8px}
   .vbtn{width:40px;height:40px;padding:0;justify-content:center}
@@ -445,7 +442,13 @@ body[data-ort="sammlung"] .layout{display:none}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
   .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
-  .mprice{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mprice{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"preis btns" "zeile zeile";align-items:center;gap:2px 12px}
+  .mprice > .js-preis{grid-area:preis;justify-self:start}
+  .mzeile{grid-area:zeile;display:grid;min-width:0}
+  .mzeile > *{grid-area:1 / 1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mzeile:has(> .js-msg.an) #mMeta{opacity:0;filter:blur(4px);pointer-events:none}
+  .mbar .js-msg{font-size:12.5px;color:var(--ink)}
+  .aufschl{inset:auto 16px calc(160px + env(safe-area-inset-bottom)) 16px;width:auto;transform-origin:bottom left}
   .mnav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
   .mnav button{all:unset;box-sizing:border-box;text-align:center;padding:12px 2px;min-height:44px;line-height:20px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:color 150ms ease,background-color 150ms ease,transform 160ms var(--ease-out)}
   .mnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
@@ -454,25 +457,18 @@ body[data-ort="sammlung"] .layout{display:none}
   .mnav .count{font-family:var(--f-mono);font-weight:400;font-size:11px;margin-left:3px}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
-  .mbar > div:first-child{min-width:0}
-  .mbar #mMeta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar #mMeta{text-align:left;padding:2px 0;font-size:12.5px;transition:opacity 180ms ease,filter 180ms ease}
   .mbar b{white-space:nowrap}
   .mbar .nm{display:none}
   .mbar .copied:not(:empty)::before{content:"✓ "}
-  .mbar .copied:empty{display:none}
-  .mbar .copied:not(:empty){display:block;color:var(--ink)}
-  .mbar div:has(> .copied:not(:empty)) #mMeta{display:none}
-  .mbtns{display:flex;gap:8px;flex:none}
-  .hacts{display:none}
-  .top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "kind" "sum"}
+  .mbtns{grid-area:btns;display:flex;gap:8px}
+  .hacts,.kopfbrief{display:none}
+  .steckbrief{display:block}
+  .top{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind";gap:12px;padding-block:4px 8px}
 }
 @media (max-width:640px){
-  .top{gap:12px;padding-bottom:12px}
   .brand svg{width:34px;height:34px}
   .brand h1{font-size:22px}
-  .brand p{font-size:13px}
-  .summary{grid-auto-flow:row;grid-template-columns:1fr 1fr;gap:10px 16px}
-  .summary .wide{grid-column:1 / -1}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-bottom:0}
   .tab{border:1px solid var(--line);border-radius:8px;background:var(--raise);margin:0;white-space:normal;text-align:left;padding:8px 12px}
   .tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -508,6 +504,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
   *{animation:none!important}
   .seg::before,.tabind{transition:none!important}
   :active{transform:none!important}
+  .js-preis.blitz{transform:none}
 }
 </style>
 </head>
@@ -530,14 +527,11 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         <circle cx="26" cy="15" r="1.6" fill="currentColor" stroke="none"></circle>
         <line x1="9" y1="31" x2="8" y2="38"></line><line x1="35" y1="31" x2="36" y2="38"></line>
       </svg>
-      <div>
-        <h1>Martylko</h1>
-        <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
-      </div>
+      <h1>Martylko</h1>
     </div>
     <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
-    <dl class="summary" id="summary"></dl>
-    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link teilen</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
+    <p class="kopfbrief js-steckbrief"><span class="sb-was"></span><span class="sb-zustand"></span></p>
+    <div class="hacts"><p class="kpreis"><b class="js-preis" id="kPrice"></b><button type="button" class="metabtn" popovertarget="aufschl" aria-label="Preis aufschlüsseln">▸</button></p><div class="acts"><button type="button" class="btn js-sammeln">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -556,6 +550,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         <div class="pick" id="pick" hidden></div>
         <div class="dimtag" id="dimTag"></div>
       </div>
+      <p class="steckbrief js-steckbrief" id="steckbrief"><span class="sb-was"></span><span class="sb-zustand"></span></p>
     </section>
     <div class="warnbox" id="warnBox" hidden>
       <button type="button" class="warnhead" id="warnHead" aria-expanded="false" aria-controls="warns"></button>
@@ -974,7 +969,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
   <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
 </dialog>
 <div class="mbar" id="mbar">
-  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
+  <div class="mprice"><b class="js-preis" id="mPrice"></b><div class="mbtns"><button type="button" class="btn js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><div class="mzeile"><button type="button" class="metabtn" id="mMeta" popovertarget="aufschl" title="Preis aufschlüsseln"></button><span class="copied js-msg" aria-live="polite"></span></div></div>
   <nav class="mnav" aria-label="Orte">
     <button type="button" data-ort="entwerfen">Entwerfen</button>
     <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
@@ -982,6 +977,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
     <button type="button" data-ort="sammlung">Sammlung <span class="js-anzahl"></span></button>
   </nav>
 </div>
+<div class="aufschl" id="aufschl" popover></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -1386,31 +1382,31 @@ function render(){
     w.innerHTML = `${R.warn.length} Warnung${R.warn.length === 1 ? '' : 'en'} · <button type="button" class="linkbtn" data-go="entwerfen">Zum Entwurf</button>`;
   }
   $('#kindName').textContent = reduit ? 'Reduit' : 'Sideboard';
-  $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
+  $('#dimTag').textContent = masseText(R);
+  for (const el of document.querySelectorAll('.js-steckbrief .sb-was')) el.textContent = steckbriefText(R, P.d);
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
   renderVariante();
   syncLocks();
 }
+let letzterPreis = null;   // Preis der letzten Anzeige; ändert er sich, blitzt er kurz
 function renderSummary(R){
-  const main = R.groups[0];
-  const { cut: cost, whole } = sheetCosts(R.groups);
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
   const chf = v => `CHF ${Math.round(v / 5) * 5}`;
-  const item = (dt, dd, cls) => `<div${cls ? ` class="${cls}"` : ''}><dt>${dt}</dt><dd>${dd}</dd></div>`;
   const reduit = R.kind === 'reduit';
-  const wood = cost + (reduit ? R.solidCost : 0), woodWhole = whole + (reduit ? R.solidCost : 0);
-  const sheets = R.groups.map(g => `${g.sheets.length} × ${g.label}`).join(' + ');
-  const boards = !!main.boards, woodName = boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt';
-  $('#summary').innerHTML =
-    item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
-    item('Teile', parts) +
-    item(boards ? 'Bretter' : 'Platten', `<span title="${sheets}">${sheets}</span>`, 'wide') +
-    item('Total ca.', `<b>${chf(kostenGesamt(R))}</b><small>${woodName} ${chf(wood)}${reduit ? ` · Kaufteile ${chf(R.buyCost)}` : ''}${boards ? '' : ` · ganze Platten ${chf(woodWhole)}`}</small>`, 'price');
-  $('#mPrice').textContent = chf(kostenGesamt(R));
-  $('#mMeta').textContent = reduit ? `${woodName} ${chf(wood)} · Kaufteile ${chf(R.buyCost)}` : `${woodName} · ${parts} Teile`;
+  const A = preisAufschluesselung(R), preis = chf(A.total);
+  for (const el of document.querySelectorAll('.js-preis')) {
+    el.textContent = preis;
+    if (letzterPreis !== null && preis !== letzterPreis) { el.classList.add('blitz'); clearTimeout(el._b); el._b = setTimeout(() => el.classList.remove('blitz'), 300); }
+  }
+  letzterPreis = preis;
+  $('#mMeta').textContent = `${A.kaufteile != null ? `${A.holzName} ${chf(A.holz)} · Kaufteile ${chf(A.kaufteile)}` : `${A.holzName} · ${parts} Teile`} ▸`;
+  $('#aufschl').innerHTML = `<p class="total">Total ca. <b>${preis}</b></p>`
+    + `<dl><dt>${A.holzName}</dt><dd>${chf(A.holz)}</dd>${A.kaufteile != null ? `<dt>Kaufteile</dt><dd>${chf(A.kaufteile)}</dd>` : ''}</dl>`
+    + (A.ganzePlatten != null ? `<p class="hint">Ganze Platten statt Zuschnitt: ${chf(A.ganzePlatten)}</p>` : '')
+    + `<p class="hint">${A.ohneBeschlaege ? 'Ohne Beschläge – ' : ''}Richtwert.</p>`;
   const why = reduit
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
@@ -2085,10 +2081,12 @@ $('#bZufall').addEventListener('click', () => {
   flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
 });
 
+// Meldung zeigen; nach 6 s blendet sie aus (Klasse «an», CSS-Blende 180 ms) und leert sich danach.
 function flash(sel, html){
   for (const el of document.querySelectorAll(sel)) {
-    el.innerHTML = html;
-    clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+    clearTimeout(el._t); clearTimeout(el._w);
+    if (html) { el.innerHTML = html; el.classList.add('an'); el._t = setTimeout(() => flash(sel, ''), 6000); }
+    else { el.classList.remove('an'); el._w = setTimeout(() => { el.innerHTML = ''; }, 180); }
   }
 }
 
@@ -2174,12 +2172,12 @@ function renderVariante(){
   const e = coll.find(x => x.id === aktiv);
   const passt = e && e.data.kind === formData().kind;
   const anders = passt && geaendert(formData(), e.data);
-  $('#variante').hidden = !passt;
-  if (passt) $('#variante').innerHTML = `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}`;
+  const zustand = passt ? `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}` : 'Entwurf';
+  for (const el of document.querySelectorAll('.js-steckbrief .sb-zustand')) el.innerHTML = zustand;
   for (const b of document.querySelectorAll('.js-sammeln')) {
     if (b.closest('#collLeer')) continue;
     b.disabled = passt && !anders;
-    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : b.closest('.mbar') ? 'Sammeln' : 'In Sammlung';
+    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : 'Sammeln';
   }
   for (const b of document.querySelectorAll('.js-ueberschreiben')) b.hidden = !anders;
 }
