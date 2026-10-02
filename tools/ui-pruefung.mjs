@@ -104,6 +104,119 @@ export const PRUEFUNGEN = {
     await ctx.screenshot(hb, `a1-handy-bauen-${m}`);
     await hb.close();
   },
+  // a2: Mobile-Native-Paket – Kopf-Tags, Icons, Manifest, 16-px-Eingaben mit passender Tastatur, Touch-Feinheiten, Ortsknöpfe, Querformat, Namensfeld der Sammlung.
+  a2: async (ctx) => {
+    const page = await ctx.handy();
+    await ctx.oeffne(page, 'entwerfen', { erst: true });
+    await page.evaluate(() => { const w = document.querySelector('#wahl'); if (w.open) w.querySelector('[data-kind="sideboard"]').click(); });
+
+    // Kopf: theme-color, color-scheme, Icons, Manifest
+    const kopf = await page.evaluate(async () => {
+      const breite = async (src) => { if (!src) return 0; const i = new Image(); i.src = src; try { await i.decode(); } catch (e) {} return i.naturalWidth; };
+      const link = document.querySelector('link[rel="manifest"]');
+      const r = link ? await fetch(link.href) : null;
+      const man = r && r.ok ? await r.json() : null;
+      const icons = [];
+      for (const i of man?.icons || []) icons.push((await fetch(new URL(i.src, link.href))).status);
+      // Patchright bricht jede Anfrage ab, deren URL auf «/favicon.ico» endet (Failed to fetch); die Query umgeht das, der Server liefert dieselbe Datei.
+      const ico = await fetch('favicon.ico?pruefung');
+      const b = ico.ok ? new Uint8Array(await ico.arrayBuffer()) : new Uint8Array(0);
+      return {
+        theme: [...document.querySelectorAll('meta[name="theme-color"]')].map(m => `${m.media}=${m.content}`).sort().join(' '),
+        schema: document.querySelector('meta[name="color-scheme"]')?.content,
+        icon: [...document.querySelectorAll('link[rel="icon"]')].map(l => l.getAttribute('href')).join(' '),
+        ico: `${ico.status} ${[...b.slice(0, 4)].join(',')}`,
+        png: [await breite(document.querySelector('link[rel="apple-touch-icon"]')?.href), await breite('icon-192.png'), await breite('icon-512.png')].join('/'),
+        man, icons,
+        quelle: await (await fetch(location.pathname)).text(),
+      };
+    });
+    ctx.pruefe(kopf.theme === '(prefers-color-scheme: dark)=#131A1C (prefers-color-scheme: light)=#EDF0EE', `theme-color hell/dunkel (${kopf.theme || '–'})`);
+    ctx.pruefe(kopf.schema === 'light dark', 'meta color-scheme «light dark»');
+    ctx.pruefe(kopf.icon === 'favicon.ico icon.svg', `link rel=icon favicon.ico + icon.svg (${kopf.icon || '–'})`);
+    ctx.pruefe(kopf.ico === '200 0,0,1,0', `favicon.ico lädt, ICO-Kopf (${kopf.ico})`);
+    ctx.pruefe(kopf.png === '180/192/512', `PNG-Icons 180/192/512 (${kopf.png})`);
+    ctx.pruefe(kopf.man?.name === 'Martylko' && kopf.man.short_name === 'Martylko' && kopf.man.display === 'standalone' && kopf.man.start_url === './', 'Manifest lädt: Martylko, standalone, start_url ./');
+    ctx.pruefe(kopf.icons.length === 3 && kopf.icons.every(s => s === 200), `Manifest-Icons laden (${kopf.icons.join(',') || '–'})`);
+    const ohne = (kopf.quelle.match(/(?<!-webkit-)backdrop-filter:/g) || []).length;
+    const mit = (kopf.quelle.match(/-webkit-backdrop-filter:/g) || []).length;
+    ctx.pruefe(ohne > 0 && mit === ohne, `-webkit-backdrop-filter vor jedem backdrop-filter (${mit}/${ohne})`);
+
+    // Eingaben: kein Fokus-Zoom, passende Tastatur
+    const ein = await page.evaluate(() => {
+      const px = (sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fontSize);
+      return {
+        w: px('#w'), select: px('#mat'),
+        ohne: [...document.querySelectorAll('input[type="number"]')].filter(i => !i.inputMode).map(i => i.id),
+        kerf: document.querySelector('#kerf').inputMode,
+      };
+    });
+    ctx.pruefe(ein.w >= 16 && ein.select >= 16, `Eingaben ≥ 16 px (#w ${ein.w}, select ${ein.select})`);
+    ctx.pruefe(!ein.ohne.length, `inputmode an allen Zahlfeldern (fehlt: ${ein.ohne.join(',') || '–'})`);
+    ctx.pruefe(ein.kerf === 'decimal', '#kerf inputmode decimal');
+
+    // Touch: kein Tap-Blitz, Trefferhöhe, Übergang, Auswahl, Overscroll
+    const touch = await page.evaluate(() => {
+      const cs = (sel) => getComputedStyle(document.querySelector(sel));
+      return {
+        blitz: ['html', '.mnav button', '.wahlbtn', '.lock', '.gh', '.linkbtn']
+          .filter(s => document.querySelector(s) && cs(s).getPropertyValue('-webkit-tap-highlight-color') !== 'rgba(0, 0, 0, 0)'),
+        hoehen: [...document.querySelectorAll('.mnav button')].map(b => Math.round(b.getBoundingClientRect().height)),
+        uebergang: cs('.mnav button').transitionProperty,
+        auswahl: ['.mnav button', '.wahlbtn', '.gh', 'body'].map(s => cs(s).getPropertyValue('user-select')).join('/'),
+        scroll: `${cs('html').overscrollBehaviorY}/${cs('html').overscrollBehaviorX}/${cs('.controls').overscrollBehaviorY}`,
+      };
+    });
+    ctx.pruefe(!touch.blitz.length, `Tap-Highlight transparent (blitzt: ${touch.blitz.join(', ') || '–'})`);
+    ctx.pruefe(touch.hoehen.length === 4 && touch.hoehen.every(h => h >= 44 && h <= 48), `Ortsknöpfe 44 px (${touch.hoehen.join('/')})`);
+    ctx.pruefe(touch.uebergang === 'color, background-color, transform', `Ortsknopf-Übergang (${touch.uebergang})`);
+    ctx.pruefe(touch.auswahl === 'none/none/none/auto', `user-select auf Bedienelementen, nicht auf body (${touch.auswahl})`);
+    ctx.pruefe(touch.scroll === 'none/auto/contain', `overscroll html y none, x auto, .controls contain (${touch.scroll})`);
+
+    // Ortsknopf-Zustände per DevTools-Protokoll erzwingen
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
+    const { root } = await cdp.send('DOM.getDocument');
+    const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.mnav button' });
+    const zustand = async (pseudo) => {
+      await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: pseudo });
+      await page.waitForTimeout(250); // Übergang 160 ms auslaufen lassen
+      return page.evaluate(() => { const s = getComputedStyle(document.querySelector('.mnav button')); return `${s.transform} ${s.outlineStyle} ${s.outlineOffset}`; });
+    };
+    ctx.pruefe((await zustand(['active'])).startsWith('matrix(0.97, 0, 0, 0.97, 0, 0)'), 'Ortsknopf :active scale(.97)');
+    ctx.pruefe((await zustand(['focus-visible'])).endsWith('solid -2px'), 'Ortsknopf :focus-visible Ring innen');
+    await zustand([]);
+    await cdp.detach();
+
+    // Farbschema und Querformat
+    await page.emulateMedia({ colorScheme: 'dark' });
+    const dunkel = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    await page.emulateMedia({ colorScheme: 'light' });
+    const hell = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    ctx.pruefe(dunkel === 'dark' && hell === 'light', `color-scheme folgt System (${hell}/${dunkel})`);
+    const lage = () => page.evaluate(() => getComputedStyle(document.querySelector('.viewer')).position);
+    await page.setViewportSize({ width: 844, height: 390 });
+    const quer = await lage();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const hoch = await lage();
+    ctx.pruefe(quer === 'static' && hoch === 'sticky', `Bühne quer static, hoch sticky (${quer}/${hoch})`);
+
+    // Namensfeld der Sammlung: 16 px, «Fertig»-Taste, Enter speichert und schliesst
+    await page.evaluate(() => { document.querySelector('.js-sammeln').click(); location.hash = 'sammlung'; });
+    const name = page.locator('#collList input').first();
+    await name.waitFor();
+    const nf = await name.evaluate(i => ({ hint: i.enterKeyHint, px: parseFloat(getComputedStyle(i).fontSize) }));
+    await name.fill('Prüfung Enter');
+    await name.press('Enter');
+    const nach = await page.evaluate(() => ({
+      fokus: !!document.activeElement?.matches('#collList input'),
+      gespeichert: JSON.parse(localStorage.getItem('sideboard-werkbank-v2-sammlung') || '[]').some(e => e.name === 'Prüfung Enter'),
+    }));
+    ctx.pruefe(nf.hint === 'done' && nf.px >= 16, `Namensfeld enterkeyhint done, ${nf.px} px`);
+    ctx.pruefe(!nach.fokus && nach.gespeichert, `Enter im Namensfeld: Tastatur zu, Name gespeichert (${JSON.stringify(nach)})`);
+    await ctx.screenshot(page, 'a2-handy-sammlung');
+    await page.close();
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.

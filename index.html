@@ -5,11 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Martylko</title>
 <meta name="description" content="Konfigurator für DIY-Möbel – Sideboard und Reduit-Regale: Masse eingeben, Materialliste, Plattenplan, Beschläge und Bauablauf erhalten.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#EDF0EE">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#131A1C">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="app.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
+  color-scheme:light;
   --ground:#EDF0EE; --panel:#F8FAF9; --raise:#FFFFFF;
   --ink:#1B2427; --muted:#5A676A; --line:#D3DAD7; --line-strong:#B3BEBA;
   --accent:#2D5D6C; --accent-soft:#DCE8EB; --on-accent:#FFFFFF;
@@ -45,6 +53,8 @@
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
 }
 *{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overscroll-behavior-y:none}
 body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
 .app{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:14px 56px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
@@ -100,7 +110,7 @@ button,input,select{font:inherit;color:inherit}
 .cfgwrap{display:contents}
 .warnbox{grid-area:warns;min-width:0}
 .warnhead{display:none}
-.controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin}
+.controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin;overscroll-behavior:contain}
 .viewer{grid-area:viewer;min-width:0}
 .output{grid-area:output;min-width:0;container:ergebnis / inline-size}
 @media (max-width:920px){
@@ -227,7 +237,7 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 #stage canvas{display:block;width:100%;height:100%}
 .vbar{position:absolute;top:12px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;pointer-events:none}
 .vbar > div{display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto}
-.vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
+.vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
 .vbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 @media (hover:hover) and (pointer:fine){
   .vbtn:hover{border-color:var(--accent)}
@@ -340,7 +350,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .foot{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:90ch}
 /* Bewegung: gleitende Auswahl, Druck-Feedback */
 .seg{position:relative;isolation:isolate}
-.seg label,.card,.btn,.vbtn,.tab,.gh{-webkit-tap-highlight-color:transparent}
 .seg label{position:relative;transition:color 150ms ease}
 .seg.pill::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:0;width:var(--w);transform:translateX(var(--x));background:var(--accent);transition:transform 220ms var(--ease-out),width 220ms var(--ease-out)}
 .seg.pill.still::before{transition:none}
@@ -409,7 +418,8 @@ body[data-ort="sammlung"] .layout{display:none}
   .seg label{padding-block:11px}
   .vbtn{min-height:40px}
   select,.btn{min-height:44px}
-  .num input{padding-block:10px}
+  .num input{padding-block:10px;font-size:16px}
+  select,.coll input,.copybox{font-size:16px}
   .tab{min-height:44px}
   input[type=range]{height:30px}
   .check{min-height:32px}
@@ -434,11 +444,13 @@ body[data-ort="sammlung"] .layout{display:none}
   .group.collapsed{gap:0}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
-  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
   .mprice{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .mnav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-  .mnav button{all:unset;text-align:center;padding:8px 2px;min-height:28px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .mnav button{all:unset;box-sizing:border-box;text-align:center;padding:12px 2px;min-height:44px;line-height:20px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:color 150ms ease,background-color 150ms ease,transform 160ms var(--ease-out)}
   .mnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+  .mnav button:active{transform:scale(.97)}
+  .mnav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .mnav .count{font-family:var(--f-mono);font-weight:400;font-size:11px;margin-left:3px}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
@@ -468,6 +480,8 @@ body[data-ort="sammlung"] .layout{display:none}
   .tabind{display:none}
   .toolbar{align-items:flex-start}
 }
+/* Querformat am Handy: Bühne scrollt mit, sonst bleiben 43 px fürs Formular */
+@media (orientation:landscape) and (max-height:500px){.viewer{position:static}}
 /* Teiletabelle als Karten, sobald die Ergebnisspalte schmal ist (Handy und dritte Spalte am Desktop) */
 @container ergebnis (max-width:600px){
   #cutTable thead{display:none}
@@ -487,6 +501,8 @@ body[data-ort="sammlung"] .layout{display:none}
   #cutTable tfoot tr{display:block}
   .sheetlist{grid-template-columns:minmax(0,1fr)}
 }
+/* Bedienelemente: Langdruck markiert keinen Text und öffnet kein Kontextmenü */
+button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important}
@@ -706,15 +722,15 @@ body[data-ort="sammlung"] .layout{display:none}
         <div class="field" id="row-nicheL">
           <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
           <div class="row2" id="row-nicheL-dims">
-            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
           </div>
         </div>
         <div class="field" id="row-nicheR">
           <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
           <div class="row2" id="row-nicheR-dims">
-            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
           </div>
         </div>
         <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
@@ -866,8 +882,8 @@ body[data-ort="sammlung"] .layout{display:none}
         <div class="field" id="row-sheet">
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
-            <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
-            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
+            <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" inputmode="numeric" aria-label="Plattenlänge"><span>mm</span></div>
+            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" inputmode="numeric" aria-label="Plattenbreite"><span>mm</span></div>
           </div>
         </div>
         <div class="field" id="row-boards" hidden>
@@ -875,8 +891,8 @@ body[data-ort="sammlung"] .layout{display:none}
           <ul class="boardlist" id="boardList"></ul>
         </div>
         <div class="row2">
-          <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4"><span>mm</span></div></div>
-          <div class="field" id="row-price"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55"><span>CHF/m²</span></div></div>
+          <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4" inputmode="decimal"><span>mm</span></div></div>
+          <div class="field" id="row-price"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55" inputmode="numeric"><span>CHF/m²</span></div></div>
         </div>
         <label class="check" id="row-grain" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
         <p class="hint" id="sheetHint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
@@ -2143,7 +2159,7 @@ function renderColl(){
   $('#collLeer').hidden = !!coll.length;
   $('#collList').innerHTML = sortiere(coll, sortNach).map(e => `
     <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
-      <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
+      <input value="${esc(e.name)}" aria-label="Name" maxlength="60" enterkeyhint="done">
       <div class="meta">${esc(e.info.typ)} · ${esc(BW[mitBauweise(e.data).bw].name)}${pruefeRegeln(mitBauweise(e.data)).korrekturen.length ? ' (ältere Variante)' : ''} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
       <div class="do">
         <button type="button" class="btn ghost" data-act="laden">Laden</button>
@@ -2213,6 +2229,10 @@ for (const m of document.querySelectorAll('.js-msg')) m.addEventListener('click'
 $('#collList').addEventListener('change', ev => {
   const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
   if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); if (e.id === aktiv) renderVariante(); }
+});
+// Enter im Namensfeld beendet die Eingabe (Tastatur zu); gespeichert wird über den change-Handler beim Blur.
+$('#collList').addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && !ev.isComposing && ev.target.matches('input')) { ev.preventDefault(); ev.target.blur(); }
 });
 $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
