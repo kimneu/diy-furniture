@@ -575,6 +575,11 @@ function entwurfSetzen(e, data){
   const kind = data.kind || 'sideboard';
   return { ...(e || {}), kind, [kind]: data };
 }
+// Preiszeile auf der Karte «Was baust du?»: eigener Entwurf mit Preis, sonst der Preis der Startwerte.
+function wahlZeile(entwurf, start){
+  const n = Math.round(kostenGesamt(computeData(entwurf || start)) / 5) * 5;
+  return entwurf ? `Dein Entwurf · ca. CHF ${n}` : `ab ca. CHF ${n}`;
+}
 
 /* ---------- Sammlung ---------- */
 // Was das Möbel kostet: Holz im Zuschnitt bzw. ganze Bretter, Latten und Kaufteile (Reduit).
@@ -679,6 +684,11 @@ async function planAusCode(code){
     return d && typeof d === 'object' && !Array.isArray(d) && ['sideboard', 'reduit'].includes(d.kind) ? d : null;
   } catch (e) { return null; }
 }
+// Meldung nach einem Link (?plan=…): Rückgängig nur, wenn es vorher einen eigenen Entwurf gab.
+function linkMeldung({ erstBesuch = false, gueltig = false, angepasst = false } = {}){
+  if (!gueltig) return { text: erstBesuch ? 'Der Link ist ungültig – du siehst den Standard-Entwurf.' : 'Der Link ist ungültig – dein Entwurf bleibt, wie er war.', undo:false };
+  return { text: angepasst ? 'Entwurf von Link geladen und an die Bauweise angepasst.' : 'Entwurf von Link geladen.', undo: !erstBesuch };
+}
 
 /* ---------- Orte ---------- */
 const ORTE = ['entwerfen', 'einkaufen', 'bauen', 'sammlung'];
@@ -687,4 +697,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode, masseText, steckbriefText, preisAufschluesselung };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode, masseText, steckbriefText, preisAufschluesselung, wahlZeile, linkMeldung };

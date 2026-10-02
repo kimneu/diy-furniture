@@ -134,6 +134,33 @@ test('ortAusHash: bekannte Orte, sonst Entwerfen', () => {
   assert.strictEqual(K.ortAusHash('#tab-cut'), 'entwerfen');
 });
 
+test('wahlZeile: eigener Entwurf mit Preis, sonst «ab ca.» aus den Startwerten', () => {
+  const preis = d => Math.round(K.kostenGesamt(K.computeData(d)) / 5) * 5;
+  const rd = K.startwerte(FORM, 'reduit'), sb = K.startwerte(FORM, 'sideboard');
+  assert.strictEqual(K.wahlZeile(null, rd), `ab ca. CHF ${preis(rd)}`);
+  assert.strictEqual(K.wahlZeile(undefined, sb), `ab ca. CHF ${preis(sb)}`);
+  assert.strictEqual(K.wahlZeile(sb, rd), `Dein Entwurf · ca. CHF ${preis(sb)}`);
+  const breit = { ...sb, w:'2000' };
+  assert.ok(preis(breit) > preis(sb));
+  assert.strictEqual(K.wahlZeile(breit, null), `Dein Entwurf · ca. CHF ${preis(breit)}`);
+  assert.ok(preis(rd) > 0);
+});
+
+test('linkMeldung: Erstbesuch ohne Rückgängig, ungültiger Link sagt, was man sieht', () => {
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:false }),
+    { text:'Der Link ist ungültig – du siehst den Standard-Entwurf.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:false }),
+    { text:'Der Link ist ungültig – dein Entwurf bleibt, wie er war.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:true, angepasst:false }),
+    { text:'Entwurf von Link geladen.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:true, angepasst:false }),
+    { text:'Entwurf von Link geladen.', undo:true });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:true, angepasst:true }),
+    { text:'Entwurf von Link geladen und an die Bauweise angepasst.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:true, angepasst:true }),
+    { text:'Entwurf von Link geladen und an die Bauweise angepasst.', undo:true });
+});
+
 test('snapBreite rastet auf die nächste Brettbreite, bei Gleichstand die breitere', () => {
   assert.strictEqual(K.snapBreite([200, 400], 335), 400);
   assert.strictEqual(K.snapBreite([200, 400], 290), 200);
