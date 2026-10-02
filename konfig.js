@@ -623,12 +623,20 @@ function sortiere(coll, nach){
 // Ein Entwurf als Link (?plan=…): Formularwerte als JSON, deflate-raw, base64url, vorne die Version des Formats.
 // Ohne Server: Der Link trägt den ganzen Entwurf. Fehlende Felder füllt der Empfänger mit seinen Startwerten.
 const PLAN_V = '1';
-// Was in den Link gehört. Katalogwerte (Preis, Format), die dem Katalog folgen, bleiben weg:
-// Der Empfänger rechnet dann mit seinem aktuellen Katalog statt mit dem Preis beim Teilen.
+// Was in den Link gehört: die Felder des Möbeltyps (das Formular hält beide Typen zugleich).
+// Katalogwerte (Preis, Format), die dem Katalog folgen, bleiben weg: Der Empfänger rechnet dann mit seinem
+// aktuellen Katalog statt mit dem Preis beim Teilen. Neue Formularfelder hier eintragen, sonst fehlen sie im Link.
+const LINK_FELDER = {
+  gemeinsam:['kind', 'bw', 'mat', 't', 'back', 'joint', 'grain', 'kerf', 'price', 'sheetL', 'sheetB'],
+  sideboard:['w', 'h', 'd', 'room', 'top', 'sections', 'shelves', 'base', 'baseH', 'legShape', 'taper', 'legColor',
+    'front', 'doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
+  reduit:['rw', 'rd', 'rh', 'doorW', 'doorPos', 'doorOff', 'doorH', 'doorIn', 'hinge', 'wall', 'shape', 'corner', 'build', 'sys',
+    'dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop', 'nicheL', 'nicheLW', 'nicheLH', 'nicheR', 'nicheRW', 'nicheRH']
+};
 function linkDaten(d){
-  const { katalog, ...rest } = d;
-  for (const k of KATALOGFELDER) if (folgtKatalog(d, k)) delete rest[k];
-  // TODO: Felder des anderen Möbeltyps weglassen (Link kürzer)
+  const felder = [...LINK_FELDER.gemeinsam, ...LINK_FELDER[d.kind === 'reduit' ? 'reduit' : 'sideboard']];
+  const rest = {};
+  for (const k of felder) if (k in d && !(KATALOGFELDER.includes(k) && folgtKatalog(d, k))) rest[k] = d[k];
   return rest;
 }
 const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -656,4 +664,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, planCode, planAusCode };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode };
