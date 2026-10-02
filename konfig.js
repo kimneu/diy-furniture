@@ -416,16 +416,17 @@ function bwDetails(b, c){
 // Hinweise, die zum Möbel gehören und kein Fehler sind, sind erlaubt: Kippschutz, Bad, Gipskarton (gehört
 // zum Raum) und was die Berechnung schon selbst löst (zusätzliche Winkel/Pfosten eingeplant, Tiefe auf Brettbreite).
 const HARMLOS = /kippt leicht|^Bad:|^Gipskarton|eingeplant|gesetzt \(Brettbreite/;
-// Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder.
+// Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder: genau die Felder, die in der Gruppe stehen.
 const SPERREN = {
   masse:['w', 'h', 'd'],
   bauweise:['bw', 'build', 'sys', 'joint'],
   bauart:['build', 'sys'],
-  form:['shape', 'corner'],
-  tablare:['dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop'],
+  form:['shape', 'corner', 'nShelves'],
+  tablare:['dBack', 'dLeft', 'dRight', 'gapBottom', 'gapTop'],
   nische:['nicheL', 'nicheLW', 'nicheLH', 'nicheR', 'nicheRW', 'nicheRH'],
-  aufbau:['top', 'sections', 'shelves', 'base', 'baseH', 'legShape', 'taper', 'legColor'],
-  front:['front', 'doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
+  aufteilung:['sections', 'front', 'base'],
+  aufbau:['top', 'shelves', 'baseH', 'legShape', 'taper', 'legColor'],
+  front:['doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
   material:['mat', 't', 'back', 'price', 'sheetL', 'sheetB', 'kerf', 'grain', 'katalog'],
   verbindung:['joint']
 };

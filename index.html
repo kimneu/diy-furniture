@@ -171,6 +171,7 @@ button,input,select{font:inherit;color:inherit}
 .group{padding-block:14px;border-bottom:1px solid var(--line);display:grid;gap:12px}
 .group:last-child{border-bottom:0}
 .group h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.mehr{margin:0;padding:22px 0 2px;font-family:var(--f-display);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink)}
 .field{display:grid;gap:5px}
 .field > label,.lbl{font-size:13px;font-weight:500}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -446,6 +447,7 @@ body[data-ort="sammlung"] .layout{display:none}
   .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(140px + env(safe-area-inset-bottom))}
   .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
   #stage{aspect-ratio:auto;height:30svh;min-height:200px;max-height:none}
+  .cfgwrap:has(.controls input[type=number]:focus) #stage{height:120px;min-height:120px}
   .stage-wrap{border-radius:12px}
   .vbar{top:auto;bottom:8px;left:8px;right:8px}
   .vbtn{width:40px;height:40px;padding:0;justify-content:center}
@@ -578,12 +580,6 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
     </div>
 
     <form id="cfg" class="controls" autocomplete="off">
-      <section class="group">
-        <div class="acts">
-          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall<span id="lockCount"></span></button>
-        </div>
-        <p class="hint">Mit dem Schloss bei einer Gruppe bleibt sie beim Würfeln, wie sie ist.</p>
-      </section>
       <div class="bwnotice" id="bwNotice" role="status" hidden></div>
       <section class="group" data-kind="sideboard" data-lock="masse">
         <h2>Masse</h2>
@@ -629,35 +625,11 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
           <div class="num"><input id="rh" name="rh" type="number" min="1800" max="3000" step="10" value="2400" inputmode="numeric"><span>mm</span></div>
           <input id="rh-r" type="range" min="1800" max="3000" step="10" value="2400" data-for="rh" aria-label="Raumhöhe">
         </div>
-        <div class="dim">
-          <label for="doorW">Türbreite</label>
-          <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
-          <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
-        </div>
-        <div class="dim">
-          <label for="doorH">Türhöhe</label>
-          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
-          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
-        </div>
-        <div class="field">
-          <span class="lbl" id="lbl-doorPos">Türlage</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
-        </div>
-        <div class="dim" id="row-doorOff">
-          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
-          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
-          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
-        </div>
-        <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
-        <div class="field" id="row-hinge">
-          <span class="lbl" id="lbl-hinge">Türband</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-hinge"><input type="radio" name="hinge" id="hinge-L" value="L" checked><label for="hinge-L">links</label><input type="radio" name="hinge" id="hinge-R" value="R"><label for="hinge-R">rechts</label></div>
-        </div>
+        <p class="hint">Innenmasse von Wand zu Wand.</p>
         <div class="field">
           <span class="lbl" id="lbl-wall">Wände</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-wall"><input type="radio" name="wall" id="wall-solid" value="solid" checked><label for="wall-solid">Beton / Backstein</label><input type="radio" name="wall" id="wall-drywall" value="drywall"><label for="wall-drywall">Gipskarton</label></div>
         </div>
-        <p class="hint">Innenmasse von Wand zu Wand. Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
       </section>
 
       <section class="group" id="grp-bw" data-lock="bauweise">
@@ -682,84 +654,8 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         </div>
       </section>
 
-      <section class="group" data-kind="reduit" data-lock="form">
-        <h2>Form</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-shape">Regal an</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
-        </div>
-        <div class="field" id="row-corner">
-          <span class="lbl" id="lbl-corner">Ecke</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
-        </div>
-      </section>
-
-      <section class="group" data-kind="reduit" data-lock="tablare">
-        <h2>Tablare</h2>
-        <div class="dim">
-          <label for="dBack">Tiefe hinten</label>
-          <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
-          <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
-          <div class="ticks" id="dBack-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <div class="dim" id="row-dLeft">
-          <label for="dLeft">Tiefe links</label>
-          <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
-          <div class="ticks" id="dLeft-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <div class="dim" id="row-dRight">
-          <label for="dRight">Tiefe rechts</label>
-          <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
-          <div class="ticks" id="dRight-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <p class="hint" id="depthHint" hidden></p>
-        <div class="dim">
-          <label for="nShelves">Anzahl Tablare</label>
-          <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
-          <input id="nShelves-r" type="range" min="1" max="8" step="1" value="5" data-for="nShelves" aria-label="Anzahl Tablare">
-        </div>
-        <div class="dim">
-          <label for="gapBottom">Unterstes Tablar ab Boden</label>
-          <div class="num"><input id="gapBottom" name="gapBottom" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"><span>mm</span></div>
-          <input id="gapBottom-r" type="range" min="0" max="600" step="10" value="150" data-for="gapBottom" aria-label="Unterstes Tablar ab Boden">
-        </div>
-        <div class="dim">
-          <label for="gapTop">Oberstes Tablar bis Decke</label>
-          <div class="num"><input id="gapTop" name="gapTop" type="number" min="100" max="800" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="gapTop-r" type="range" min="100" max="800" step="10" value="300" data-for="gapTop" aria-label="Oberstes Tablar bis Decke">
-        </div>
-      </section>
-
-      <section class="group" data-kind="reduit" id="grp-niche" data-lock="nische">
-        <h2>Nische</h2>
-        <div class="field" id="row-nicheL">
-          <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
-          <div class="row2" id="row-nicheL-dims">
-            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
-          </div>
-        </div>
-        <div class="field" id="row-nicheR">
-          <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
-          <div class="row2" id="row-nicheR-dims">
-            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
-          </div>
-        </div>
-        <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
-      </section>
-
-      <section class="group" data-kind="sideboard" data-lock="aufbau">
-        <h2>Aufbau</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-top">Deckel</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-top">
-            <input type="radio" name="top" id="top-over" value="over" checked><label for="top-over">aufgesetzt</label>
-            <input type="radio" name="top" id="top-between" value="between"><label for="top-between">zwischen Seiten</label>
-          </div>
-        </div>
+      <section class="group" id="grp-aufteilung" data-kind="sideboard" data-lock="aufteilung">
+        <h2>Aufteilung</h2>
         <div class="field">
           <span class="lbl" id="lbl-sec">Fächer nebeneinander</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-sec">
@@ -770,12 +666,11 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
           </div>
         </div>
         <div class="field">
-          <span class="lbl" id="lbl-sh">Einlegeböden pro Fach</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-sh">
-            <input type="radio" name="shelves" id="sh-0" value="0"><label for="sh-0">0</label>
-            <input type="radio" name="shelves" id="sh-1" value="1" checked><label for="sh-1">1</label>
-            <input type="radio" name="shelves" id="sh-2" value="2"><label for="sh-2">2</label>
-            <input type="radio" name="shelves" id="sh-3" value="3"><label for="sh-3">3</label>
+          <span class="lbl" id="lbl-front">Türen</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-front">
+            <input type="radio" name="front" id="fr-open" value="open"><label for="fr-open">offen</label>
+            <input type="radio" name="front" id="fr-hinged" value="hinged" checked><label for="fr-hinged">Drehtüren</label>
+            <input type="radio" name="front" id="fr-sliding" value="sliding"><label for="fr-sliding">Schiebetüren</label>
           </div>
         </div>
         <div class="field">
@@ -784,6 +679,43 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
             <input type="radio" name="base" id="base-none" value="none"><label for="base-none">ohne</label>
             <input type="radio" name="base" id="base-plinth" value="plinth"><label for="base-plinth">Sockel</label>
             <input type="radio" name="base" id="base-legs" value="legs" checked><label for="base-legs">Füsse</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit" data-lock="form">
+        <h2>Form &amp; Tablare</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-shape">Regal an</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
+        </div>
+        <div class="field" id="row-corner">
+          <span class="lbl" id="lbl-corner">Ecke</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
+        </div>
+        <div class="dim">
+          <label for="nShelves">Anzahl Tablare</label>
+          <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
+          <input id="nShelves-r" type="range" min="1" max="8" step="1" value="5" data-for="nShelves" aria-label="Anzahl Tablare">
+        </div>
+      </section>
+
+      <section class="group" data-kind="sideboard" data-lock="aufbau">
+        <h2>Aufbau im Detail</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-top">Deckel</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-top">
+            <input type="radio" name="top" id="top-over" value="over" checked><label for="top-over">aufgesetzt</label>
+            <input type="radio" name="top" id="top-between" value="between"><label for="top-between">zwischen Seiten</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-sh">Einlegeböden pro Fach</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sh">
+            <input type="radio" name="shelves" id="sh-0" value="0"><label for="sh-0">0</label>
+            <input type="radio" name="shelves" id="sh-1" value="1" checked><label for="sh-1">1</label>
+            <input type="radio" name="shelves" id="sh-2" value="2"><label for="sh-2">2</label>
+            <input type="radio" name="shelves" id="sh-3" value="3"><label for="sh-3">3</label>
           </div>
         </div>
         <div class="dim" id="row-baseH">
@@ -812,16 +744,8 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         </div>
       </section>
 
-      <section class="group" data-kind="sideboard" data-lock="front">
-        <h2>Front</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-front">Türen</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-front">
-            <input type="radio" name="front" id="fr-open" value="open"><label for="fr-open">offen</label>
-            <input type="radio" name="front" id="fr-hinged" value="hinged" checked><label for="fr-hinged">Drehtüren</label>
-            <input type="radio" name="front" id="fr-sliding" value="sliding"><label for="fr-sliding">Schiebetüren</label>
-          </div>
-        </div>
+      <section class="group" id="grp-front" data-kind="sideboard" data-lock="front">
+        <h2>Front im Detail</h2>
         <div class="field" id="row-doorsPer">
           <span class="lbl" id="lbl-dp">Türen pro Fach</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-dp">
@@ -863,8 +787,89 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         </div>
       </section>
 
+      <section class="group" id="grp-tuer" data-kind="reduit">
+        <h2>Tür</h2>
+        <div class="dim">
+          <label for="doorW">Türbreite</label>
+          <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
+          <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
+        </div>
+        <div class="dim">
+          <label for="doorH">Türhöhe</label>
+          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
+          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-doorPos">Türlage</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
+        </div>
+        <div class="dim" id="row-doorOff">
+          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
+          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
+          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
+        </div>
+        <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
+        <div class="field" id="row-hinge">
+          <span class="lbl" id="lbl-hinge">Türband</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-hinge"><input type="radio" name="hinge" id="hinge-L" value="L" checked><label for="hinge-L">links</label><input type="radio" name="hinge" id="hinge-R" value="R"><label for="hinge-R">rechts</label></div>
+        </div>
+        <p class="hint">Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
+      </section>
+
+      <section class="group" id="grp-tiefen" data-kind="reduit" data-lock="tablare">
+        <h2>Tiefen &amp; Abstände</h2>
+        <div class="dim">
+          <label for="dBack">Tiefe hinten</label>
+          <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
+          <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
+          <div class="ticks" id="dBack-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <div class="dim" id="row-dLeft">
+          <label for="dLeft">Tiefe links</label>
+          <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
+          <div class="ticks" id="dLeft-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <div class="dim" id="row-dRight">
+          <label for="dRight">Tiefe rechts</label>
+          <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
+          <div class="ticks" id="dRight-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <p class="hint" id="depthHint" hidden></p>
+        <div class="dim">
+          <label for="gapBottom">Unterstes Tablar ab Boden</label>
+          <div class="num"><input id="gapBottom" name="gapBottom" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"><span>mm</span></div>
+          <input id="gapBottom-r" type="range" min="0" max="600" step="10" value="150" data-for="gapBottom" aria-label="Unterstes Tablar ab Boden">
+        </div>
+        <div class="dim">
+          <label for="gapTop">Oberstes Tablar bis Decke</label>
+          <div class="num"><input id="gapTop" name="gapTop" type="number" min="100" max="800" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="gapTop-r" type="range" min="100" max="800" step="10" value="300" data-for="gapTop" aria-label="Oberstes Tablar bis Decke">
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit" id="grp-niche" data-lock="nische">
+        <h2>Nische</h2>
+        <div class="field" id="row-nicheL">
+          <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
+          <div class="row2" id="row-nicheL-dims">
+            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <div class="field" id="row-nicheR">
+          <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
+          <div class="row2" id="row-nicheR-dims">
+            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
+      </section>
+
       <section class="group" data-lock="material">
-        <h2>Optik</h2>
+        <h2>Material</h2>
         <div class="field">
           <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
           <select id="mat" name="mat"></select>
@@ -892,6 +897,12 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         </div>
       </section>
 
+      <section class="group" id="grp-niveau">
+        <h2>Niveau</h2>
+        <div class="levelbox" id="levelBox" aria-live="polite"></div>
+      </section>
+
+      <p class="mehr" id="mehr">Mehr</p>
       <section class="group">
         <h2>Platten &amp; Preise</h2>
         <div class="field" id="row-sheet">
@@ -912,9 +923,13 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
         <label class="check" id="row-grain" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
         <p class="hint" id="sheetHint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
       </section>
-      <section class="group" id="grp-niveau">
-        <h2>Niveau</h2>
-        <div class="levelbox" id="levelBox" aria-live="polite"></div>
+
+      <section class="group" id="grp-zufall">
+        <h2>Zufall</h2>
+        <div class="acts">
+          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall<span id="lockCount"></span></button>
+        </div>
+        <p class="hint">Festgehaltene Gruppen bleiben beim Würfeln, wie sie sind.</p>
       </section>
     </form>
     </div>
@@ -1151,6 +1166,7 @@ function syncVisibility(){
   syncDepths(false);
   // Verbindung, Bauart und Niveau folgen aus der Bauweise und stehen auf ihrer Karte.
   $('#grp-joint').hidden = $('#grp-bauart').hidden = $('#grp-niveau').hidden = true;
+  $('#grp-front').hidden = reduit || front === 'open';   // offene Fächer: an der Front gibt es nichts einzustellen
   $('#row-room').hidden = reduit;
   $('#row-back').hidden = reduit && !free;
   fillBauweisen(kind);
@@ -1277,7 +1293,7 @@ function fillBauweisen(kind){
   box.innerHTML = BAUWEISEN[kind].map(b => `<label class="card bw"><input type="radio" name="bw" value="${b.id}">${lead(b)}<b>${esc(b.name)}</b><span class="lvl" data-l="${b.niveau[0]}" aria-label="Niveau ${b.niveau[0]} von 3"><i></i><i></i><i></i></span><span class="desc">${esc(b.desc)}</span><span class="preis"></span><dl class="bwdet"></dl><span class="grund">${BAN_SVG}<span></span></span></label>`).join('');
   $('#bwHint').textContent = kind === 'reduit'
     ? 'Die Bauweise legt Tragwerk und Material fest. Gesperrt ist, was in diesem Raum nicht hält – der Grund steht auf der Karte.'
-    : 'Die Bauweise legt Material, Stärke, Verbindung und Oberfläche fest. Masse, Aufteilung und Optik bleiben frei.';
+    : 'Die Bauweise legt Material, Stärke, Verbindung und Oberfläche fest. Masse, Aufteilung und Front bleiben frei.';
 }
 function zeigeBauweisen(P){
   const c = cfgFromData(P.d), preise = kartenPreise(P.d), g = P.gesperrt.bw || {};
@@ -1956,7 +1972,7 @@ form.addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
-const OPEN = ['Masse', 'Raum', 'Bauweise', 'Optik'];   // «Bauweise» ersetzt Bauart und Niveau (Review, Abschnitt 4)
+const OPEN = ['Masse', 'Raum', 'Bauweise', 'Aufteilung', 'Form & Tablare'];   // A5: offen, was das Möbel sichtbar verändert; Desktop bleibt ganz offen (Aufklapper dort erst B6)
 const chevron = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const heads = [...form.querySelectorAll('.group > h2')].map(h => {
   const g = h.parentElement, b = document.createElement('button');

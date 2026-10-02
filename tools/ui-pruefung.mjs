@@ -434,6 +434,112 @@ export const PRUEFUNGEN = {
     ctx.pruefe(await offen(e) === 0 && !!geladen && tag.startsWith('Raum') && fe.length === 0,
       `Erstbesuch mit Reduit-Link (Dialog ${await offen(e)}, Möbel ${await e.locator('#kindName').textContent()}, Masstafel «${tag}»${fe.length ? ', Fehler: ' + fe.join(' | ') : ''})`);
   },
+  // a5: Formular Stufe 1 – Masse zuerst, Aufteilung als eigene Gruppe, Zufall ans Ende unter «Mehr», Handy offen nur das Sichtbare, Bühne schrumpft bei Fokus auf ein Zahlenfeld, iPhone SE und alter Speicher.
+  a5: async (ctx) => {
+    const SB = ['Masse', 'Bauweise', 'Aufteilung', 'Aufbau im Detail', 'Front im Detail', 'Material', 'Platten & Preise', 'Zufall'];
+    const RD = ['Raum', 'Bauweise', 'Form & Tablare', 'Tür', 'Tiefen & Abstände', 'Nische', 'Material', 'Platten & Preise', 'Zufall'];
+    const OFFEN = ['Masse', 'Raum', 'Bauweise', 'Aufteilung', 'Form & Tablare'];
+    const gleich = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const gruppen = p => p.$$eval('#cfg > .group', gs => gs.filter(g => g.checkVisibility())
+      .map(g => ({ titel:g.querySelector(':scope > h2')?.textContent.trim() ?? '(ohne Titel)', zu:g.classList.contains('collapsed') })));
+    const enthaelt = (p, sel, namen) => p.$eval(sel, (s, namen) => namen.every(n => s.querySelector(`[name="${n}"]`)), namen).catch(() => false);
+    const istLetzte = (p, sel) => p.$eval(sel, e => e === e.parentElement.lastElementChild).catch(() => false);
+    const hoehe = p => p.$eval('#stage', e => Math.round(e.getBoundingClientRect().height));
+    const mitEntwurf = async (kind, extra) => {
+      const p = await ctx.handy();
+      await p.addInitScript(([kind, extra]) => localStorage.setItem('sideboard-werkbank-v2-entwuerfe',
+        JSON.stringify({ kind, [kind]:{ kind, ...extra } })), [kind, extra]);
+      await ctx.oeffne(p, 'entwerfen');
+      return p;
+    };
+
+    // Handy, Sideboard, Erstbesuch
+    let p = await ctx.handy();
+    await ctx.oeffne(p, 'entwerfen', { erst:true });
+    const w = await p.locator('#w').boundingBox();
+    ctx.pruefe(w && w.y < 700, `Breite beim Erstbesuch ohne Scrollen (y ${w && Math.round(w.y)} < 700)`);
+    let g = await gruppen(p);
+    ctx.pruefe(gleich(g.map(x => x.titel), SB), `Gruppen Sideboard: ${g.map(x => x.titel).join(' · ')}`);
+    ctx.pruefe(g.every(x => x.zu === !OFFEN.includes(x.titel)), 'Handy offen nur Masse, Bauweise, Aufteilung');
+    ctx.pruefe(!(await p.$$eval('#cfg h2', hs => hs.some(h => h.textContent.trim() === 'Optik'))), 'keine Gruppe «Optik» mehr');
+    ctx.pruefe(await istLetzte(p, '#row-room'), 'Einsatzort ist letzte Zeile von Masse');
+    ctx.pruefe(await enthaelt(p, '#grp-aufteilung[data-lock="aufteilung"]', ['sections', 'front', 'base']), 'Aufteilung mit Fächern, Türen, Untergestell');
+    ctx.pruefe(await istLetzte(p, '#grp-zufall') && await p.$eval('#grp-zufall', s => !!s.querySelector('#bZufall')
+      && s.querySelector('.hint').textContent.trim() === 'Festgehaltene Gruppen bleiben beim Würfeln, wie sie sind.').catch(() => false),
+      'Zufall als letzte Gruppe mit Knopf und kurzem Hinweis');
+    ctx.pruefe(await p.$eval('#mehr', m => m.nextElementSibling.querySelector(':scope > h2').textContent.trim() === 'Platten & Preise').catch(() => false),
+      '«Mehr» steht direkt vor Platten & Preise');
+    await ctx.screenshot(p, 'a5-handy-sideboard');
+
+    // Bühne schrumpft nur bei Fokus auf ein Zahlenfeld (Entwurf vorgeladen: kein Dialog, fester Zustand)
+    await p.close();
+    p = await mitEntwurf('sideboard', { bw:'S1' });
+    const vorher = await hoehe(p);
+    await p.focus('#w');
+    const fokus = await hoehe(p);
+    ctx.pruefe(fokus <= 130, `Bühne bei Fokus auf Breite ${fokus} px (≤ 130, vorher ${vorher})`);
+    await p.focus('#w-r');
+    ctx.pruefe(await hoehe(p) === vorher, 'Bühne bleibt beim Regler gross');
+    await p.$eval('#w-r', e => e.blur());
+    ctx.pruefe(await hoehe(p) === vorher, 'Bühne nach dem Verlassen wieder gross');
+
+    // «Front im Detail» weg, solange die Fächer offen sind
+    await p.click('label[for="fr-open"]', { timeout:2000 }).catch(() => {});
+    ctx.pruefe(await p.$eval('#grp-front', s => s.hidden).catch(() => false), '«Front im Detail» weg bei offenen Fächern');
+    await p.click('label[for="fr-hinged"]', { timeout:2000 }).catch(() => {});
+    ctx.pruefe(await p.$eval('#grp-front', s => !s.hidden).catch(() => false), '«Front im Detail» zurück bei Drehtüren');
+
+    // Handy, Reduit
+    await p.close();
+    p = await mitEntwurf('reduit', { bw:'R2', sys:'posts', mat:'fichtesp', t:'18' });
+    const rw = await p.locator('#rw').boundingBox();
+    ctx.pruefe(rw && rw.y < 700, `Raumbreite ohne Scrollen (y ${rw && Math.round(rw.y)} < 700)`);
+    g = await gruppen(p);
+    ctx.pruefe(gleich(g.map(x => x.titel), RD), `Gruppen Reduit: ${g.map(x => x.titel).join(' · ')}`);
+    ctx.pruefe(g.every(x => x.zu === !OFFEN.includes(x.titel)), 'Handy offen nur Raum, Bauweise, Form & Tablare');
+    ctx.pruefe(await p.$eval('#wall-solid', i => { const f = i.closest('.field'); return f === f.parentElement.lastElementChild; }).catch(() => false),
+      'Wände sind letzte Zeile von Raum');
+    ctx.pruefe(await enthaelt(p, '#grp-tuer', ['doorW', 'doorH', 'doorPos', 'doorOff', 'doorIn', 'hinge']), 'Tür mit Breite, Höhe, Lage, Abstand, innen, Band');
+    ctx.pruefe(await enthaelt(p, '#cfg > .group[data-lock="form"]', ['shape', 'corner', 'nShelves']), 'Form & Tablare mit Form, Ecke, Anzahl');
+    ctx.pruefe(await enthaelt(p, '#grp-tiefen[data-lock="tablare"]', ['dBack', 'dLeft', 'dRight', 'gapBottom', 'gapTop'])
+      && await p.$eval('#grp-tiefen', s => !!s.querySelector('#depthHint')).catch(() => false), 'Tiefen & Abstände mit allen Tiefen und Tiefenhinweis');
+    await ctx.screenshot(p, 'a5-handy-reduit');
+
+    // Desktop: gleiche Reihenfolge, alles offen
+    await p.close();
+    p = await ctx.desktop();
+    await ctx.oeffne(p, 'entwerfen', { erst:true });
+    g = await gruppen(p);
+    ctx.pruefe(gleich(g.map(x => x.titel), SB) && g.every(x => !x.zu), 'Desktop gleiche Reihenfolge, alle Gruppen offen');
+
+    // iPhone SE (375×667), Erstbesuch: die Breite liegt ganz über der Leiste (etwa 134 px, 150 px Reserve)
+    await p.close();
+    p = await ctx.handy();
+    await p.setViewportSize({ width:375, height:667 });
+    await ctx.oeffne(p, 'entwerfen', { erst:true });
+    const se = await p.locator('#w').boundingBox();
+    ctx.pruefe(se && se.y + se.height < 667 - 150, `SE 375×667 – Breite über dem Falz (unten ${se && Math.round(se.y + se.height)} < ${667 - 150})`);
+    await ctx.screenshot(p, 'a5-handy-se');
+
+    // Alter Speicher: Schlösser «aufbau» und «front» von vor A5, Entwurf im Format { kind, sideboard:{…} }
+    await p.close();
+    p = await ctx.handy();
+    await p.addInitScript(() => {
+      localStorage.setItem('sideboard-werkbank-v2-schloss', JSON.stringify(['aufbau', 'front']));
+      localStorage.setItem('sideboard-werkbank-v2-entwuerfe', JSON.stringify({ kind:'sideboard',
+        sideboard:{ kind:'sideboard', bw:'S1', sections:'3', front:'hinged', base:'legs', top:'between', shelves:'2', handle:'knob', color:'salbei' } }));
+    });
+    await ctx.oeffne(p, 'entwerfen');
+    const fl = await ctx.fehler(p);
+    g = await gruppen(p);
+    // Zufall ist am Handy zugeklappt: erst aufklappen, dann würfeln. Würfeln samt 3D-Neuaufbau braucht in SwiftShader mehr als 2 s.
+    await p.click('#grp-zufall .gh', { timeout:5000 }).catch(() => {});
+    const geklickt = await p.click('#bZufall', { timeout:10000 }).then(() => true, () => false);
+    const gewuerfelt = geklickt && await p.waitForFunction(() => [...document.querySelectorAll('.js-msg')].some(m => m.textContent.includes('gewürfelt')), null, { timeout:5000 }).then(() => true, () => false);
+    const fz = await ctx.fehler(p);
+    ctx.pruefe(!fl.length && !fz.length && gleich(g.map(x => x.titel), SB) && gewuerfelt,
+      `alter Speicher lädt ohne Fehler (Gruppen ${g.map(x => x.titel).join(' · ')}; Zufall ${gewuerfelt ? 'würfelt' : geklickt ? 'ohne Meldung' : 'nicht klickbar'}${[...fl, ...fz].length ? '; Fehler: ' + [...fl, ...fz].join(' | ') : ''})`);
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.

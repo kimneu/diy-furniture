@@ -236,3 +236,39 @@ test('Plattenformat wird nicht mehr auf 2100 mm gekappt (Birke 1500 × 3000)', (
   assert.deepStrictEqual(R.groups[0].sheet, [1500, 3000]);
   assert.ok(!R.warn.some(w => w.includes('2100')), JSON.stringify(R.warn));
 });
+
+test('Festhalten: Aufteilung ist eine eigene Gruppe, Zufall hält ihre Felder', () => {
+  assert.deepStrictEqual(K.SPERREN.aufteilung, ['sections', 'front', 'base']);
+  assert.deepStrictEqual(K.SPERREN.aufbau, ['top', 'shelves', 'baseH', 'legShape', 'taper', 'legColor']);
+  assert.deepStrictEqual(K.SPERREN.front, ['doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT']);
+  assert.deepStrictEqual(K.SPERREN.form, ['shape', 'corner', 'nShelves']);
+  assert.deepStrictEqual(K.SPERREN.tablare, ['dBack', 'dLeft', 'dRight', 'gapBottom', 'gapTop']);
+  const rnd = seeded(21);
+  const sb = { ...FORM, sections:'3', front:'open', base:'plinth', baseH:'80' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(sb, rnd, 60, ['aufteilung']);
+    for (const k of ['sections', 'front', 'base']) assert.strictEqual(d[k], sb[k], k);
+  }
+  const fr = { ...FORM, handle:'knob', color:'salbei', doorsPer:'2' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(fr, rnd, 60, ['front']);
+    for (const k of ['doorsPer', 'handle', 'color']) assert.strictEqual(d[k], fr[k], k);
+  }
+  const rd = { ...FORM, kind:'reduit', shape:'L', corner:'R', nShelves:'6' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(rd, rnd, 60, ['form']);
+    for (const k of ['shape', 'corner', 'nShelves']) assert.strictEqual(d[k], rd[k], k);
+  }
+});
+
+test('Festhalten: jede Gruppe im Formular hält genau ihre Felder', () => {
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  const gruppen = {};
+  for (const m of html.matchAll(/<section class="group"[^>]*data-lock="(\w+)"[^>]*>([\s\S]*?)<\/section>/g)) gruppen[m[1]] = m[2];
+  assert.deepStrictEqual(Object.keys(gruppen).sort(), Object.keys(K.SPERREN).sort());
+  for (const g of ['form', 'tablare', 'nische', 'aufteilung', 'aufbau', 'front']) {
+    const namen = [...gruppen[g].matchAll(/ name="(\w+)"/g)].map(m => m[1]);
+    for (const n of namen) assert.ok(K.SPERREN[g].includes(n), `${n} steht in «${g}», wird aber nicht festgehalten`);
+    for (const n of K.SPERREN[g]) assert.ok(namen.includes(n) || n === 'frontT', `${n} wird mit «${g}» festgehalten, steht aber nicht darin`);   // frontT-Knöpfe baut JS
+  }
+});
