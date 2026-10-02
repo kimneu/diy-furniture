@@ -35,3 +35,11 @@ Tests (Node 18+, no dependencies):
 ```sh
 node --test
 ```
+
+UI checks in headless Chrome (needs Google Chrome and internet for the CDN scripts):
+
+```sh
+(cd tools && npm install)          # once
+node tools/ui-pruefung.mjs         # all checks
+node tools/ui-pruefung.mjs t0 a3   # selected checks
+```

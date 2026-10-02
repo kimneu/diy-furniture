@@ -97,6 +97,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
   In einer VM mit `--bind 0.0.0.0` starten, sonst ist der Server vom Host aus nicht erreichbar.
   Nach Änderungen an den `.js`-Dateien im Browser **Ctrl+Shift+R** (sonst bleibt die alte Version im Cache).
 - Tests: `node --test` (Node 18+, keine Abhängigkeiten).
+- UI-Prüfung: einmalig `(cd tools && npm install)`, dann `node tools/ui-pruefung.mjs [t0 a1 …]` (Chrome headless über Patchright, eigener Server auf freiem Port, Bilder in `tools/ui-shots/`, nicht im Repo). Jeder Task der Stufe A ergänzt eine Prüfung in `PRUEFUNGEN`. Patchright schaltet die Konsole ab: Fehler liefert `ctx.fehler`, Seitenvariablen nur `ctx.haupt` (`page.evaluate` läuft isoliert). Jede neue Seite ist ein Erstbesuch (leerer Speicher, «Was baust du?» offen).
 
 ## Aufbau
 
@@ -116,6 +117,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 | `test/regeln.test.js`, `test/bauweisen.test.js` | Regelwerk (Sperren, Grenzen, Fixpunkt) und Bauweisen |
 | `test/kombinationen.test.js` | Schritt 8: jede Bauweise über Form, Wand, Tür, Raum; Zufall mit festem Seed; Geometrie (Überschneidung, Auflagen), Zahlen, Fixpunkt |
 | `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json`, `tools/preise-datei.cjs` | Jumbo-Preise (Platten, Bretter, Kaufteile) lesen, mit `preise.js` vergleichen und nachführen (siehe «Preise nachführen») |
+| `tools/ui-pruefung.mjs` | UI-Prüfung im Browser je Task (`PRUEFUNGEN.t0`, `a1` …), Aufruf siehe «Repo & Setup» |
 
 Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet (bei einem neuen Namen auch Gruppen, Schlüssel und `matShort`), und die Fixture neu schreiben (siehe Commit `b424766`).
 
