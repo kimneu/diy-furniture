@@ -217,7 +217,7 @@ export const PRUEFUNGEN = {
     await ctx.screenshot(page, 'a2-handy-sammlung');
     await page.close();
   },
-  // a3: Kopf eine Zeile, Steckbrief unter der Bühne (Handy) bzw. im Kopf (Desktop), Masse beschriftet, Leiste mit Preis-Blitz, Meldungs-Blende und Aufschlüsselung, Reduit ohne Querscrollen.
+  // a3: Kopf eine Zeile, Steckbrief unter der Bühne (Handy) bzw. im Kopf (Desktop), Masse beschriftet, Leiste mit Preis-Blitz, Meldungs-Blende und Aufschlüsselung, Reduit ohne Querscrollen, Zustand «geändert» ohne Umbruch.
   a3: async (ctx) => {
     const waehle = async (page, kind) => {
       if (!(await page.evaluate(() => document.querySelector('#wahl').open))) await page.click('#bKind');
@@ -228,6 +228,14 @@ export const PRUEFUNGEN = {
     const text = (page, sel) => page.evaluate(s => document.querySelector(s)?.textContent.trim() ?? '', sel);
     const sichtbar = (page, sel) => page.locator(sel).first().isVisible();
     const binnen = (page, fn, ms) => page.waitForFunction(fn, null, { timeout:ms }).then(() => true, () => false);
+    // Zustand «geändert»: Entwurf über den Knopf sel sammeln, dann die Breite ändern; true, sobald der Knopf «Neue Variante» heisst.
+    const aendern = async (page, sel) => {
+      await page.evaluate(s => document.querySelector(s).click(), sel);
+      await page.waitForFunction(s => document.querySelector(s).textContent === 'Gesammelt ✓', sel, { timeout:3000 }).catch(() => {});
+      await page.evaluate(() => { const w = document.querySelector('#w'); w.value = String(Number(w.value) + 400); w.dispatchEvent(new Event('input', { bubbles:true })); });
+      return page.waitForFunction(s => document.querySelector(s).textContent === 'Neue Variante', sel, { timeout:3000 }).then(() => true, () => false);
+    };
+    const kopfMass = (page) => page.evaluate(() => ({ h: document.querySelector('header.top').getBoundingClientRect().height, brief: document.querySelector('.top .kopfbrief').getBoundingClientRect().width }));
 
     // Handy, Sideboard
     const h = await ctx.handy();
@@ -284,6 +292,20 @@ export const PRUEFUNGEN = {
     await h.evaluate(() => document.querySelector('#aufschl')?.hidePopover?.());
     await ctx.screenshot(h, 'a3-handy-reduit');
 
+    // Handy, Sideboard im Zustand «geändert»: Preis bleibt ganz sichtbar, Knöpfe überdecken ihn nicht
+    const hg = await ctx.handy();
+    await ctx.oeffne(hg, 'entwerfen', { erst:true });
+    await waehle(hg, 'sideboard');
+    ctx.pruefe(await aendern(hg, '.mbar .js-sammeln') && await hg.locator('.mbar .js-ueberschreiben, .top .js-ueberschreiben').count() === 0,
+      'Handy geändert: Knopf «Neue Variante», kein Überschreiben in Kopf und Leiste');
+    const lage = await hg.evaluate(() => {
+      const p = document.querySelector('#mPrice').getBoundingClientRect(), b = document.querySelector('.mbar .mbtns').getBoundingClientRect();
+      return { schnitt: p.left < b.right && b.left < p.right && p.top < b.bottom && b.top < p.bottom, links: p.left, rechts: p.right };
+    });
+    ctx.pruefe(!lage.schnitt, `Handy geändert: #mPrice und Knöpfe überschneiden sich nicht (Preis ${Math.round(lage.links)}–${Math.round(lage.rechts)})`);
+    ctx.pruefe(lage.links >= 0 && lage.rechts <= 390, 'Handy geändert: #mPrice ganz im Bild');
+    await ctx.screenshot(hg, 'a3-handy-geaendert');
+
     // Desktop
     const d = await ctx.desktop();
     await ctx.oeffne(d, 'entwerfen', { erst:true });
@@ -300,6 +322,17 @@ export const PRUEFUNGEN = {
     ctx.pruefe(await hoehe(d, 'header.top') <= 64 && await d.evaluate(() => document.scrollingElement.scrollWidth) <= 1000 && await sichtbar(d, '.top .kopfbrief'),
       'Zwischenbreite 1000 px: Kopf eine Zeile mit Steckbrief, kein Überlauf');
     await ctx.screenshot(d, 'a3-zwischenbreite');
+    // Zustand «geändert» am Desktop: Kopf bleibt eine Zeile, der Steckbrief behält Platz
+    await d.setViewportSize({ width:1440, height:900 });
+    await d.waitForFunction(() => innerWidth === 1440);
+    ctx.pruefe(await aendern(d, '.top .js-sammeln'), 'Desktop geändert: Knopf «Neue Variante»');
+    for (const breite of [1440, 921]) {
+      await d.setViewportSize({ width:breite, height:800 });
+      await d.waitForFunction(b => innerWidth === b, breite);
+      const k = await kopfMass(d);
+      ctx.pruefe(k.h <= 64 && k.brief >= 120, `Desktop geändert ${breite} px: Kopf höchstens 64 px, Steckbrief mindestens 120 px breit (${k.h} px, ${Math.round(k.brief)} px)`);
+      await ctx.screenshot(d, `a3-desktop-geaendert-${breite}`);
+    }
   },
 };
 

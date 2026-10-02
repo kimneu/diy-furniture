@@ -82,6 +82,9 @@ button,input,select{font:inherit;color:inherit}
 .wahlbtn small{color:var(--muted);font-size:12.5px}
 .wahlbtn .zuletzt{font-family:var(--f-mono);color:var(--ink)}
 .hacts{grid-area:acts;display:flex;align-items:center;gap:12px}
+/* Knöpfe im Kopf bleiben einzeilig, sonst wächst der Kopf bei längerem Zustandstext («Neue Variante») */
+.hacts .acts{flex-wrap:nowrap}
+.hacts .acts .btn{flex:none;white-space:nowrap}
 .top{position:relative}
 .hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
 .js-msg{transition:opacity 180ms ease,filter 180ms ease}
@@ -442,7 +445,7 @@ body[data-ort="sammlung"] .layout{display:none}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
   .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
-  .mprice{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"preis btns" "zeile zeile";align-items:center;gap:2px 12px}
+  .mprice{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"preis btns" "zeile zeile";align-items:center;gap:2px 12px}
   .mprice > .js-preis{grid-area:preis;justify-self:start}
   .mzeile{grid-area:zeile;display:grid;min-width:0}
   .mzeile > *{grid-area:1 / 1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -461,7 +464,8 @@ body[data-ort="sammlung"] .layout{display:none}
   .mbar b{white-space:nowrap}
   .mbar .nm{display:none}
   .mbar .copied:not(:empty)::before{content:"✓ "}
-  .mbtns{grid-area:btns;display:flex;gap:8px}
+  .mbtns{grid-area:btns;display:flex;gap:8px;justify-self:end;min-width:0}
+  .mbtns .btn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hacts,.kopfbrief{display:none}
   .steckbrief{display:block}
   .top{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind";gap:12px;padding-block:4px 8px}
@@ -531,7 +535,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
     </div>
     <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
     <p class="kopfbrief js-steckbrief"><span class="sb-was"></span><span class="sb-zustand"></span></p>
-    <div class="hacts"><p class="kpreis"><b class="js-preis" id="kPrice"></b><button type="button" class="metabtn" popovertarget="aufschl" aria-label="Preis aufschlüsseln">▸</button></p><div class="acts"><button type="button" class="btn js-sammeln">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><span class="copied js-msg" aria-live="polite"></span></div>
+    <div class="hacts"><p class="kpreis"><b class="js-preis" id="kPrice"></b><button type="button" class="metabtn" popovertarget="aufschl" aria-label="Preis aufschlüsseln">▸</button></p><div class="acts"><button type="button" class="btn js-sammeln">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button></div><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -969,7 +973,7 @@ button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav bu
   <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
 </dialog>
 <div class="mbar" id="mbar">
-  <div class="mprice"><b class="js-preis" id="mPrice"></b><div class="mbtns"><button type="button" class="btn js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><div class="mzeile"><button type="button" class="metabtn" id="mMeta" popovertarget="aufschl" title="Preis aufschlüsseln"></button><span class="copied js-msg" aria-live="polite"></span></div></div>
+  <div class="mprice"><b class="js-preis" id="mPrice"></b><div class="mbtns"><button type="button" class="btn js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button></div><div class="mzeile"><button type="button" class="metabtn" id="mMeta" popovertarget="aufschl" title="Preis aufschlüsseln"></button><span class="copied js-msg" aria-live="polite"></span></div></div>
   <nav class="mnav" aria-label="Orte">
     <button type="button" data-ort="entwerfen">Entwerfen</button>
     <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
@@ -2177,17 +2181,9 @@ function renderVariante(){
   for (const b of document.querySelectorAll('.js-sammeln')) {
     if (b.closest('#collLeer')) continue;
     b.disabled = passt && !anders;
-    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : 'Sammeln';
+    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Neue Variante' : 'Sammeln';
   }
-  for (const b of document.querySelectorAll('.js-ueberschreiben')) b.hidden = !anders;
 }
-for (const b of document.querySelectorAll('.js-ueberschreiben')) b.addEventListener('click', () => {
-  const i = coll.findIndex(x => x.id === aktiv);
-  if (i < 0) return;
-  coll[i] = { ...sammlungEintrag(formData(), R), id:coll[i].id, name:coll[i].name };
-  storeColl(); renderColl();
-  flash('.js-msg', `«${esc(coll[i].name)}» überschrieben.`);
-});
 // Lädt eine Variante. Passt sie nicht (mehr) zu ihrer Bauweise, fragt ein Hinweis: anpassen oder unverändert ansehen.
 const mitBauweise = d => d.bw ? d : { ...d, bw:bauweiseVon(d) };
 function ladeVariante(e){
