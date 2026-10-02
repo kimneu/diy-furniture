@@ -44,6 +44,66 @@ export const PRUEFUNGEN = {
     ctx.pruefe(fd.length === 0, 'Desktop ohne Fehler' + (fd.length ? ': ' + fd.join(' | ') : ''));
     await ctx.screenshot(desk, 't0-desktop-dunkel');
   },
+  // a1: Standards Mode mit lang de-CH und Gerüst im Quelltext; Layout wie vorher im Quirks Mode (kein Seitenscrollen bei 1440×900 und 1200×640, Feldbreite, Tabelle, Bühne, Handy).
+  a1: async (ctx) => {
+    const zu = (p) => p.evaluate(() => document.querySelectorAll('dialog[open]').forEach(d => d.close()));
+    const modus = async (p) => (await p.evaluate(() => document.compatMode)) === 'CSS1Compat' ? 'standards' : 'quirks';
+    const tdZeile = (p) => p.evaluate(() => getComputedStyle(document.querySelector('#cutTable td')).lineHeight);
+
+    // Desktop, Entwerfen
+    const d = await ctx.desktop();
+    await ctx.oeffne(d, 'entwerfen'); await zu(d);
+    const m = await modus(d);
+    ctx.pruefe(m === 'standards', `Standards Mode (compatMode ${await d.evaluate(() => document.compatMode)})`);
+    ctx.pruefe(await d.evaluate(() => document.documentElement.lang) === 'de-CH', '<html lang="de-CH">');
+    const quelle = await d.evaluate(() => fetch('/index.html', { cache: 'no-store' }).then(r => r.text()));
+    ctx.pruefe(/^<!doctype html>\n<html lang="de-CH">\n<head>\n<meta charset="utf-8">/.test(quelle)
+      && /<\/style>\n<\/head>\n<body>\n<svg /.test(quelle)
+      && /<\/script>\n<\/body>\n<\/html>\n?$/.test(quelle), 'Quelltext-Gerüst doctype/html/head/body');
+    await ctx.screenshot(d, `a1-desktop-entwerfen-${m}`);
+    const appUnten = await d.evaluate(() => document.querySelector('.app').getBoundingClientRect().bottom);
+    await d.mouse.move(400, 30); await d.mouse.wheel(0, 800); await d.waitForTimeout(250);
+    const y = await d.evaluate(() => scrollY);
+    ctx.pruefe(appUnten <= 900 && y === 0, `Desktop 1440×900 scrollt nicht (.app unten ${Math.round(appUnten)}, scrollY ${y})`);
+    const numB = await d.evaluate(() => Math.round(document.querySelector('.num input').getBoundingClientRect().width));
+    ctx.pruefe(numB === 62, `.num input 62 px breit (${numB})`);
+    await d.click('#tab-bauen'); await d.waitForTimeout(250);
+    ctx.pruefe(await tdZeile(d) === 'normal', 'Tabelle Desktop line-height normal');
+    await ctx.screenshot(d, `a1-desktop-bauen-${m}`);
+    // Mindestfenster 1200×640: ab hier füllt die App genau das Fenster, die Seite scrollt nicht
+    await d.setViewportSize({ width: 1200, height: 640 });
+    await ctx.oeffne(d, 'entwerfen'); await zu(d);
+    await d.mouse.move(400, 30); await d.mouse.wheel(0, 800); await d.waitForTimeout(250);
+    const [yKlein, ueberlauf] = await d.evaluate(() => [scrollY, getComputedStyle(document.body).overflow]);
+    ctx.pruefe(yKlein === 0 && ueberlauf === 'hidden', `1200×640 – Seite scrollt nicht (scrollY ${yKlein}, body overflow ${ueberlauf})`);
+    await d.close();
+
+    // Desktop ohne three.js: Ersatztext füllt die Bühne
+    const n = await ctx.desktop();
+    await n.route('**/three.min.js', r => r.abort());
+    await ctx.oeffne(n, 'entwerfen'); await zu(n);
+    const [hn, hs] = await n.evaluate(() => [document.querySelector('.nogl')?.getBoundingClientRect().height || 0, document.querySelector('#stage').getBoundingClientRect().height]);
+    ctx.pruefe(hn > 0 && Math.round(hn) === Math.round(hs), `.nogl füllt #stage (${Math.round(hn)}/${Math.round(hs)})`);
+    await n.close();
+
+    // Handy, Entwerfen
+    const h = await ctx.handy();
+    await ctx.oeffne(h, 'entwerfen'); await zu(h);
+    await ctx.screenshot(h, `a1-handy-entwerfen-${m}`);
+    const [sw, iw] = await h.evaluate(() => [document.scrollingElement.scrollWidth, innerWidth]);
+    ctx.pruefe(sw <= iw, `Handy ohne Querscrollen (${sw}/${iw})`);
+    await h.evaluate(() => scrollTo(0, 1e6)); await h.waitForTimeout(250);
+    const [fu, mo] = await h.evaluate(() => [document.querySelector('#cfg').getBoundingClientRect().bottom, document.querySelector('#mbar').getBoundingClientRect().top]);
+    ctx.pruefe(fu <= mo, `Formular-Ende über der Leiste (${Math.round(fu)}/${Math.round(mo)})`);
+    await h.close();
+
+    // Handy, Bauen
+    const hb = await ctx.handy();
+    await ctx.oeffne(hb, 'bauen'); await zu(hb);
+    ctx.pruefe(await tdZeile(hb) === 'normal', 'Tabelle Handy line-height normal');
+    await ctx.screenshot(hb, `a1-handy-bauen-${m}`);
+    await hb.close();
+  },
 };
 
 // Läuft vor jedem Script der Seite in der Hauptwelt (context.addInitScript) und sammelt Fehler in window.__uiFehler.
