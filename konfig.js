@@ -581,6 +581,29 @@ function entwurfSetzen(e, data){
 function kostenGesamt(R){
   return sheetCosts(R.groups).cut + (R.solidCost || 0) + (R.buyCost || 0);
 }
+// Masse beschriftet für die Masstafel: Reduit als Raum (B · T · H), Sideboard als Möbel (B · H · T mit Front).
+function masseText(R){
+  return R.kind === 'reduit' ? `Raum B ${R.W} · T ${R.D} · H ${R.H} mm` : `B ${R.W} · H ${R.H} · T ${R.Dtot} mm`;
+}
+// Steckbrief: Bauweise · Teile · Platten · Bretter (Platten samt Rückwand); Einzahl bei 1, was 0 ist, fällt weg.
+function steckbriefText(R, d){
+  const anzahl = (n, eins, mehr) => n ? `${n} ${n === 1 ? eins : mehr}` : '';
+  const blaetter = boards => R.groups.filter(g => !!g.boards === boards).reduce((a, g) => a + g.sheets.length, 0);
+  return [BW[d.bw || bauweiseVon(d)].name, anzahl(R.rows.reduce((a, r) => a + r.qty, 0), 'Teil', 'Teile'),
+    anzahl(blaetter(false), 'Platte', 'Platten'), anzahl(blaetter(true), 'Brett', 'Bretter')].filter(Boolean).join(' · ');
+}
+// Preis aufgeschlüsselt: Holz (Zuschnitt bzw. ganze Bretter, mit Latten), Kaufteile (Reduit), ganze Platten zum Vergleich; ungerundet.
+function preisAufschluesselung(R){
+  const { cut, whole } = sheetCosts(R.groups), latten = R.solidCost || 0, boards = !!R.groups[0].boards;
+  return {
+    total: kostenGesamt(R),
+    holzName: boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt',
+    holz: cut + latten,
+    kaufteile: R.kind === 'reduit' ? R.buyCost : null,
+    ganzePlatten: boards ? null : whole + latten,
+    ohneBeschlaege: R.kind !== 'reduit'
+  };
+}
 // Ein Eintrag merkt sich die Formularwerte und eine Kurzbeschreibung mit den Kosten beim Speichern.
 function sammlungEintrag(d, R, now = new Date()){
   const reduit = d.kind === 'reduit';
@@ -664,4 +687,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode, masseText, steckbriefText, preisAufschluesselung };
