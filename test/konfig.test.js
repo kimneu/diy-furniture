@@ -134,6 +134,33 @@ test('ortAusHash: bekannte Orte, sonst Entwerfen', () => {
   assert.strictEqual(K.ortAusHash('#tab-cut'), 'entwerfen');
 });
 
+test('wahlZeile: eigener Entwurf mit Preis, sonst «ab ca.» aus den Startwerten', () => {
+  const preis = d => Math.round(K.kostenGesamt(K.computeData(d)) / 5) * 5;
+  const rd = K.startwerte(FORM, 'reduit'), sb = K.startwerte(FORM, 'sideboard');
+  assert.strictEqual(K.wahlZeile(null, rd), `ab ca. CHF ${preis(rd)}`);
+  assert.strictEqual(K.wahlZeile(undefined, sb), `ab ca. CHF ${preis(sb)}`);
+  assert.strictEqual(K.wahlZeile(sb, rd), `Dein Entwurf · ca. CHF ${preis(sb)}`);
+  const breit = { ...sb, w:'2000' };
+  assert.ok(preis(breit) > preis(sb));
+  assert.strictEqual(K.wahlZeile(breit, null), `Dein Entwurf · ca. CHF ${preis(breit)}`);
+  assert.ok(preis(rd) > 0);
+});
+
+test('linkMeldung: Erstbesuch ohne Rückgängig, ungültiger Link sagt, was man sieht', () => {
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:false }),
+    { text:'Der Link ist ungültig – du siehst den Standard-Entwurf.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:false }),
+    { text:'Der Link ist ungültig – dein Entwurf bleibt, wie er war.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:true, angepasst:false }),
+    { text:'Entwurf von Link geladen.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:true, angepasst:false }),
+    { text:'Entwurf von Link geladen.', undo:true });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:true, gueltig:true, angepasst:true }),
+    { text:'Entwurf von Link geladen und an die Bauweise angepasst.', undo:false });
+  assert.deepStrictEqual(K.linkMeldung({ erstBesuch:false, gueltig:true, angepasst:true }),
+    { text:'Entwurf von Link geladen und an die Bauweise angepasst.', undo:true });
+});
+
 test('snapBreite rastet auf die nächste Brettbreite, bei Gleichstand die breitere', () => {
   assert.strictEqual(K.snapBreite([200, 400], 335), 400);
   assert.strictEqual(K.snapBreite([200, 400], 290), 200);
@@ -208,4 +235,40 @@ test('Plattenformat wird nicht mehr auf 2100 mm gekappt (Birke 1500 × 3000)', (
   const R = K.computeData(d);
   assert.deepStrictEqual(R.groups[0].sheet, [1500, 3000]);
   assert.ok(!R.warn.some(w => w.includes('2100')), JSON.stringify(R.warn));
+});
+
+test('Festhalten: Aufteilung ist eine eigene Gruppe, Zufall hält ihre Felder', () => {
+  assert.deepStrictEqual(K.SPERREN.aufteilung, ['sections', 'front', 'base']);
+  assert.deepStrictEqual(K.SPERREN.aufbau, ['top', 'shelves', 'baseH', 'legShape', 'taper', 'legColor']);
+  assert.deepStrictEqual(K.SPERREN.front, ['doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT']);
+  assert.deepStrictEqual(K.SPERREN.form, ['shape', 'corner', 'nShelves']);
+  assert.deepStrictEqual(K.SPERREN.tablare, ['dBack', 'dLeft', 'dRight', 'gapBottom', 'gapTop']);
+  const rnd = seeded(21);
+  const sb = { ...FORM, sections:'3', front:'open', base:'plinth', baseH:'80' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(sb, rnd, 60, ['aufteilung']);
+    for (const k of ['sections', 'front', 'base']) assert.strictEqual(d[k], sb[k], k);
+  }
+  const fr = { ...FORM, handle:'knob', color:'salbei', doorsPer:'2' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(fr, rnd, 60, ['front']);
+    for (const k of ['doorsPer', 'handle', 'color']) assert.strictEqual(d[k], fr[k], k);
+  }
+  const rd = { ...FORM, kind:'reduit', shape:'L', corner:'R', nShelves:'6' };
+  for (let i = 0; i < 30; i++) {
+    const d = K.zufall(rd, rnd, 60, ['form']);
+    for (const k of ['shape', 'corner', 'nShelves']) assert.strictEqual(d[k], rd[k], k);
+  }
+});
+
+test('Festhalten: jede Gruppe im Formular hält genau ihre Felder', () => {
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  const gruppen = {};
+  for (const m of html.matchAll(/<section class="group"[^>]*data-lock="(\w+)"[^>]*>([\s\S]*?)<\/section>/g)) gruppen[m[1]] = m[2];
+  assert.deepStrictEqual(Object.keys(gruppen).sort(), Object.keys(K.SPERREN).sort());
+  for (const g of ['form', 'tablare', 'nische', 'aufteilung', 'aufbau', 'front']) {
+    const namen = [...gruppen[g].matchAll(/ name="(\w+)"/g)].map(m => m[1]);
+    for (const n of namen) assert.ok(K.SPERREN[g].includes(n), `${n} steht in «${g}», wird aber nicht festgehalten`);
+    for (const n of K.SPERREN[g]) assert.ok(namen.includes(n) || n === 'frontT', `${n} wird mit «${g}» festgehalten, steht aber nicht darin`);   // frontT-Knöpfe baut JS
+  }
 });

@@ -1,9 +1,42 @@
-# Weiterarbeit – Stand 01.10.2026
+# Weiterarbeit – Stand 02.10.2026
 
 Notizen, um an einer anderen Maschine weiterzumachen. Design und Plan des Reduit-Features:
 
 - Spec: `docs/superpowers/specs/2026-09-25-reduit-design.md`
 - Umsetzungsplan: `docs/superpowers/plans/2026-09-25-reduit.md`
+
+## UI/UX-Review (02.10.2026) – hier weitermachen
+
+Review der Oberfläche mit `/layers-intro`, `/emil-design-eng`, `/mobile-native`, `/pick-ui-library`; 33 Agents (Lese-Linsen, Skeptiker, Entwürfe, Jury, Stack-Anwälte), 15 Screenshots. Branch `ux-review` auf dem Fork.
+
+- Einstieg: `docs/review/2026-10-02-ux-review.md` (Kurzurteil, Interview, Befunde zum ersten Moment, Modell-Risse, Richtung mit Wireframes und Wörterbuch, Stufenplan A/B/C, Stack-Urteil, offene Entscheide, iPhone-Prüfliste)
+- Alle Befunde: `docs/review/2026-10-02-ux-befunde.md` (51 geprüft, 6 verworfen, 74 Nachträge, 143 ungeprüft tief/info) · Bilder: `docs/review/bilder/2026-10-02/`
+
+Entschieden am 02.10.2026:
+
+- **Richtung «Beispiel zuerst auf Objekt-Fundament»:** Möbel + Masse auf Bildschirm 1, Felder nach Nutzungshäufigkeit (offen / Aufklapper mit Wert-Einzeiler / Mehr); darunter Wörterbuch, Rückmeldung in drei Formen (Sperre · Anpassung · Warnung, Notizen nicht gezählt), Entwurf mit Zustand Neu · Gesammelt · Geändert · Von Link.
+- **Erstbesuch ohne Pflichtdialog** (Abweichung von der Ansichten-Spec): Beispiel-Sideboard sofort, Typ-Chip im Kopf öffnet die Wahl als Sheet.
+- **3D am Handy:** ein Finger dreht weiterhin; Kopf kürzer (52 statt 305 px), Bühne kleiner. Nach Stufe A am iPhone prüfen; `touch-action: pan-y` allein hilft nicht (OrbitControls r128 ruft `preventDefault()`).
+- **Stack: Vanilla in Stufen**, kein Build. Umbau (Vite + React + Base UI) nur unter den Bedingungen in Kapitel 8 des Berichts.
+
+Umsetzungsplan Stufe A (Opus-Entwürfe, je Task geprüft): `docs/superpowers/plans/2026-10-02-ux-stufe-a.md` (T0 UI-Prüfskript `tools/ui-pruefung.mjs` mit Patchright, dann A1–A6; 74 Schritte, 6 Tage; offene Entscheide als Tabelle mit Vorschlag). Stufe B und Einkaufen/Bauen als Umriss: `docs/superpowers/plans/2026-10-02-ux-stufe-b-umriss.md`.
+
+Nächste Schritte (Stufe A, 5–6 Tage, jeder Schritt deploybar): A1 Doctype mit Sichttest · A2 Mobile-Native-Paket (16-px-Eingaben, Tap-Highlight, theme-color, Manifest, Ortsknöpfe 44 px) · A3 Kopf schrumpfen, Steckbrief unter der Bühne, Leiste ohne Überlauf · A4 Erstbesuch ohne Dialog, Typ-Sheet · A5 Formular Stufe 1 (Masse zuerst, Zufall ans Ende, Aufteilung) · A6 3D-Schleife pausieren. Danach iPhone-Prüfliste (Kapitel 10), dann Stufe B (Wörterbuch, `R.warn` mit Art, Entwurf-Zustand, Tokens, Aufklapper).
+
+### iPhone-Prüfung A2
+
+Nach dem Deploy von A2 (Mobile-Native-Paket, Commit `189fb04`) am iPhone prüfen, Spec Kapitel 10, Teil A2. Je Punkt «Ja» oder «Nein» eintragen (statt «offen»). Die UI-Prüfung `node tools/ui-pruefung.mjs a2` läuft in Chromium und ersetzt diese Liste nicht.
+
+iOS-Version: offen
+
+1. Tipp in «Breite», «Schnittfuge» und ein Select: kein Zoom. Bei «Schnittfuge» zeigt die Tastatur ein Komma. – offen
+2. Ortsknöpfe: kein grauer Blitz, beim Drücken spürbares Einsinken. – offen
+3. Adressleiste hell (#EDF0EE) und dunkel (#131A1C). Färbt Safari sie gar nicht (neuere iOS-Versionen ignorieren theme-color): «Nein (ignoriert)». – offen
+4. «Zum Home-Bildschirm»: Das Icon ist das Möbel auf Petrol, der Name «Martylko», die App öffnet ohne Safari-Leiste. – offen
+5. Im Home-Bildschirm-Modus: Alle vier Orte sind über die Leiste erreichbar, und die Möbel-Wahl schliesst über ihren Knopf. Die Sammlung ist dort leer, weil iOS den Speicher vom Safari-Speicher trennt; Varianten kommen nur per Link hinüber. Ja oder Nein, und ob das stört. – offen
+6. Am Seitenanfang nach unten ziehen: kein Gummiband, kein Neuladen. – offen
+7. Querformat: Die Bühne scrollt mit. – offen
+8. Namensfeld: Die Taste heisst «Fertig», und ein Tipp darauf schliesst die Tastatur. – offen
 
 ## Schreiner-Review (28.09.2026) – hier weitermachen
 
@@ -79,6 +112,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
   In einer VM mit `--bind 0.0.0.0` starten, sonst ist der Server vom Host aus nicht erreichbar.
   Nach Änderungen an den `.js`-Dateien im Browser **Ctrl+Shift+R** (sonst bleibt die alte Version im Cache).
 - Tests: `node --test` (Node 18+, keine Abhängigkeiten).
+- UI-Prüfung: einmalig `(cd tools && npm install)`, dann `node tools/ui-pruefung.mjs [t0 a1 …]` (Chrome headless über Patchright, eigener Server auf freiem Port, Bilder in `tools/ui-shots/`, nicht im Repo). Jeder Task der Stufe A ergänzt eine Prüfung in `PRUEFUNGEN`. Patchright schaltet die Konsole ab: Fehler liefert `ctx.fehler`, Seitenvariablen nur `ctx.haupt` (`page.evaluate` läuft isoliert). Jede neue Seite ist ein Erstbesuch (leerer Speicher, «Was baust du?» offen).
 
 ## Aufbau
 
@@ -98,6 +132,7 @@ Umsetzung nach Kapitel 4 im Bericht, Schritt für Schritt auf dem Branch `claude
 | `test/regeln.test.js`, `test/bauweisen.test.js` | Regelwerk (Sperren, Grenzen, Fixpunkt) und Bauweisen |
 | `test/kombinationen.test.js` | Schritt 8: jede Bauweise über Form, Wand, Tür, Raum; Zufall mit festem Seed; Geometrie (Überschneidung, Auflagen), Zahlen, Fixpunkt |
 | `tools/jumbo-preise.mjs`, `tools/jumbo-quellen.json`, `tools/preise-datei.cjs` | Jumbo-Preise (Platten, Bretter, Kaufteile) lesen, mit `preise.js` vergleichen und nachführen (siehe «Preise nachführen») |
+| `tools/ui-pruefung.mjs` | UI-Prüfung im Browser je Task (`PRUEFUNGEN.t0`, `a1` …), Aufruf siehe «Repo & Setup» |
 
 Preis-Updates in `preise.js` brechen den Snapshot nicht mehr (er rechnet mit `test/fixtures/preise.json`). Ändert sich eine Produktbeschreibung in `MAT_INFO`, schlägt er fehl: prüfen, dass sich nur `R.M` unterscheidet (bei einem neuen Namen auch Gruppen, Schlüssel und `matShort`), und die Fixture neu schreiben (siehe Commit `b424766`).
 

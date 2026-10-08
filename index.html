@@ -1,12 +1,23 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Martylko</title>
 <meta name="description" content="Konfigurator für DIY-Möbel – Sideboard und Reduit-Regale: Masse eingeben, Materialliste, Plattenplan, Beschläge und Bauablauf erhalten.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#EDF0EE">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#131A1C">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="app.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
+  color-scheme:light;
   --ground:#EDF0EE; --panel:#F8FAF9; --raise:#FFFFFF;
   --ink:#1B2427; --muted:#5A676A; --line:#D3DAD7; --line-strong:#B3BEBA;
   --accent:#2D5D6C; --accent-soft:#DCE8EB; --on-accent:#FFFFFF;
@@ -42,6 +53,8 @@
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
 }
 *{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overscroll-behavior-y:none}
 body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
 .app{max-width:1480px;margin:0 auto;padding-inline:20px;padding-block:14px 56px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
@@ -51,41 +64,63 @@ button,input,select{font:inherit;color:inherit}
 
 /* Kopf */
 /* Festes Raster, damit der Kopf bei anderen Werten (Zufall, Laden) nicht umbricht und die Seite springt. */
-.top{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind" "sum acts";gap:14px 40px;align-items:center;padding-block:6px 16px;border-bottom:1px solid var(--line)}
+.top{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind brief acts";gap:0 28px;align-items:center;padding-block:4px 10px;border-bottom:1px solid var(--line)}
 .brand{grid-area:brand}
 .brand{display:flex;gap:14px;align-items:center}
 .brand svg{flex:none;color:var(--accent)}
 .brand h1{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.1}
-.brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
-.summary{grid-area:sum;display:grid;grid-auto-flow:column;grid-template-columns:auto auto minmax(0,1fr);grid-auto-columns:auto;gap:6px 28px;margin:0;min-width:0}
 .kindpick{grid-area:kind;justify-self:end}
 #bKind{font-size:15px}
 .wahl{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:18px;width:min(460px,calc(100% - 32px));box-shadow:var(--shadow)}
 .wahl::backdrop{background:rgba(10,20,24,.35)}
-.wahl h2{font-size:20px;margin-bottom:12px}
+.wahl h2{font-size:20px;margin-bottom:4px}
 .wahllist{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
 .wahllist li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
 .wahlbtn{all:unset;display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raise);cursor:pointer}
 .wahlbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .wahlbtn[aria-current]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .wahlbtn small{color:var(--muted);font-size:12.5px}
-.wahlbtn .zuletzt{font-family:var(--f-mono);color:var(--ink)}
-@media (max-width:920px){.kindpick{justify-self:start}}
-.hacts{grid-area:acts;display:grid;gap:4px;justify-items:end;width:220px}
+.wahlbtn .zuletzt{color:var(--ink);font-variant-numeric:tabular-nums}
+.wahlsatz{margin:0 0 12px;color:var(--muted);font-size:14px}
+/* Möbel-Wahl: ein 200 ms, aus 150 ms; am Handy als Sheet von unten */
+.wahl{transition:opacity 150ms var(--ease-out),transform 150ms var(--ease-out),overlay 150ms allow-discrete,display 150ms allow-discrete}
+.wahl:not([open]){opacity:0;transform:translateY(16px)}
+.wahl[open]{transition-duration:200ms}
+@starting-style{.wahl[open]{opacity:0;transform:translateY(16px)}}
+.wahl::backdrop{transition:opacity 150ms var(--ease-out),overlay 150ms allow-discrete,display 150ms allow-discrete}
+.wahl:not([open])::backdrop{opacity:0}
+.wahl[open]::backdrop{transition-duration:200ms}
+@starting-style{.wahl[open]::backdrop{opacity:0}}
+@media (max-width:640px){
+  .wahl{margin:auto 0 0;width:100%;max-width:none;border-width:1px 0 0;border-radius:14px 14px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  .wahl:not([open]){transform:translateY(100%)}
+  @starting-style{.wahl[open]{transform:translateY(100%)}}
+}
+.hacts{grid-area:acts;display:flex;align-items:center;gap:12px}
+/* Knöpfe im Kopf bleiben einzeilig, sonst wächst der Kopf bei längerem Zustandstext («Neue Variante») */
+.hacts .acts{flex-wrap:nowrap}
+.hacts .acts .btn{flex:none;white-space:nowrap}
 .top{position:relative}
 .hacts .copied{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:5px 11px;box-shadow:var(--shadow);font-size:13px;color:var(--ink)}
-.hacts .copied:empty{display:none}
-.variante{margin:0;font-size:12.5px;color:var(--muted);text-align:right}
-.variante b{color:var(--ink);font-weight:600}
-.summary div{display:flex;flex-direction:column}
-.summary dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.summary dd{margin:0;font-family:var(--f-mono);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
-.summary .wide{min-width:0}
-.summary .wide dd{overflow:hidden;text-overflow:ellipsis}
-.summary .price dd{min-height:44px}
-.summary .price dd b{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1;color:var(--accent)}
-.summary .price dd small{display:block;font-family:var(--f-body)}
-.summary small{color:var(--muted);font-size:12px}
+.js-msg{transition:opacity 180ms ease,filter 180ms ease}
+.js-msg:not(.an){opacity:0;filter:blur(4px);pointer-events:none}
+.kopfbrief{grid-area:brief;margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--muted)}
+.kopfbrief .sb-zustand::before{content:" · "}
+.kopfbrief .sb-was,.steckbrief .sb-was{color:var(--ink);font-weight:500}
+.kopfbrief b,.steckbrief b{color:var(--ink);font-weight:600}
+.steckbrief{display:none;margin:8px 2px 0;font-size:13px;line-height:1.4;color:var(--muted)}
+.steckbrief span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpreis{margin:0;display:flex;align-items:center;white-space:nowrap}
+.js-preis{display:inline-block;font-family:var(--f-display);font-size:20px;font-weight:700;line-height:1.1;color:var(--accent);transform-origin:left center;transition:color 220ms var(--ease-out),transform 220ms var(--ease-out)}
+.js-preis.blitz{color:var(--ink);transform:scale(1.06);transition-duration:80ms}
+.metabtn{border:0;background:none;margin:0;padding:6px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.aufschl{margin:0;inset:64px 20px auto auto;width:min(320px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raise);color:var(--ink);box-shadow:var(--shadow);font-size:13px;transform-origin:top right;transition:opacity 180ms var(--ease-out),transform 180ms var(--ease-out)}
+@starting-style{.aufschl:popover-open{opacity:0;transform:scale(.97)}}
+.aufschl p{margin:0}
+.aufschl .total{font-size:15px;margin-bottom:6px}
+.aufschl dl{display:grid;grid-template-columns:1fr auto;gap:2px 16px;margin:0 0 6px}
+.aufschl dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.aufschl .hint{color:var(--muted);font-size:12px}
 .lvl{display:inline-flex;gap:3px;vertical-align:middle;margin-right:6px}
 .lvlhead{margin:0;display:flex;align-items:center;gap:4px;font-size:15px}
 .lvlhead .lvl i{width:11px;height:11px}
@@ -97,7 +132,7 @@ button,input,select{font:inherit;color:inherit}
 .cfgwrap{display:contents}
 .warnbox{grid-area:warns;min-width:0}
 .warnhead{display:none}
-.controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin}
+.controls{grid-area:controls;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 18px;scrollbar-width:thin;overscroll-behavior:contain}
 .viewer{grid-area:viewer;min-width:0}
 .output{grid-area:output;min-width:0;container:ergebnis / inline-size}
 @media (max-width:920px){
@@ -110,15 +145,8 @@ button,input,select{font:inherit;color:inherit}
   html,body{height:100%}
   body{overflow:hidden}
   .app{max-width:none;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);padding-block:8px 14px}
-  .top{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"brand kind sum acts";gap:0 28px;padding-block:2px 10px}
-  .brand p{display:none}
   .brand svg{width:30px;height:30px}
   .brand h1{font-size:21px}
-  .summary{gap:6px 20px;grid-template-columns:auto auto minmax(100px,1fr) auto}
-  .summary dt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .summary .price dd{min-height:0;max-width:210px}
-  .summary .price dd small{overflow:hidden;text-overflow:ellipsis}
-  .hacts{width:auto;display:flex;align-items:center;gap:12px;justify-items:initial}
   .layout{grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"controls viewer output" "controls warns output";gap:10px 18px;margin-top:12px;min-height:0;align-items:stretch}
   .controls{position:static;max-height:none;min-height:0}
   .viewer{min-height:0;display:flex;flex-direction:column}
@@ -143,6 +171,7 @@ button,input,select{font:inherit;color:inherit}
 .group{padding-block:14px;border-bottom:1px solid var(--line);display:grid;gap:12px}
 .group:last-child{border-bottom:0}
 .group h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.mehr{margin:0;padding:22px 0 2px;font-family:var(--f-display);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink)}
 .field{display:grid;gap:5px}
 .field > label,.lbl{font-size:13px;font-weight:500}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -224,7 +253,7 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 #stage canvas{display:block;width:100%;height:100%}
 .vbar{position:absolute;top:12px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;pointer-events:none}
 .vbar > div{display:flex;gap:6px;flex-wrap:wrap;pointer-events:auto}
-.vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
+.vbtn{border:1px solid var(--line-strong);background:color-mix(in srgb,var(--raise) 88%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:6px 11px;border-radius:999px;font-size:13px;cursor:pointer;font-weight:500}
 .vbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 @media (hover:hover) and (pointer:fine){
   .vbtn:hover{border-color:var(--accent)}
@@ -273,7 +302,7 @@ select{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-rad
 .copybox{width:100%;min-height:140px;font-family:var(--f-mono);font-size:12px;margin-top:10px;background:var(--raise);border:1px solid var(--line-strong);border-radius:8px;padding:8px}
 
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
-table{width:100%;border-collapse:collapse;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px;line-height:normal} /* normal: Zeilenhöhe wie vor dem Doctype (Quirks Mode) */
 th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 thead th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--raise);white-space:nowrap}
 tbody tr:last-child td{border-bottom:0}
@@ -337,7 +366,6 @@ figure.sheet svg{width:100%;height:auto;display:block}
 .foot{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:90ch}
 /* Bewegung: gleitende Auswahl, Druck-Feedback */
 .seg{position:relative;isolation:isolate}
-.seg label,.card,.btn,.vbtn,.tab,.gh{-webkit-tap-highlight-color:transparent}
 .seg label{position:relative;transition:color 150ms ease}
 .seg.pill::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:0;width:var(--w);transform:translateX(var(--x));background:var(--accent);transition:transform 220ms var(--ease-out),width 220ms var(--ease-out)}
 .seg.pill.still::before{transition:none}
@@ -392,7 +420,7 @@ body[data-ort="sammlung"] .layout{display:none}
   body[data-ort="einkaufen"] .cfgwrap,body[data-ort="bauen"] .cfgwrap{display:none}
   body[data-ort="entwerfen"] .output{display:none}
   .output .tabs{display:none}
-  body:not([data-ort="entwerfen"]) .top .summary{display:none}
+  body:not([data-ort="entwerfen"]) .mbtns{display:none}
 }
 
 .chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
@@ -406,7 +434,8 @@ body[data-ort="sammlung"] .layout{display:none}
   .seg label{padding-block:11px}
   .vbtn{min-height:40px}
   select,.btn{min-height:44px}
-  .num input{padding-block:10px}
+  .num input{padding-block:10px;font-size:16px}
+  select,.coll input,.copybox{font-size:16px}
   .tab{min-height:44px}
   input[type=range]{height:30px}
   .check{min-height:32px}
@@ -417,7 +446,8 @@ body[data-ort="sammlung"] .layout{display:none}
 @media (max-width:920px){
   .app{padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-bottom:calc(140px + env(safe-area-inset-bottom))}
   .viewer{position:sticky;top:0;z-index:5;background:var(--ground);margin-inline:-16px;padding:8px 16px}
-  #stage{aspect-ratio:auto;height:38svh;min-height:220px;max-height:none}
+  #stage{aspect-ratio:auto;height:30svh;min-height:200px;max-height:none}
+  .cfgwrap:has(.controls input[type=number]:focus) #stage{height:120px;min-height:120px}
   .stage-wrap{border-radius:12px}
   .vbar{top:auto;bottom:8px;left:8px;right:8px}
   .vbtn{width:40px;height:40px;padding:0;justify-content:center}
@@ -431,33 +461,35 @@ body[data-ort="sammlung"] .layout{display:none}
   .group.collapsed{gap:0}
   .group.collapsed > :not(h2){display:none}
   .group.collapsed .gh svg{transform:rotate(-90deg)}
-  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
-  .mprice{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mbar{display:grid;gap:6px;position:fixed;z-index:10;left:0;right:0;bottom:0;padding:8px max(16px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:color-mix(in srgb,var(--raise) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+  .mprice{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"preis btns" "zeile zeile";align-items:center;gap:2px 12px}
+  .mprice > .js-preis{grid-area:preis;justify-self:start}
+  .mzeile{grid-area:zeile;display:grid;min-width:0}
+  .mzeile > *{grid-area:1 / 1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mzeile:has(> .js-msg.an) #mMeta{opacity:0;filter:blur(4px);pointer-events:none}
+  .mbar .js-msg{font-size:12.5px;color:var(--ink)}
+  .aufschl{inset:auto 16px calc(160px + env(safe-area-inset-bottom)) 16px;width:auto;transform-origin:bottom left}
   .mnav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-  .mnav button{all:unset;text-align:center;padding:8px 2px;min-height:28px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .mnav button{all:unset;box-sizing:border-box;text-align:center;padding:12px 2px;min-height:44px;line-height:20px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:color 150ms ease,background-color 150ms ease,transform 160ms var(--ease-out)}
   .mnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+  .mnav button:active{transform:scale(.97)}
+  .mnav button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .mnav .count{font-family:var(--f-mono);font-weight:400;font-size:11px;margin-left:3px}
   .mbar b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1;color:var(--accent)}
   .mbar span{font-size:12.5px;color:var(--muted)}
-  .mbar > div:first-child{min-width:0}
-  .mbar #mMeta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar #mMeta{text-align:left;padding:2px 0;font-size:12.5px;transition:opacity 180ms ease,filter 180ms ease}
   .mbar b{white-space:nowrap}
   .mbar .nm{display:none}
   .mbar .copied:not(:empty)::before{content:"✓ "}
-  .mbar .copied:empty{display:none}
-  .mbar .copied:not(:empty){display:block;color:var(--ink)}
-  .mbar div:has(> .copied:not(:empty)) #mMeta{display:none}
-  .mbtns{display:flex;gap:8px;flex:none}
-  .hacts{display:none}
-  .top{grid-template-columns:minmax(0,1fr);grid-template-areas:"brand" "kind" "sum"}
+  .mbtns{grid-area:btns;display:flex;gap:8px;justify-self:end;min-width:0}
+  .mbtns .btn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hacts,.kopfbrief{display:none}
+  .steckbrief{display:block}
+  .top{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand kind";gap:12px;padding-block:4px 8px}
 }
 @media (max-width:640px){
-  .top{gap:12px;padding-bottom:12px}
   .brand svg{width:34px;height:34px}
   .brand h1{font-size:22px}
-  .brand p{font-size:13px}
-  .summary{grid-auto-flow:row;grid-template-columns:1fr 1fr;gap:10px 16px}
-  .summary .wide{grid-column:1 / -1}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;border-bottom:0}
   .tab{border:1px solid var(--line);border-radius:8px;background:var(--raise);margin:0;white-space:normal;text-align:left;padding:8px 12px}
   .tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -465,6 +497,8 @@ body[data-ort="sammlung"] .layout{display:none}
   .tabind{display:none}
   .toolbar{align-items:flex-start}
 }
+/* Querformat am Handy: Bühne scrollt mit, sonst bleiben 43 px fürs Formular */
+@media (orientation:landscape) and (max-height:500px){.viewer{position:static}}
 /* Teiletabelle als Karten, sobald die Ergebnisspalte schmal ist (Handy und dritte Spalte am Desktop) */
 @container ergebnis (max-width:600px){
   #cutTable thead{display:none}
@@ -484,14 +518,19 @@ body[data-ort="sammlung"] .layout{display:none}
   #cutTable tfoot tr{display:block}
   .sheetlist{grid-template-columns:minmax(0,1fr)}
 }
+/* Bedienelemente: Langdruck markiert keinen Text und öffnet kein Kontextmenü */
+button,[role=button],.seg label,label.card,.gh,.wahlbtn,.lock,.warnhead,.mnav button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important}
   .seg::before,.tabind{transition:none!important}
   :active{transform:none!important}
+  .js-preis.blitz{transform:none}
+  .wahl{transform:none!important}
 }
 </style>
-
+</head>
+<body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <pattern id="hatch" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -510,14 +549,11 @@ body[data-ort="sammlung"] .layout{display:none}
         <circle cx="26" cy="15" r="1.6" fill="currentColor" stroke="none"></circle>
         <line x1="9" y1="31" x2="8" y2="38"></line><line x1="35" y1="31" x2="36" y2="38"></line>
       </svg>
-      <div>
-        <h1>Martylko</h1>
-        <p>Masse eingeben – Materialliste, Plattenplan und Bauablauf erhalten.</p>
-      </div>
+      <h1>Martylko</h1>
     </div>
     <div class="kindpick"><input type="hidden" name="kind" id="kind" value="sideboard" form="cfg"><button type="button" class="btn ghost" id="bKind" aria-haspopup="dialog"><span id="kindName">Sideboard</span> ▾</button></div>
-    <dl class="summary" id="summary"></dl>
-    <div class="hacts"><p class="variante" id="variante" hidden></p><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><div class="acts"><button type="button" class="btn js-sammeln">In Sammlung</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link teilen</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div><span class="copied js-msg" aria-live="polite"></span></div>
+    <p class="kopfbrief js-steckbrief"><span class="sb-was"></span><span class="sb-zustand"></span></p>
+    <div class="hacts"><p class="kpreis"><b class="js-preis" id="kPrice"></b><button type="button" class="metabtn" popovertarget="aufschl" aria-label="Preis aufschlüsseln">▸</button></p><div class="acts"><button type="button" class="btn js-sammeln">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button></div><button type="button" class="linkbtn" data-go="sammlung">Sammlung <span class="js-anzahl"></span></button><span class="copied js-msg" aria-live="polite"></span></div>
   </header>
 
   <div class="layout">
@@ -536,6 +572,7 @@ body[data-ort="sammlung"] .layout{display:none}
         <div class="pick" id="pick" hidden></div>
         <div class="dimtag" id="dimTag"></div>
       </div>
+      <p class="steckbrief js-steckbrief" id="steckbrief"><span class="sb-was"></span><span class="sb-zustand"></span></p>
     </section>
     <div class="warnbox" id="warnBox" hidden>
       <button type="button" class="warnhead" id="warnHead" aria-expanded="false" aria-controls="warns"></button>
@@ -543,12 +580,6 @@ body[data-ort="sammlung"] .layout{display:none}
     </div>
 
     <form id="cfg" class="controls" autocomplete="off">
-      <section class="group">
-        <div class="acts">
-          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall<span id="lockCount"></span></button>
-        </div>
-        <p class="hint">Mit dem Schloss bei einer Gruppe bleibt sie beim Würfeln, wie sie ist.</p>
-      </section>
       <div class="bwnotice" id="bwNotice" role="status" hidden></div>
       <section class="group" data-kind="sideboard" data-lock="masse">
         <h2>Masse</h2>
@@ -594,35 +625,11 @@ body[data-ort="sammlung"] .layout{display:none}
           <div class="num"><input id="rh" name="rh" type="number" min="1800" max="3000" step="10" value="2400" inputmode="numeric"><span>mm</span></div>
           <input id="rh-r" type="range" min="1800" max="3000" step="10" value="2400" data-for="rh" aria-label="Raumhöhe">
         </div>
-        <div class="dim">
-          <label for="doorW">Türbreite</label>
-          <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
-          <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
-        </div>
-        <div class="dim">
-          <label for="doorH">Türhöhe</label>
-          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
-          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
-        </div>
-        <div class="field">
-          <span class="lbl" id="lbl-doorPos">Türlage</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
-        </div>
-        <div class="dim" id="row-doorOff">
-          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
-          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
-          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
-        </div>
-        <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
-        <div class="field" id="row-hinge">
-          <span class="lbl" id="lbl-hinge">Türband</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-hinge"><input type="radio" name="hinge" id="hinge-L" value="L" checked><label for="hinge-L">links</label><input type="radio" name="hinge" id="hinge-R" value="R"><label for="hinge-R">rechts</label></div>
-        </div>
+        <p class="hint">Innenmasse von Wand zu Wand.</p>
         <div class="field">
           <span class="lbl" id="lbl-wall">Wände</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-wall"><input type="radio" name="wall" id="wall-solid" value="solid" checked><label for="wall-solid">Beton / Backstein</label><input type="radio" name="wall" id="wall-drywall" value="drywall"><label for="wall-drywall">Gipskarton</label></div>
         </div>
-        <p class="hint">Innenmasse von Wand zu Wand. Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
       </section>
 
       <section class="group" id="grp-bw" data-lock="bauweise">
@@ -647,84 +654,8 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="reduit" data-lock="form">
-        <h2>Form</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-shape">Regal an</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
-        </div>
-        <div class="field" id="row-corner">
-          <span class="lbl" id="lbl-corner">Ecke</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
-        </div>
-      </section>
-
-      <section class="group" data-kind="reduit" data-lock="tablare">
-        <h2>Tablare</h2>
-        <div class="dim">
-          <label for="dBack">Tiefe hinten</label>
-          <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
-          <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
-          <div class="ticks" id="dBack-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <div class="dim" id="row-dLeft">
-          <label for="dLeft">Tiefe links</label>
-          <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
-          <div class="ticks" id="dLeft-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <div class="dim" id="row-dRight">
-          <label for="dRight">Tiefe rechts</label>
-          <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
-          <div class="ticks" id="dRight-ticks" aria-hidden="true" hidden></div>
-        </div>
-        <p class="hint" id="depthHint" hidden></p>
-        <div class="dim">
-          <label for="nShelves">Anzahl Tablare</label>
-          <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
-          <input id="nShelves-r" type="range" min="1" max="8" step="1" value="5" data-for="nShelves" aria-label="Anzahl Tablare">
-        </div>
-        <div class="dim">
-          <label for="gapBottom">Unterstes Tablar ab Boden</label>
-          <div class="num"><input id="gapBottom" name="gapBottom" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"><span>mm</span></div>
-          <input id="gapBottom-r" type="range" min="0" max="600" step="10" value="150" data-for="gapBottom" aria-label="Unterstes Tablar ab Boden">
-        </div>
-        <div class="dim">
-          <label for="gapTop">Oberstes Tablar bis Decke</label>
-          <div class="num"><input id="gapTop" name="gapTop" type="number" min="100" max="800" step="10" value="300" inputmode="numeric"><span>mm</span></div>
-          <input id="gapTop-r" type="range" min="100" max="800" step="10" value="300" data-for="gapTop" aria-label="Oberstes Tablar bis Decke">
-        </div>
-      </section>
-
-      <section class="group" data-kind="reduit" id="grp-niche" data-lock="nische">
-        <h2>Nische</h2>
-        <div class="field" id="row-nicheL">
-          <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
-          <div class="row2" id="row-nicheL-dims">
-            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
-          </div>
-        </div>
-        <div class="field" id="row-nicheR">
-          <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
-          <div class="row2" id="row-nicheR-dims">
-            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" aria-label="Nischenbreite"><span>mm breit</span></div>
-            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" aria-label="Nischenhöhe"><span>mm hoch</span></div>
-          </div>
-        </div>
-        <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
-      </section>
-
-      <section class="group" data-kind="sideboard" data-lock="aufbau">
-        <h2>Aufbau</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-top">Deckel</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-top">
-            <input type="radio" name="top" id="top-over" value="over" checked><label for="top-over">aufgesetzt</label>
-            <input type="radio" name="top" id="top-between" value="between"><label for="top-between">zwischen Seiten</label>
-          </div>
-        </div>
+      <section class="group" id="grp-aufteilung" data-kind="sideboard" data-lock="aufteilung">
+        <h2>Aufteilung</h2>
         <div class="field">
           <span class="lbl" id="lbl-sec">Fächer nebeneinander</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-sec">
@@ -735,12 +666,11 @@ body[data-ort="sammlung"] .layout{display:none}
           </div>
         </div>
         <div class="field">
-          <span class="lbl" id="lbl-sh">Einlegeböden pro Fach</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-sh">
-            <input type="radio" name="shelves" id="sh-0" value="0"><label for="sh-0">0</label>
-            <input type="radio" name="shelves" id="sh-1" value="1" checked><label for="sh-1">1</label>
-            <input type="radio" name="shelves" id="sh-2" value="2"><label for="sh-2">2</label>
-            <input type="radio" name="shelves" id="sh-3" value="3"><label for="sh-3">3</label>
+          <span class="lbl" id="lbl-front">Türen</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-front">
+            <input type="radio" name="front" id="fr-open" value="open"><label for="fr-open">offen</label>
+            <input type="radio" name="front" id="fr-hinged" value="hinged" checked><label for="fr-hinged">Drehtüren</label>
+            <input type="radio" name="front" id="fr-sliding" value="sliding"><label for="fr-sliding">Schiebetüren</label>
           </div>
         </div>
         <div class="field">
@@ -749,6 +679,43 @@ body[data-ort="sammlung"] .layout{display:none}
             <input type="radio" name="base" id="base-none" value="none"><label for="base-none">ohne</label>
             <input type="radio" name="base" id="base-plinth" value="plinth"><label for="base-plinth">Sockel</label>
             <input type="radio" name="base" id="base-legs" value="legs" checked><label for="base-legs">Füsse</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit" data-lock="form">
+        <h2>Form &amp; Tablare</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-shape">Regal an</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-shape"><input type="radio" name="shape" id="shape-I" value="I"><label for="shape-I">hinten</label><input type="radio" name="shape" id="shape-L" value="L"><label for="shape-L">L-Form</label><input type="radio" name="shape" id="shape-U" value="U" checked><label for="shape-U">U-Form</label></div>
+        </div>
+        <div class="field" id="row-corner">
+          <span class="lbl" id="lbl-corner">Ecke</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-corner"><input type="radio" name="corner" id="corner-L" value="L" checked><label for="corner-L">links hinten</label><input type="radio" name="corner" id="corner-R" value="R"><label for="corner-R">rechts hinten</label></div>
+        </div>
+        <div class="dim">
+          <label for="nShelves">Anzahl Tablare</label>
+          <div class="num"><input id="nShelves" name="nShelves" type="number" min="1" max="8" step="1" value="5" inputmode="numeric"><span>Stk.</span></div>
+          <input id="nShelves-r" type="range" min="1" max="8" step="1" value="5" data-for="nShelves" aria-label="Anzahl Tablare">
+        </div>
+      </section>
+
+      <section class="group" data-kind="sideboard" data-lock="aufbau">
+        <h2>Aufbau im Detail</h2>
+        <div class="field">
+          <span class="lbl" id="lbl-top">Deckel</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-top">
+            <input type="radio" name="top" id="top-over" value="over" checked><label for="top-over">aufgesetzt</label>
+            <input type="radio" name="top" id="top-between" value="between"><label for="top-between">zwischen Seiten</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-sh">Einlegeböden pro Fach</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sh">
+            <input type="radio" name="shelves" id="sh-0" value="0"><label for="sh-0">0</label>
+            <input type="radio" name="shelves" id="sh-1" value="1" checked><label for="sh-1">1</label>
+            <input type="radio" name="shelves" id="sh-2" value="2"><label for="sh-2">2</label>
+            <input type="radio" name="shelves" id="sh-3" value="3"><label for="sh-3">3</label>
           </div>
         </div>
         <div class="dim" id="row-baseH">
@@ -777,16 +744,8 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
-      <section class="group" data-kind="sideboard" data-lock="front">
-        <h2>Front</h2>
-        <div class="field">
-          <span class="lbl" id="lbl-front">Türen</span>
-          <div class="seg" role="radiogroup" aria-labelledby="lbl-front">
-            <input type="radio" name="front" id="fr-open" value="open"><label for="fr-open">offen</label>
-            <input type="radio" name="front" id="fr-hinged" value="hinged" checked><label for="fr-hinged">Drehtüren</label>
-            <input type="radio" name="front" id="fr-sliding" value="sliding"><label for="fr-sliding">Schiebetüren</label>
-          </div>
-        </div>
+      <section class="group" id="grp-front" data-kind="sideboard" data-lock="front">
+        <h2>Front im Detail</h2>
         <div class="field" id="row-doorsPer">
           <span class="lbl" id="lbl-dp">Türen pro Fach</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-dp">
@@ -828,8 +787,89 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
+      <section class="group" id="grp-tuer" data-kind="reduit">
+        <h2>Tür</h2>
+        <div class="dim">
+          <label for="doorW">Türbreite</label>
+          <div class="num"><input id="doorW" name="doorW" type="number" min="600" max="1200" step="10" value="800" inputmode="numeric"><span>mm</span></div>
+          <input id="doorW-r" type="range" min="600" max="1200" step="10" value="800" data-for="doorW" aria-label="Türbreite">
+        </div>
+        <div class="dim">
+          <label for="doorH">Türhöhe</label>
+          <div class="num"><input id="doorH" name="doorH" type="number" min="1500" max="2600" step="10" value="2000" inputmode="numeric"><span>mm</span></div>
+          <input id="doorH-r" type="range" min="1500" max="2600" step="10" value="2000" data-for="doorH" aria-label="Türhöhe">
+        </div>
+        <div class="field">
+          <span class="lbl" id="lbl-doorPos">Türlage</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-doorPos"><input type="radio" name="doorPos" id="doorPos-L" value="L"><label for="doorPos-L">links</label><input type="radio" name="doorPos" id="doorPos-M" value="M" checked><label for="doorPos-M">mittig</label><input type="radio" name="doorPos" id="doorPos-R" value="R"><label for="doorPos-R">rechts</label></div>
+        </div>
+        <div class="dim" id="row-doorOff">
+          <label for="doorOff" id="lbl-doorOff">Abstand zur linken Wand</label>
+          <div class="num"><input id="doorOff" name="doorOff" type="number" min="50" max="3000" step="10" value="200" inputmode="numeric"><span>mm</span></div>
+          <input id="doorOff-r" type="range" min="50" max="3000" step="10" value="200" data-for="doorOff" aria-label="Abstand der Tür zur Seitenwand">
+        </div>
+        <label class="check" for="doorIn"><input type="checkbox" id="doorIn" name="doorIn"> Tür öffnet nach innen</label>
+        <div class="field" id="row-hinge">
+          <span class="lbl" id="lbl-hinge">Türband</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-hinge"><input type="radio" name="hinge" id="hinge-L" value="L" checked><label for="hinge-L">links</label><input type="radio" name="hinge" id="hinge-R" value="R"><label for="hinge-R">rechts</label></div>
+        </div>
+        <p class="hint">Türbreite und -höhe sind die Öffnung in der Vorderwand, der Abstand zählt von der Seitenwand bis zur Öffnung.</p>
+      </section>
+
+      <section class="group" id="grp-tiefen" data-kind="reduit" data-lock="tablare">
+        <h2>Tiefen &amp; Abstände</h2>
+        <div class="dim">
+          <label for="dBack">Tiefe hinten</label>
+          <div class="num"><input id="dBack" name="dBack" type="number" min="150" max="600" step="10" value="400" inputmode="numeric"><span>mm</span></div>
+          <input id="dBack-r" type="range" min="150" max="600" step="10" value="400" data-for="dBack" aria-label="Tiefe hinten">
+          <div class="ticks" id="dBack-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <div class="dim" id="row-dLeft">
+          <label for="dLeft">Tiefe links</label>
+          <div class="num"><input id="dLeft" name="dLeft" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dLeft-r" type="range" min="150" max="600" step="10" value="300" data-for="dLeft" aria-label="Tiefe links">
+          <div class="ticks" id="dLeft-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <div class="dim" id="row-dRight">
+          <label for="dRight">Tiefe rechts</label>
+          <div class="num"><input id="dRight" name="dRight" type="number" min="150" max="600" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="dRight-r" type="range" min="150" max="600" step="10" value="300" data-for="dRight" aria-label="Tiefe rechts">
+          <div class="ticks" id="dRight-ticks" aria-hidden="true" hidden></div>
+        </div>
+        <p class="hint" id="depthHint" hidden></p>
+        <div class="dim">
+          <label for="gapBottom">Unterstes Tablar ab Boden</label>
+          <div class="num"><input id="gapBottom" name="gapBottom" type="number" min="0" max="600" step="10" value="150" inputmode="numeric"><span>mm</span></div>
+          <input id="gapBottom-r" type="range" min="0" max="600" step="10" value="150" data-for="gapBottom" aria-label="Unterstes Tablar ab Boden">
+        </div>
+        <div class="dim">
+          <label for="gapTop">Oberstes Tablar bis Decke</label>
+          <div class="num"><input id="gapTop" name="gapTop" type="number" min="100" max="800" step="10" value="300" inputmode="numeric"><span>mm</span></div>
+          <input id="gapTop-r" type="range" min="100" max="800" step="10" value="300" data-for="gapTop" aria-label="Oberstes Tablar bis Decke">
+        </div>
+      </section>
+
+      <section class="group" data-kind="reduit" id="grp-niche" data-lock="nische">
+        <h2>Nische</h2>
+        <div class="field" id="row-nicheL">
+          <label class="check" for="nicheL"><input type="checkbox" id="nicheL" name="nicheL"> Nische links vorne</label>
+          <div class="row2" id="row-nicheL-dims">
+            <div class="num wide"><input id="nicheLW" name="nicheLW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheLH" name="nicheLH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <div class="field" id="row-nicheR">
+          <label class="check" for="nicheR"><input type="checkbox" id="nicheR" name="nicheR"> Nische rechts vorne</label>
+          <div class="row2" id="row-nicheR-dims">
+            <div class="num wide"><input id="nicheRW" name="nicheRW" type="number" min="300" max="1000" step="10" value="450" inputmode="numeric" aria-label="Nischenbreite"><span>mm breit</span></div>
+            <div class="num wide"><input id="nicheRH" name="nicheRH" type="number" min="600" max="1800" step="10" value="1300" inputmode="numeric" aria-label="Nischenhöhe"><span>mm hoch</span></div>
+          </div>
+        </div>
+        <p class="hint">Unter der Nischenhöhe entfallen die Tablare – Platz für Staubsauger, Besen oder Getränkekisten.</p>
+      </section>
+
       <section class="group" data-lock="material">
-        <h2>Optik</h2>
+        <h2>Material</h2>
         <div class="field">
           <label for="mat">Plattenmaterial<span class="lbl-note">günstigste zuerst</span></label>
           <select id="mat" name="mat"></select>
@@ -857,13 +897,19 @@ body[data-ort="sammlung"] .layout{display:none}
         </div>
       </section>
 
+      <section class="group" id="grp-niveau">
+        <h2>Niveau</h2>
+        <div class="levelbox" id="levelBox" aria-live="polite"></div>
+      </section>
+
+      <p class="mehr" id="mehr">Mehr</p>
       <section class="group">
         <h2>Platten &amp; Preise</h2>
         <div class="field" id="row-sheet">
           <span class="lbl">Plattenformat (Länge × Breite)</span>
           <div class="row2">
-            <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" aria-label="Plattenlänge"><span>mm</span></div>
-            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" aria-label="Plattenbreite"><span>mm</span></div>
+            <div class="num wide"><input id="sheetL" name="sheetL" type="number" min="500" max="3100" step="10" value="2500" inputmode="numeric" aria-label="Plattenlänge"><span>mm</span></div>
+            <div class="num wide"><input id="sheetB" name="sheetB" type="number" min="300" max="3100" step="10" value="1250" inputmode="numeric" aria-label="Plattenbreite"><span>mm</span></div>
           </div>
         </div>
         <div class="field" id="row-boards" hidden>
@@ -871,15 +917,19 @@ body[data-ort="sammlung"] .layout{display:none}
           <ul class="boardlist" id="boardList"></ul>
         </div>
         <div class="row2">
-          <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4"><span>mm</span></div></div>
-          <div class="field" id="row-price"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55"><span>CHF/m²</span></div></div>
+          <div class="field"><label for="kerf">Schnittfuge</label><div class="num wide"><input id="kerf" name="kerf" type="number" min="0" max="8" step="0.5" value="4" inputmode="decimal"><span>mm</span></div></div>
+          <div class="field" id="row-price"><label for="price">Preis Holz</label><div class="num wide"><input id="price" name="price" type="number" min="0" max="500" step="1" value="55" inputmode="numeric"><span>CHF/m²</span></div></div>
         </div>
         <label class="check" id="row-grain" for="grain"><input type="checkbox" id="grain" name="grain" checked> Maserungsrichtung beim Zuschnitt einhalten</label>
         <p class="hint" id="sheetHint">Kosten = Fläche der zugeschnittenen Teile × Preis pro m². Richtwerte (Stand Sept. 2026) – trag den Preis deines Händlers ein.</p>
       </section>
-      <section class="group" id="grp-niveau">
-        <h2>Niveau</h2>
-        <div class="levelbox" id="levelBox" aria-live="polite"></div>
+
+      <section class="group" id="grp-zufall">
+        <h2>Zufall</h2>
+        <div class="acts">
+          <button type="button" class="btn ghost" id="bZufall" title="Würfelt eine stimmige Konfiguration ohne Warnungen. Beim Reduit bleibt der Raum, gewürfelt wird das Regal.">Zufall<span id="lockCount"></span></button>
+        </div>
+        <p class="hint">Festgehaltene Gruppen bleiben beim Würfeln, wie sie sind.</p>
       </section>
     </form>
     </div>
@@ -947,6 +997,7 @@ body[data-ort="sammlung"] .layout{display:none}
 </div>
 <dialog class="wahl" id="wahl" aria-labelledby="h-wahl">
   <h2 id="h-wahl">Was baust du?</h2>
+  <p class="wahlsatz">Masse eingeben – Einkaufsliste, Teile und Bauablauf erhalten.</p>
   <ul class="wahllist">
     <li><button type="button" class="wahlbtn" data-kind="sideboard"><b>Sideboard</b><small>Korpus mit Fächern, Türen und Füssen fürs Wohnzimmer</small><small class="zuletzt" data-zuletzt="sideboard"></small></button><button type="button" class="linkbtn" data-zufall="sideboard">Zufall</button></li>
     <li><button type="button" class="wahlbtn" data-kind="reduit"><b>Reduit</b><small>Regal in einem kleinen Raum, eingebaut oder selbststehend</small><small class="zuletzt" data-zuletzt="reduit"></small></button><button type="button" class="linkbtn" data-zufall="reduit">Zufall</button></li>
@@ -954,7 +1005,7 @@ body[data-ort="sammlung"] .layout{display:none}
   <div class="acts"><button type="button" class="btn ghost" id="wahlColl">Aus Sammlung laden</button><button type="button" class="btn ghost" id="wahlZu">Schliessen</button></div>
 </dialog>
 <div class="mbar" id="mbar">
-  <div class="mprice"><div><b id="mPrice"></b><span id="mMeta"></span><span class="copied js-msg" aria-live="polite"></span></div><div class="mbtns"><button type="button" class="btn ghost js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button><button type="button" class="btn ghost js-ueberschreiben" hidden>Überschreiben</button></div></div>
+  <div class="mprice"><b class="js-preis" id="mPrice"></b><div class="mbtns"><button type="button" class="btn js-sammeln" title="Aktuellen Entwurf in die Sammlung legen">Sammeln</button><button type="button" class="btn ghost js-link" title="Link zu diesem Entwurf kopieren oder teilen">Link</button></div><div class="mzeile"><button type="button" class="metabtn" id="mMeta" popovertarget="aufschl" title="Preis aufschlüsseln"></button><span class="copied js-msg" aria-live="polite"></span></div></div>
   <nav class="mnav" aria-label="Orte">
     <button type="button" data-ort="entwerfen">Entwerfen</button>
     <button type="button" data-ort="einkaufen">Einkaufen<span class="count" id="mCntKauf"></span></button>
@@ -962,6 +1013,7 @@ body[data-ort="sammlung"] .layout{display:none}
     <button type="button" data-ort="sammlung">Sammlung <span class="js-anzahl"></span></button>
   </nav>
 </div>
+<div class="aufschl" id="aufschl" popover></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -1114,6 +1166,7 @@ function syncVisibility(){
   syncDepths(false);
   // Verbindung, Bauart und Niveau folgen aus der Bauweise und stehen auf ihrer Karte.
   $('#grp-joint').hidden = $('#grp-bauart').hidden = $('#grp-niveau').hidden = true;
+  $('#grp-front').hidden = reduit || front === 'open';   // offene Fächer: an der Front gibt es nichts einzustellen
   $('#row-room').hidden = reduit;
   $('#row-back').hidden = reduit && !free;
   fillBauweisen(kind);
@@ -1240,7 +1293,7 @@ function fillBauweisen(kind){
   box.innerHTML = BAUWEISEN[kind].map(b => `<label class="card bw"><input type="radio" name="bw" value="${b.id}">${lead(b)}<b>${esc(b.name)}</b><span class="lvl" data-l="${b.niveau[0]}" aria-label="Niveau ${b.niveau[0]} von 3"><i></i><i></i><i></i></span><span class="desc">${esc(b.desc)}</span><span class="preis"></span><dl class="bwdet"></dl><span class="grund">${BAN_SVG}<span></span></span></label>`).join('');
   $('#bwHint').textContent = kind === 'reduit'
     ? 'Die Bauweise legt Tragwerk und Material fest. Gesperrt ist, was in diesem Raum nicht hält – der Grund steht auf der Karte.'
-    : 'Die Bauweise legt Material, Stärke, Verbindung und Oberfläche fest. Masse, Aufteilung und Optik bleiben frei.';
+    : 'Die Bauweise legt Material, Stärke, Verbindung und Oberfläche fest. Masse, Aufteilung und Front bleiben frei.';
 }
 function zeigeBauweisen(P){
   const c = cfgFromData(P.d), preise = kartenPreise(P.d), g = P.gesperrt.bw || {};
@@ -1366,31 +1419,31 @@ function render(){
     w.innerHTML = `${R.warn.length} Warnung${R.warn.length === 1 ? '' : 'en'} · <button type="button" class="linkbtn" data-go="entwerfen">Zum Entwurf</button>`;
   }
   $('#kindName').textContent = reduit ? 'Reduit' : 'Sideboard';
-  $('#dimTag').textContent = reduit ? `Raum ${R.W} × ${R.D} × ${R.H} mm` : `${R.W} × ${R.H} × ${R.Dtot} mm`;
+  $('#dimTag').textContent = masseText(R);
+  for (const el of document.querySelectorAll('.js-steckbrief .sb-was')) el.textContent = steckbriefText(R, P.d);
   $('#bDoors').hidden = reduit || c.front === 'open';
   $('#bWall').hidden = !reduit;
   if (window.THREE && three.ok) build3D(R);
   renderVariante();
   syncLocks();
 }
+let letzterPreis = null;   // Preis der letzten Anzeige; ändert er sich, blitzt er kurz
 function renderSummary(R){
-  const main = R.groups[0];
-  const { cut: cost, whole } = sheetCosts(R.groups);
   const parts = R.rows.reduce((a, r) => a + r.qty, 0);
   const lvlText = ['', 'Einsteiger', 'Einsteiger+', 'Etwas Übung'][R.level];
   const chf = v => `CHF ${Math.round(v / 5) * 5}`;
-  const item = (dt, dd, cls) => `<div${cls ? ` class="${cls}"` : ''}><dt>${dt}</dt><dd>${dd}</dd></div>`;
   const reduit = R.kind === 'reduit';
-  const wood = cost + (reduit ? R.solidCost : 0), woodWhole = whole + (reduit ? R.solidCost : 0);
-  const sheets = R.groups.map(g => `${g.sheets.length} × ${g.label}`).join(' + ');
-  const boards = !!main.boards, woodName = boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt';
-  $('#summary').innerHTML =
-    item(reduit ? 'Raum' : 'Aussenmass', `${R.W} × ${reduit ? `${R.D} × ${R.H}` : `${R.H} × ${R.Dtot}`} <small>mm</small>`) +
-    item('Teile', parts) +
-    item(boards ? 'Bretter' : 'Platten', `<span title="${sheets}">${sheets}</span>`, 'wide') +
-    item('Total ca.', `<b>${chf(kostenGesamt(R))}</b><small>${woodName} ${chf(wood)}${reduit ? ` · Kaufteile ${chf(R.buyCost)}` : ''}${boards ? '' : ` · ganze Platten ${chf(woodWhole)}`}</small>`, 'price');
-  $('#mPrice').textContent = chf(kostenGesamt(R));
-  $('#mMeta').textContent = reduit ? `${woodName} ${chf(wood)} · Kaufteile ${chf(R.buyCost)}` : `${woodName} · ${parts} Teile`;
+  const A = preisAufschluesselung(R), preis = chf(A.total);
+  for (const el of document.querySelectorAll('.js-preis')) {
+    el.textContent = preis;
+    if (letzterPreis !== null && preis !== letzterPreis) { el.classList.add('blitz'); clearTimeout(el._b); el._b = setTimeout(() => el.classList.remove('blitz'), 300); }
+  }
+  letzterPreis = preis;
+  $('#mMeta').textContent = `${A.kaufteile != null ? `${A.holzName} ${chf(A.holz)} · Kaufteile ${chf(A.kaufteile)}` : `${A.holzName} · ${parts} Teile`} ▸`;
+  $('#aufschl').innerHTML = `<p class="total">Total ca. <b>${preis}</b></p>`
+    + `<dl><dt>${A.holzName}</dt><dd>${chf(A.holz)}</dd>${A.kaufteile != null ? `<dt>Kaufteile</dt><dd>${chf(A.kaufteile)}</dd>` : ''}</dl>`
+    + (A.ganzePlatten != null ? `<p class="hint">Ganze Platten statt Zuschnitt: ${chf(A.ganzePlatten)}</p>` : '')
+    + `<p class="hint">${A.ohneBeschlaege ? 'Ohne Beschläge – ' : ''}Richtwert.</p>`;
   const why = reduit
     ? (R.build === 'free' ? `Selbststehende Module, ${JOINTS[R.joint].name}` : `Eingebaut mit ${SYS[R.sys].name}${R.sys === 'cheeks' ? ', Lochreihen bohren' : ', an die Wand dübeln'}`)
     : `${JOINTS[R.joint].name}${R.front === 'hinged' ? ' + Drehtüren anschlagen' : R.front === 'sliding' ? ' + Schiebetürbeschlag einbauen' : ', offene Front'}`;
@@ -1919,7 +1972,7 @@ form.addEventListener('change', pillOnChange);
 
 // Schmal: Gruppen einklappbar, nur die wichtigsten offen
 const narrow = matchMedia('(max-width: 920px)');
-const OPEN = ['Masse', 'Raum', 'Bauweise', 'Optik'];   // «Bauweise» ersetzt Bauart und Niveau (Review, Abschnitt 4)
+const OPEN = ['Masse', 'Raum', 'Bauweise', 'Aufteilung', 'Form & Tablare'];   // A5: offen, was das Möbel sichtbar verändert; Desktop bleibt ganz offen (Aufklapper dort erst B6)
 const chevron = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const heads = [...form.querySelectorAll('.group > h2')].map(h => {
   const g = h.parentElement, b = document.createElement('button');
@@ -2065,31 +2118,25 @@ $('#bZufall').addEventListener('click', () => {
   flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
 });
 
+// Meldung zeigen; nach 6 s blendet sie aus (Klasse «an», CSS-Blende 180 ms) und leert sich danach.
 function flash(sel, html){
   for (const el of document.querySelectorAll(sel)) {
-    el.innerHTML = html;
-    clearTimeout(el._t); if (html) el._t = setTimeout(() => { el.innerHTML = ''; }, 6000);
+    clearTimeout(el._t); clearTimeout(el._w);
+    if (html) { el.innerHTML = html; el.classList.add('an'); el._t = setTimeout(() => flash(sel, ''), 6000); }
+    else { el.classList.remove('an'); el._w = setTimeout(() => { el.innerHTML = ''; }, 180); }
   }
 }
 
 /* ---------- Möbelwahl ---------- */
-// Beim ersten Besuch ohne Schliessen. Sonst legt Öffnen einen History-Eintrag an, damit Zurück den Dialog schliesst.
+// Öffnen legt einen History-Eintrag an, damit Zurück die Wahl schliesst. Beim Erstbesuch öffnet sie nicht (Entscheid 02.10.2026).
 const wahl = $('#wahl');
-let wahlErst = false;
 let wahlToken = 0;
-function oeffneWahl({ erst = false } = {}){
-  wahlErst = erst;
+function oeffneWahl(){
   const aktuell = formData().kind;
-  for (const b of wahl.querySelectorAll('[data-kind]')) b.toggleAttribute('aria-current', !erst && b.dataset.kind === aktuell);
-  for (const z of wahl.querySelectorAll('[data-zuletzt]')) {
-    const d = !erst && entwuerfe && entwuerfe[z.dataset.zuletzt];
-    if (!d) { z.textContent = ''; continue; }
-    const info = sammlungEintrag(d, computeData(d)).info;
-    z.textContent = `zuletzt: ${info.masse} mm · ca. CHF ${Math.round(info.kosten / 5) * 5}`;
-  }
-  $('#wahlZu').hidden = erst;
+  for (const b of wahl.querySelectorAll('[data-kind]')) b.toggleAttribute('aria-current', b.dataset.kind === aktuell);
+  for (const z of wahl.querySelectorAll('[data-zuletzt]')) z.textContent = wahlZeile(entwuerfe && entwuerfe[z.dataset.zuletzt], startwerte(DEFAULTS, z.dataset.zuletzt));
   $('#wahlColl').hidden = !coll.length;
-  if (!erst) { wahlToken = Date.now(); history.pushState({ wahl:wahlToken }, '', location.hash || '#entwerfen'); }
+  wahlToken = Date.now(); history.pushState({ wahl:wahlToken }, '', location.hash || '#entwerfen');
   wahl.showModal();
 }
 function schliesseWahl(){
@@ -2099,23 +2146,29 @@ function schliesseWahl(){
 }
 // Jedes Verlassen unseres History-Eintrags (auch über einen älteren, ebenfalls markierten) schliesst den Dialog.
 window.addEventListener('popstate', () => { if (wahl.open && !(history.state && history.state.wahl === wahlToken)) wahl.close(); });
-wahl.addEventListener('cancel', ev => { ev.preventDefault(); if (!wahlErst) schliesseWahl(); });
+wahl.addEventListener('cancel', ev => { ev.preventDefault(); schliesseWahl(); });
 $('#bKind').addEventListener('click', () => oeffneWahl());
 $('#wahlZu').addEventListener('click', schliesseWahl);
 wahl.addEventListener('click', ev => {
+  if (ev.target === wahl) {   // Tipp auf den Backdrop (nicht auf den Innenabstand der Wahl)
+    const r = wahl.getBoundingClientRect();
+    if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) schliesseWahl();
+    return;
+  }
   const k = ev.target.closest('[data-kind]'), z = ev.target.closest('[data-zufall]'), s = ev.target.closest('#wahlColl');
   if (!k && !z && !s) return;
   if (k) wechsleTyp(k.dataset.kind);
   if (z) {
     const basis = entwuerfe[z.dataset.zufall] || startwerte(DEFAULTS, z.dataset.zufall);
-    applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo: !wahlErst });
-    if (!wahlErst) flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
+    applyData(zufall(basis, Math.random, 60, locksFuer(z.dataset.zufall)), { undo:true });
+    flash('.js-msg', `Neu gewürfelt. ${undoBtn}`);
   }
-  if (wahlErst) { wahlErst = false; wahl.close(); if (s) geheZu('sammlung'); return; }
-  // history.back() läuft asynchron: erst nach dem Zurück-Schritt zur Sammlung, sonst überholt der neue Hash ihn.
-  if (s && history.state && history.state.wahl === wahlToken) addEventListener('popstate', () => geheZu('sammlung'), { once:true });
+  // Wahl führt nach Entwerfen, «Aus Sammlung laden» zur Sammlung. history.back() läuft asynchron:
+  // erst nach dem Zurück-Schritt den Ort wechseln, sonst überholt der neue Hash ihn.
+  const ziel = s ? 'sammlung' : 'entwerfen';
+  if (history.state && history.state.wahl === wahlToken) addEventListener('popstate', () => geheZu(ziel), { once:true });
   schliesseWahl();
-  if (s && !wahl.open) geheZu('sammlung');
+  if (!wahl.open) geheZu(ziel);
 });
 
 const chf5 = v => `CHF ${Math.round(v / 5) * 5}`;
@@ -2139,7 +2192,7 @@ function renderColl(){
   $('#collLeer').hidden = !!coll.length;
   $('#collList').innerHTML = sortiere(coll, sortNach).map(e => `
     <li data-id="${e.id}"${e.id === aktiv ? ' class="on"' : ''}>
-      <input value="${esc(e.name)}" aria-label="Name" maxlength="60">
+      <input value="${esc(e.name)}" aria-label="Name" maxlength="60" enterkeyhint="done">
       <div class="meta">${esc(e.info.typ)} · ${esc(BW[mitBauweise(e.data).bw].name)}${pruefeRegeln(mitBauweise(e.data)).korrekturen.length ? ' (ältere Variante)' : ''} · <b>${esc(e.info.masse)}</b> mm · ${esc(e.info.material)} · ca. <b>${chf5(e.info.kosten)}</b> · ${esc(e.gespeichert)}</div>
       <div class="do">
         <button type="button" class="btn ghost" data-act="laden">Laden</button>
@@ -2154,22 +2207,14 @@ function renderVariante(){
   const e = coll.find(x => x.id === aktiv);
   const passt = e && e.data.kind === formData().kind;
   const anders = passt && geaendert(formData(), e.data);
-  $('#variante').hidden = !passt;
-  if (passt) $('#variante').innerHTML = `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}`;
+  const zustand = passt ? `Variante <b>«${esc(e.name)}»</b>${anders ? ' · geändert' : ''}` : 'Entwurf';
+  for (const el of document.querySelectorAll('.js-steckbrief .sb-zustand')) el.innerHTML = zustand;
   for (const b of document.querySelectorAll('.js-sammeln')) {
     if (b.closest('#collLeer')) continue;
     b.disabled = passt && !anders;
-    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Als neue Variante' : b.closest('.mbar') ? 'Sammeln' : 'In Sammlung';
+    b.textContent = passt && !anders ? 'Gesammelt ✓' : anders ? 'Neue Variante' : 'Sammeln';
   }
-  for (const b of document.querySelectorAll('.js-ueberschreiben')) b.hidden = !anders;
 }
-for (const b of document.querySelectorAll('.js-ueberschreiben')) b.addEventListener('click', () => {
-  const i = coll.findIndex(x => x.id === aktiv);
-  if (i < 0) return;
-  coll[i] = { ...sammlungEintrag(formData(), R), id:coll[i].id, name:coll[i].name };
-  storeColl(); renderColl();
-  flash('.js-msg', `«${esc(coll[i].name)}» überschrieben.`);
-});
 // Lädt eine Variante. Passt sie nicht (mehr) zu ihrer Bauweise, fragt ein Hinweis: anpassen oder unverändert ansehen.
 const mitBauweise = d => d.bw ? d : { ...d, bw:bauweiseVon(d) };
 function ladeVariante(e){
@@ -2210,6 +2255,10 @@ $('#collList').addEventListener('change', ev => {
   const e = coll.find(x => x.id === ev.target.closest('li').dataset.id);
   if (e && ev.target.value.trim()) { e.name = ev.target.value.trim(); storeColl(); if (e.id === aktiv) renderVariante(); }
 });
+// Enter im Namensfeld beendet die Eingabe (Tastatur zu); gespeichert wird über den change-Handler beim Blur.
+$('#collList').addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && !ev.isComposing && ev.target.matches('input')) { ev.preventDefault(); ev.target.blur(); }
+});
 $('#collList').addEventListener('click', ev => {
   const act = ev.target.dataset.act;
   if (!act) return;
@@ -2243,14 +2292,22 @@ async function teileLink(){
   catch (e) { prompt('Link zu diesem Entwurf:', url); }
 }
 for (const b of document.querySelectorAll('.js-link')) b.addEventListener('click', teileLink);
-// Geteilter Entwurf aus ?plan=…: wie eine Variante aus der Sammlung laden (Regeln prüfen, Rückgängig).
-// Fehlende Felder kommen aus den Startwerten, Preis und Format aus dem aktuellen Katalog.
-async function ladeLink(code){
+// Entwurf von Link (?plan=…): fehlende Felder aus den Startwerten, Preis und Format aus dem Katalog. Weicht er von den Regeln ab,
+// wird er ohne Rückfrage angepasst (kein Hinweis «Ältere Variante», er ist keine Variante). aktiv erst nach applyData leeren, damit Rückgängig die vorher geladene Variante zurückholt.
+async function ladeLink(code, { erstBesuch = false } = {}){
   const d = await planAusCode(code);
-  if (!d || !MATS[d.mat]) { flash('.js-msg', 'Der Link ist ungültig – der Entwurf liess sich nicht lesen.'); return; }
-  const { katalog, price, sheetL, sheetB, ...basis } = startwerte(DEFAULTS, d.kind);
-  const kat = catalogValues(d.mat, d.t);
-  ladeVariante({ id:null, name:'Geteilter Entwurf', data:{ ...basis, ...kat, ...d, katalog:kat } });
+  const gueltig = !!d && !!MATS[d.mat];
+  let angepasst = false;
+  if (gueltig) {
+    const { katalog, price, sheetL, sheetB, ...basis } = startwerte(DEFAULTS, d.kind);
+    const kat = catalogValues(d.mat, d.t);
+    const data = mitBauweise({ ...basis, ...kat, ...d, katalog:kat }), P = pruefeRegeln(data);
+    angepasst = P.korrekturen.length > 0;
+    applyData(angepasst ? P.d : data, { undo:!erstBesuch });
+    aktiv = null; storeAktiv(); renderVariante();
+  }
+  const m = linkMeldung({ erstBesuch, gueltig, angepasst });
+  flash('.js-msg', esc(m.text) + (m.undo ? ` ${undoBtn}` : ''));
 }
 const planLink = new URLSearchParams(location.search).get('plan');
 if (planLink) history.replaceState(null, '', location.pathname + location.hash);   // Neuladen holt sonst den Link zurück
@@ -2262,7 +2319,7 @@ fillFrontMats();
 restore(null);
 DEFAULTS = formData();
 try { entwuerfe = entwuerfeLaden(JSON.parse(localStorage.getItem(ENTW) || 'null'), stored()); } catch (e) { entwuerfe = entwuerfeLaden(null, stored()); }
-const erstBesuch = !entwuerfe;   // Task 9 öffnet dann «Was baust du?»
+const erstBesuch = !entwuerfe;   // kein Dialog (Entscheid 02.10.2026), nur die Link-Meldung unterscheidet sich
 restore(entwuerfe && entwuerfe[entwuerfe.kind]);
 syncMaterials();
 syncDepths(true);
@@ -2273,8 +2330,9 @@ render();
 save();          // ab hier gibt es immer einen Entwurf (Rückgängig und Typwechsel verlassen sich darauf)
 renderColl();
 zeigeOrt(ortAusHash(location.hash));
-if (planLink) ladeLink(planLink);
-else if (erstBesuch) oeffneWahl({ erst:true });
+if (planLink) ladeLink(planLink, { erstBesuch });
 requestAnimationFrame(() => form.classList.add('ready'));
 })();
 </script>
+</body>
+</html>

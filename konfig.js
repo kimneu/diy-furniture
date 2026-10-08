@@ -416,16 +416,17 @@ function bwDetails(b, c){
 // Hinweise, die zum Möbel gehören und kein Fehler sind, sind erlaubt: Kippschutz, Bad, Gipskarton (gehört
 // zum Raum) und was die Berechnung schon selbst löst (zusätzliche Winkel/Pfosten eingeplant, Tiefe auf Brettbreite).
 const HARMLOS = /kippt leicht|^Bad:|^Gipskarton|eingeplant|gesetzt \(Brettbreite/;
-// Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder.
+// Gruppen, die man beim Würfeln festhalten kann (Schloss im Formular, data-lock), und ihre Felder: genau die Felder, die in der Gruppe stehen.
 const SPERREN = {
   masse:['w', 'h', 'd'],
   bauweise:['bw', 'build', 'sys', 'joint'],
   bauart:['build', 'sys'],
-  form:['shape', 'corner'],
-  tablare:['dBack', 'dLeft', 'dRight', 'nShelves', 'gapBottom', 'gapTop'],
+  form:['shape', 'corner', 'nShelves'],
+  tablare:['dBack', 'dLeft', 'dRight', 'gapBottom', 'gapTop'],
   nische:['nicheL', 'nicheLW', 'nicheLH', 'nicheR', 'nicheRW', 'nicheRH'],
-  aufbau:['top', 'sections', 'shelves', 'base', 'baseH', 'legShape', 'taper', 'legColor'],
-  front:['front', 'doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
+  aufteilung:['sections', 'front', 'base'],
+  aufbau:['top', 'shelves', 'baseH', 'legShape', 'taper', 'legColor'],
+  front:['doorsPer', 'slideN', 'handle', 'color', 'frontMat', 'frontT'],
   material:['mat', 't', 'back', 'price', 'sheetL', 'sheetB', 'kerf', 'grain', 'katalog'],
   verbindung:['joint']
 };
@@ -575,11 +576,39 @@ function entwurfSetzen(e, data){
   const kind = data.kind || 'sideboard';
   return { ...(e || {}), kind, [kind]: data };
 }
+// Preiszeile auf der Karte «Was baust du?»: eigener Entwurf mit Preis, sonst der Preis der Startwerte.
+function wahlZeile(entwurf, start){
+  const n = Math.round(kostenGesamt(computeData(entwurf || start)) / 5) * 5;
+  return entwurf ? `Dein Entwurf · ca. CHF ${n}` : `ab ca. CHF ${n}`;
+}
 
 /* ---------- Sammlung ---------- */
 // Was das Möbel kostet: Holz im Zuschnitt bzw. ganze Bretter, Latten und Kaufteile (Reduit).
 function kostenGesamt(R){
   return sheetCosts(R.groups).cut + (R.solidCost || 0) + (R.buyCost || 0);
+}
+// Masse beschriftet für die Masstafel: Reduit als Raum (B · T · H), Sideboard als Möbel (B · H · T mit Front).
+function masseText(R){
+  return R.kind === 'reduit' ? `Raum B ${R.W} · T ${R.D} · H ${R.H} mm` : `B ${R.W} · H ${R.H} · T ${R.Dtot} mm`;
+}
+// Steckbrief: Bauweise · Teile · Platten · Bretter (Platten samt Rückwand); Einzahl bei 1, was 0 ist, fällt weg.
+function steckbriefText(R, d){
+  const anzahl = (n, eins, mehr) => n ? `${n} ${n === 1 ? eins : mehr}` : '';
+  const blaetter = boards => R.groups.filter(g => !!g.boards === boards).reduce((a, g) => a + g.sheets.length, 0);
+  return [BW[d.bw || bauweiseVon(d)].name, anzahl(R.rows.reduce((a, r) => a + r.qty, 0), 'Teil', 'Teile'),
+    anzahl(blaetter(false), 'Platte', 'Platten'), anzahl(blaetter(true), 'Brett', 'Bretter')].filter(Boolean).join(' · ');
+}
+// Preis aufgeschlüsselt: Holz (Zuschnitt bzw. ganze Bretter, mit Latten), Kaufteile (Reduit), ganze Platten zum Vergleich; ungerundet.
+function preisAufschluesselung(R){
+  const { cut, whole } = sheetCosts(R.groups), latten = R.solidCost || 0, boards = !!R.groups[0].boards;
+  return {
+    total: kostenGesamt(R),
+    holzName: boards ? 'Holz ganze Bretter' : 'Holz Zuschnitt',
+    holz: cut + latten,
+    kaufteile: R.kind === 'reduit' ? R.buyCost : null,
+    ganzePlatten: boards ? null : whole + latten,
+    ohneBeschlaege: R.kind !== 'reduit'
+  };
 }
 // Ein Eintrag merkt sich die Formularwerte und eine Kurzbeschreibung mit den Kosten beim Speichern.
 function sammlungEintrag(d, R, now = new Date()){
@@ -656,6 +685,11 @@ async function planAusCode(code){
     return d && typeof d === 'object' && !Array.isArray(d) && ['sideboard', 'reduit'].includes(d.kind) ? d : null;
   } catch (e) { return null; }
 }
+// Meldung nach einem Link (?plan=…): Rückgängig nur, wenn es vorher einen eigenen Entwurf gab.
+function linkMeldung({ erstBesuch = false, gueltig = false, angepasst = false } = {}){
+  if (!gueltig) return { text: erstBesuch ? 'Der Link ist ungültig – du siehst den Standard-Entwurf.' : 'Der Link ist ungültig – dein Entwurf bleibt, wie er war.', undo:false };
+  return { text: angepasst ? 'Entwurf von Link geladen und an die Bauweise angepasst.' : 'Entwurf von Link geladen.', undo: !erstBesuch };
+}
 
 /* ---------- Orte ---------- */
 const ORTE = ['entwerfen', 'einkaufen', 'bauen', 'sammlung'];
@@ -664,4 +698,4 @@ function ortAusHash(hash){
   return ORTE.includes(o) ? o : 'entwerfen';
 }
 
-if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode };
+if (typeof module !== 'undefined') module.exports = { cfgFromData, withCatalog, startwerte, computeData, pruefeRegeln, gesperrt, grenzen, REGELN, LEIMHOLZ, BAUWEISEN, BW, bauweiseVon, bwSperre, kartenPreise, bwDetails, zufall, sammlungEintrag, kostenGesamt, snapBreite, HARMLOS, SPERREN, entwuerfeLaden, entwurfSetzen, geaendert, sortiere, ortAusHash, linkDaten, LINK_FELDER, planCode, planAusCode, masseText, steckbriefText, preisAufschluesselung, wahlZeile, linkMeldung };

@@ -68,8 +68,8 @@ Auswahl «Was baust du?»
 - Sideboard / Reduit → Entwerfen mit dem letzten Entwurf dieses Typs (sonst Standardwerte)
 - Zufall → Entwerfen mit neuem Zufallsentwurf des gewählten Typs
 - Aus Sammlung laden → Sammlung   (nur wenn die Sammlung nicht leer ist)
-- Schliessen → Entwerfen          (nicht beim ersten Besuch, dort gibt es noch keinen Entwurf)
-[ Typen mit kleinem Bild; beim Typ «zuletzt: 1600 × 1400 mm, ca. CHF …» ]
+- Schliessen, Backdrop, Esc, Zurück → bleibt, wo die Auswahl geöffnet wurde
+[ Typen mit Satz «Masse eingeben – Einkaufsliste, Teile und Bauablauf erhalten.»; je Karte «Dein Entwurf · ca. CHF …» oder «ab ca. CHF …» ]
 
 Einkaufen
 - Zeile abhaken → hier (Haken bleiben gespeichert)
@@ -121,7 +121,7 @@ Ab **1200 px Breite und 640 px Höhe** füllt die App genau das Fenster:
 
 | Fall | Verhalten |
 |---|---|
-| Erster Besuch | Kein gespeicherter Entwurf, darum öffnet die Auswahl «Was baust du?» ohne «Schliessen». Die Wahl führt zu Entwerfen mit Standardwerten. |
+| Erster Besuch | Entwerfen zeigt sofort das Beispiel-Sideboard, die Auswahl öffnet nicht (Entscheid 02.10.2026, docs/review/2026-10-02-ux-review.md Kapitel 5). Mit Link: Entwurf von Link, Meldung ohne Rückgängig. |
 | Wiederkehrender Besuch | Letzter Typ, sein Entwurf und der letzte Ort (Hash). Keine Auswahl. |
 | Leere Sammlung | Kurze Erklärung («Varianten merken und vergleichen»), dazu «Aktuellen Entwurf sammeln» und «Zum Entwurf». Keine Sackgasse. |
 | Laden über ungespeicherte Änderungen | Keine Rückfrage und kein automatisches Sichern. Die Meldung «X geladen · Rückgängig» stellt den vorherigen Entwurf wieder her (gleiches Muster wie Entfernen). |
