@@ -188,6 +188,25 @@ function railParts(need){
 const RAIL_T = 12, RAIL_V0 = RAIL_T + 2;
 // Ganze Bretter bei Wandschienen: das Brett beginnt vor der Schiene und steht darum so viel weiter vor als die Tiefe.
 const railsVor = c => c.build !== 'free' && c.sys === 'rails' && MATS[c.mat] && MATS[c.mat].boards ? RAIL_V0 - 3 : 0;
+// Schienenlage mit Überstand: An einem Wand-Ende steht die äussere Schiene eingerückt, das Tablar kragt darüber aus.
+// Feld f mit Kragarm a, Last q: über der Schiene M = q·a²/2, in Feldmitte M = q·f²/8 − q·a²/2 – gleich gross bei
+// a = f/√8 ≈ 0,35 · f (bei 2 Schienen ≈ 0,21 × Tablarlänge). Bedingungen: Feld f < max wie bisher (mit Kragarm biegt
+// es sich weniger durch) und Überstand a ≤ max/3 (Durchbiegung am Kragarm). Nachgerechnet für Fichte 18, 400 tief,
+// 50 kg/m, E 10 000 N/mm²: Wand 1000 → 2 statt 3 Schienen, Feld 586, Überstand 207; Feldmitte ca. 0,2 mm (mit Kriechen
+// 0,3 mm), die Enden heben sich leicht, je Konsole ca. 25 kg. An Ecken, Nischen und freien Enden bleibt die Schiene
+// RAIL_END vom Ende (dort tragen Eckleiste oder Stütze mit).
+const KRAG = 1 / Math.sqrt(8), RAIL_END = 50;
+function railPositions(seg, max){
+  const nische = seg.niche ? (seg.niche.at === 'end' ? 1 : 0) : -1;
+  const krag = [0, 1].map(e => seg.ends[e] === 'wall' && e !== nische);
+  const w = krag.filter(Boolean).length, L = seg.u1 - seg.u0 - RAIL_END * (2 - w);
+  // So wenige Schienen wie möglich. Solange a = KRAG · f unter max/3 bleibt, ist f < max schon erfüllt; sonst gilt a = max/3,
+  // mehr Überstand ist nicht erlaubt – reicht das Feld dann nicht, braucht es eine Schiene mehr.
+  for (let n = 2; ; n++) {
+    const a = clamp(KRAG * L / (n - 1 + w * KRAG), RAIL_END, max / 3);
+    if ((L - w * a) / (n - 1) < max) return spread(seg.u0 + (krag[0] ? a : RAIL_END), seg.u1 - (krag[1] ? a : RAIL_END), n).map(r0);
+  }
+}
 const KONSOLE_LENS = [250, 300, 350, 400, 470];
 const WINKEL_LENS = [150, 200, 250];
 // Blechkonsolen: Tiefenschenkel → Wandschenkel (der lange Schenkel kommt an die Wand).
@@ -413,8 +432,8 @@ const SUPPORTS = {
   },
 
   rails(ctx, seg, shelves){
-    const n = pieces(seg.u1 - seg.u0 - 100, ctx.max) + 1;
-    let us = spread(seg.u0 + 50, seg.u1 - 50, n).map(r0);
+    const base = railPositions(seg, ctx.max);
+    let us = base;
     const split = splitShelves(ctx, seg, shelves, us);
     us = [...new Set([...us, ...split.supports])].sort((x, y) => x - y);
     const list = split.pieces;
@@ -424,9 +443,11 @@ const SUPPORTS = {
     if (kl > kmax) ctx.warn.push(`Die kürzeste Konsole (${kl} mm) steht bei ${seg.depth} mm tiefen Tablaren ${SIDE_NAME[seg.id]} vorne vor – Tablare tiefer machen oder Tablarwinkel wählen.`);
     for (const p of list) addShelf(ctx, seg, p, 'liegt auf Konsolen vor der Schiene, von unten verschraubt', RAIL_V0);
     let konsolen = 0;
+    const gesetzt = [];
     for (const u of us) {
       const on = list.filter(p => u >= p.a + 20 && u <= p.b - 20);
       if (!on.length) continue;
+      gesetzt.push(u);
       const y0 = Math.min(...on.map(p => p.y)) - 60, y1 = Math.max(...on.map(p => p.y)) + 40;
       const need = y1 - y0;
       for (const l of railParts(need)) { ctx.buy('rail' + RAIL_LENS.find(x => x >= l), 1, 'senkrecht, auf Länge kürzen'); ctx.dowel(0, Math.ceil(l / 300) + 1); }
@@ -439,9 +460,11 @@ const SUPPORTS = {
     }
     ctx.buy('konsole' + kl, konsolen, 'eine pro Tablar und Schiene');
     ctx.screw('blech', konsolen * 2, 'Tablare von unten durch die Konsolen');
+    // Für den Bauablauf: Lage der Schienen und grösster Abstand der äusseren Schiene zum Segmentende.
+    if (gesetzt.length) ctx.schienen.push({ id:seg.id, us:gesetzt, krag:Math.max(gesetzt[0] - seg.u0, seg.u1 - gesetzt[gesetzt.length - 1]) });
     for (const p of list) if (p.ends[0] === 'corner') addCornerBatten(ctx, seg, p);
     freeEndPosts(ctx, seg, shelves);
-    if (n > 2) extraWarn(ctx, seg, 'zusätzliche Schienen');
+    if (base.length > 2) extraWarn(ctx, seg, 'zusätzliche Schienen');
   },
 
   brackets(ctx, seg, shelves){
@@ -672,7 +695,7 @@ function computeReduit(c0){
       const B = boardWidthFor(BM.widths, seg.depth - 3);
       return B == null ? Infinity : Math.max(...BM.boards.filter(f => f.B === B).map(f => f.L));
     },
-    fix:0, fixBy:new Map(), eck:{}, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(),
+    fix:0, fixBy:new Map(), eck:{}, lens:[], pins:0, backScrews:0, modules:0, tall:0, grouped:new Map(), schienen:[],
     // Wanddübel; durch = Dicke des Anbauteils (0 für Metall)
     dowel(durch, n){ const k = dowelFor(durch); ctx.fix += n; ctx.fixBy.set(k, (ctx.fixBy.get(k) || 0) + n); },
     screw(anbau, qty, note){ ctx.buy(screwKey(screwFor(anbau, t)), qty, note); },
@@ -779,7 +802,7 @@ function computeReduit(c0){
   tools.add('Schwingschleifer oder Schleifklotz');
   tools.add(c.mat === 'mdf' ? 'Schaumstoffrolle und Lackpinsel' : c.mat === 'dekorspan' ? 'Bügeleisen und Cutter für Kantenband' : M.coated ? 'Pinsel für die Kanten' : 'Baumwolllappen oder Pinsel für Öl');
 
-  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, schieneZweiteilig:!!ctx.schieneZweiteilig, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasCorner: rows.some(r => r.name === 'Eckleiste'),
+  const steps = buildReduitSteps({ zuGross:!!ctx.zuGross, eck:ctx.eck, schieneZweiteilig:!!ctx.schieneZweiteilig, schienen:ctx.schienen, boards: !!BM, hasJoints: rows.some(r => r.name === 'Stossleiste'), c, free, Bk, levels, drywall, segs: lay.segs, hasSolid: rows.some(r => r.kind === 'solid'), hasCorner: rows.some(r => r.name === 'Eckleiste'),
     pins: ctx.pins, stuetzen: { frei: rows.some(r => r.note.includes('freien Ende')), stoss: rows.some(r => r.note.includes('Tablarstoss')), ecke: rows.some(r => r.note.startsWith('Eckstütze')) } });
 
   // Raumwände und Nischen für die 3D-Ansicht
@@ -837,7 +860,12 @@ function buildReduitSteps(o){
   // Waagrecht statt parallel zum Boden: Höhen von einem Meterriss aus messen (Review RM-17).
   st.push(['Tablarhöhen anzeichnen', `Die höchste Stelle des Bodens suchen und von dort einen waagrechten Meterriss rundum anzeichnen, mit Laser oder Schlauchwaage. Die Unterkanten der Tablare liegen ${o.levels.join(', ')} mm über dieser Stelle – alle Höhen vom Meterriss aus messen.`, 'Ein Laser spart hier viel Zeit.']);
   if (c.sys === 'battens') st.push(['Leisten montieren', `Wandleisten und Endleisten aus Dachlatte hochkant auf die Linien halten (48 mm hoch, 24 mm von der Wand), alle 40 cm vorbohren und mit ${ank} befestigen. Die Oberkante der Leiste ist die Unterkante des Tablars.`, 'Erst die Enden befestigen, dann mit der Wasserwaage die Mitte ausrichten.']);
-  if (c.sys === 'rails') st.push(['Wandschienen montieren', `Schienen auf Länge kürzen, senkrecht (Wasserwaage!) an den markierten Positionen mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.${o.schieneZweiteilig ? ` Zweiteilige Schienen nur am freien Ende kürzen (unten beim unteren, oben beim oberen Stück) und am Stoss bündig aufeinanderstellen, damit das Lochraster durchläuft; jedes Stück mindestens ${RAIL_STUECK_MIN} mm.` : ''}`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
+  if (c.sys === 'rails') {
+    // Lage der Schienenmitten je Wand (u: hinten ab der linken Wand, seitlich ab der Rückwand).
+    const lage = o.schienen.map(({ id, us }) => `${SIDE_NAME[id]} ${joinDe(us.map(String))} mm ab der ${id === 'back' ? 'linken Wand' : 'Rückwand'}`).join('; ');
+    const krag = Math.max(0, ...o.schienen.map(s => s.krag));
+    st.push(['Wandschienen montieren', `Mitte der Schienen anzeichnen: ${lage}.${krag > RAIL_END ? ` An den Wänden stehen die äusseren Schienen bis ${krag} mm von der Wand – die Tablare kragen dort aus, so reichen weniger Schienen.` : ''} Schienen auf Länge kürzen, senkrecht (Wasserwaage!) mit ${ank} befestigen. Konsolen auf den Tablarhöhen einhängen.${o.schieneZweiteilig ? ` Zweiteilige Schienen nur am freien Ende kürzen (unten beim unteren, oben beim oberen Stück) und am Stoss bündig aufeinanderstellen, damit das Lochraster durchläuft; jedes Stück mindestens ${RAIL_STUECK_MIN} mm.` : ''}`, 'Die erste Schiene genau lotrecht setzen, die weiteren mit Wasserwaage und Latte auf gleiche Höhe bringen.']);
+  }
   if (c.sys === 'brackets') st.push(['Tablarwinkel montieren', `Winkel auf den Linien ausrichten und mit je 2 ${ank} an der Wand befestigen.`, null]);
   if (c.sys === 'cheeks') {
     const eck = o.eck.fach || o.eck.leer;
