@@ -94,11 +94,57 @@ const run = over => R.computeReduit({ ...R.REDUIT_DEFAULTS, ...base, ...over });
 const qtyOf = (Rr, text) => Rr.hw.filter(h => h[1].startsWith(text)).reduce((a, h) => a + h[0], 0);
 const rowsNamed = (Rr, name) => Rr.rows.filter(r => r.name === name);
 
-test('Schienen: Anzahl aus Spannweite (1600 mm, 50 mm eingerückt, max 800 → 3 Schienen à 750 mm)', () => {
+// Schienenmitten je Wand aus den 3D-Extras: hinten ab der linken Wand, seitlich ab der Rückwand, sortiert.
+function schienen(Rr){
+  const out = { back:[], left:[], right:[] };
+  for (const e of Rr.extras) if (e.type === 'metal' && e.size[1] > 50) {
+    if (e.size[0] > e.size[2]) out.back.push(Math.round(e.pos[0] + Rr.W / 2));
+    else out[e.pos[0] < 0 ? 'left' : 'right'].push(Math.round(e.pos[2] + Rr.D / 2));
+  }
+  for (const k in out) out[k].sort((a, b) => a - b);
+  return out;
+}
+
+test('Schienen: Anzahl aus Spannweite (1600 mm, max 800 → 3 Schienen, Feld 591, Überstand 209)', () => {
   const Rr = run({ shape:'I', rw:1600, rh:2000, sys:'rails' });
   assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 3);
   assert.strictEqual(qtyOf(Rr, 'Konsole'), 3 * 5);
+  assert.deepStrictEqual(schienen(Rr).back, [209, 800, 1391]);
   assert.ok(Rr.warn.some(w => w.includes('Spannweite')));
+});
+
+test('Wandschienen eingerückt: Reduit 1000 breit, go/on 400 → 2 Schienen ca. 200 mm von den Wänden', () => {
+  // Gebauter Fall: Form I, 1000 × 1170 × 2525, 6 Böden 400 … 2240. Fichte 18 trägt 850 mm frei; 50 mm von den
+  // Wänden brauchte es 3 Schienen, eingerückt reichen 2 (Feld 586, Überstand je 207).
+  const Rr = run({ mat:'gon_fichte', t:18, shape:'I', rw:1000, rd:1170, rh:2525, dBack:400, nShelves:6, gapBottom:400, gapTop:285, sys:'rails' });
+  const s = schienen(Rr).back;
+  assert.strictEqual(s.length, 2, JSON.stringify(s));
+  assert.ok(Math.abs(s[0] - 200) <= 25 && Math.abs(1000 - s[1] - 200) <= 25, JSON.stringify(s));
+  assert.ok(s[1] - s[0] < Rr.max && s[0] <= Rr.max / 3);
+  assert.strictEqual(qtyOf(Rr, 'Wandschiene'), 2);
+  assert.strictEqual(qtyOf(Rr, 'Konsole'), 2 * 6);
+  assert.strictEqual(qtyOf(Rr, 'Holzschrauben 4 × 16'), 2 * 2 * 6);
+  assert.strictEqual(qtyOf(Rr, 'Spreizdübel'), Math.ceil(2 * 8 * 1.1));   // je Schiene 1940 mm, 8 Dübel
+  assert.ok(!Rr.warn.some(w => w.includes('zusätzliche Schienen')), JSON.stringify(Rr.warn));
+  // Der Bauablauf nennt die Lage der Schienen.
+  assert.ok(Rr.steps.find(st => st[0] === 'Wandschienen montieren')[1].includes('hinten 207 und 793 mm ab der linken Wand'));
+});
+
+test('Wandschienen: Überstand nur an Wand-Enden; an Ecke, Nische und freiem Ende 50 mm vom Ende', () => {
+  // Standard-U Birke 18 (max 800): hinten 2 Wand-Enden, seitlich Ecke hinten und Wand vorne.
+  const U = schienen(run({ sys:'rails', shape:'U' }));
+  assert.deepStrictEqual(U.back, [209, 800, 1391]);
+  assert.deepStrictEqual(U.left, [450, 1152]);
+  assert.deepStrictEqual(U.right, U.left);
+  // Tür nach innen: das linke Regal endet frei bei 1000 mm, dort bleibt die Schiene 50 mm vom Ende.
+  const T = schienen(run({ sys:'rails', shape:'U', rd:1800, doorIn:true, hinge:'L' }));
+  assert.strictEqual(T.left[0], 450);
+  assert.strictEqual(T.left[T.left.length - 1], 950);
+  assert.ok(1800 - T.right[T.right.length - 1] > 50);
+  // Nische vorne links: 50 mm vom Ende, rechts ohne Nische mit Überstand.
+  const N = schienen(run({ sys:'rails', shape:'U', nicheL:true }));
+  assert.strictEqual(N.left[N.left.length - 1], 1350);
+  assert.strictEqual(N.right[N.right.length - 1], 1152);
 });
 
 test('Leisten: frei gespannte Vorderkante ≥ max gibt Warnung', () => {
